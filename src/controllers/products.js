@@ -43,7 +43,7 @@ export const getOneProduct = async (req, res) => {
         }
         await product.populate("categoryId.productId")
         return res.status(201).json({
-            product,
+           body:product,
             status: 201,
             message: "Get product successfully"
 
