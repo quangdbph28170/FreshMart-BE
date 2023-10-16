@@ -5,8 +5,9 @@ import { typeRequestMw } from '../middleware/configResponse';
 const { RESPONSE_MESSAGE, RESPONSE_STATUS, RESPONSE_OBJ } = typeRequestMw;
 export const createCategory = async (req, res, next) => {
    try {
-      const defaultCategory = await Category.findOne({ type: req.type });
-      if (defaultCategory.type == 'default') {
+      console.log(req.body);
+      const defaultCategory = await Category.findOne({ type: req.body.type });
+      if (defaultCategory && defaultCategory.type == 'default') {
          req[RESPONSE_STATUS] = 500;
          req[RESPONSE_MESSAGE] = `Only one default Category`;
          return next();
@@ -34,12 +35,12 @@ export const createCategory = async (req, res, next) => {
 };
 export const updateCategory = async (req, res, next) => {
    try {
-      const defaultCategory = await Category.findOne({ type: 'default' });
-      if (defaultCategory.type === req.body.type) {
-         req[RESPONSE_STATUS] = 500;
-         req[RESPONSE_MESSAGE] = `Only one default Category`;
-         return next();
-      }
+      // const defaultCategory = await Category.findOne({ type: req.body.type });
+      // if (defaultCategory.type == 'default') {
+      //    req[RESPONSE_STATUS] = 500;
+      //    req[RESPONSE_MESSAGE] = `Only one default Category`;
+      //    return next();
+      // }
       const { error } = categorySchema.validate(req.body, { abortEarly: false });
       if (error) {
          req[RESPONSE_STATUS] = 500;
