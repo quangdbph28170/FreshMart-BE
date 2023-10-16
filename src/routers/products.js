@@ -1,12 +1,15 @@
-import express from 'express';
+import express from "express";
 import {
-   createProduct, getProducts, getOneProduct, updateProduct, removeProduct
-} from '../controllers/products';
-import { responseSender } from '../middleware/configResponse';
+  createProduct,
+  getProducts,
+  getOneProduct,
+  updateProduct,
+  removeProduct,
+} from "../controllers/products";
 const router = express.Router();
-router.post('/product', createProduct);
-router.patch('/product/:id', updateProduct);
-router.get('/products', getProducts);
-router.get('/product/:id', getOneProduct);
-router.delete('/product/:id', removeProduct);
+router.post("/products", createProduct);
+router.patch("/products/:id", updateProduct);
+router.get("/products", getProducts);
+router.get("/products/:id", getOneProduct);
+router.delete("/products/:id", removeProduct);
 export default router;
