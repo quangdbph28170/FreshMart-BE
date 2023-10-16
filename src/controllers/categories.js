@@ -6,7 +6,7 @@ const { RESPONSE_MESSAGE, RESPONSE_STATUS, RESPONSE_OBJ } = typeRequestMw;
 export const createCategory = async (req, res, next) => {
    try {
       const defaultCategory = await Category.findOne({ type: req.type });
-      if (defaultCategory) {
+      if (defaultCategory.type == 'default') {
          req[RESPONSE_STATUS] = 500;
          req[RESPONSE_MESSAGE] = `Only one default Category`;
          return next();
@@ -75,7 +75,7 @@ export const removeCategories = async (req, res, next) => {
       }
       await Product.updateMany({ categoryId: category._id }, { $set: { categoryId: defaultCategoryId } });
       // thêm id của sản phẩm vào danh mục mạc định
-      const defaultCate = await Category.findByIdAndUpdate(
+      await Category.findByIdAndUpdate(
          defaultCategoryId,
          {
             $push: { subCategories: category.subCategories, products: category.products },
