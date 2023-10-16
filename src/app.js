@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import mongoose from 'mongoose';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-
+import categoryRouter from './routers/categories';
 
 const app = express();
 dotenv.config();
@@ -16,6 +16,7 @@ app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
 app.get('/api', (req, res) => res.json({message: "Hello"}))
+app.use('/api', categoryRouter)
 mongoose
    .connect(MONGO_URL)
    .then(() => console.log('connected to db'))
