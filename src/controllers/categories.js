@@ -118,7 +118,7 @@ export const getAllCategory = async (req, res, next) => {
 };
 export const getOneCategory = async (req, res, next) => {
    try {
-      const category = await Category.findById(req.params.id);
+      const category = await Category.findById(req.params.id).populate('products');
       if (!category) {
          req[RESPONSE_STATUS] = 500;
          req[RESPONSE_MESSAGE] = `Get one category failed`;
