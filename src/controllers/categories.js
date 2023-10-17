@@ -1,4 +1,5 @@
 import Category from '../models/categories';
+import Product from '../models/products';
 import { categorySchema } from '../validation/categories';
 import { typeRequestMw } from '../middleware/configResponse';
 
@@ -69,8 +70,14 @@ export const removeCategories = async (req, res, next) => {
       const category = await Category.findOne({ _id: req.params.id });
       // không cho phép xóa danh mục mặc định
       const defaultCategory = await Category.findOne({ type: 'default' });
+      if(!defaultCategory) {
+         req[RESPONSE_STATUS] = 400;
+         req[RESPONSE_MESSAGE] = `Not found default category`;
+         return next();
+      }
       const defaultCategoryId = defaultCategory._id;
       if (category.type == 'default') {
+         req[RESPONSE_STATUS] = 400;
          req[RESPONSE_MESSAGE] = `Can not delete Default category`;
          return next();
       }
@@ -79,7 +86,7 @@ export const removeCategories = async (req, res, next) => {
       await Category.findByIdAndUpdate(
          defaultCategoryId,
          {
-            $push: { subCategories: category.subCategories, products: category.products },
+            $push: { products: category.products },
          },
          { new: true },
       );
