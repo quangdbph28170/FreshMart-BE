@@ -46,7 +46,7 @@ const productSchema = new mongoose.Schema(
             ref: "Shipment",
             required: true,
           },
-          quantity: Number,
+          weight: Number,
           date: String,
           price: Number,
         },
