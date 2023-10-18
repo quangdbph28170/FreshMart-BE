@@ -12,10 +12,18 @@ const categorySchema = new mongoose.Schema(
             ref: 'Products',
          },
       ],
-      image: {
-         type: String,
-         required: true,
-      },
+      images: [
+         {
+           url: {
+             type: String,
+             required: true,
+           },
+           public_id: {
+             type: String,
+             required: true,
+           },
+         },
+       ],
       type: {
          type: String,
          enum: ['normal', 'default'],
