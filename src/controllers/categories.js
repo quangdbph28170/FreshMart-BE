@@ -6,7 +6,7 @@ import { typeRequestMw } from '../middleware/configResponse';
 const { RESPONSE_MESSAGE, RESPONSE_STATUS, RESPONSE_OBJ } = typeRequestMw;
 export const createCategory = async (req, res, next) => {
    try {
-      console.log(req.body);
+      // console.log(req.body);
       const defaultCategory = await Category.findOne({ type: req.body.type });
       if (defaultCategory && defaultCategory.type == 'default') {
          req[RESPONSE_STATUS] = 500;
