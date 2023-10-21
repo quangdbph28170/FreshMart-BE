@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { createShipment, findAll, findOne, removeShipment, updateShipment } from "../controllers/shipment";
 
+
 const shipmentRouter = Router();
 
 shipmentRouter.post("/shipments", createShipment);
