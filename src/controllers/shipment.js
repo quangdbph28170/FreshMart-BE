@@ -53,7 +53,7 @@ export const findAll = async (req, res) => {
             sort: {
                 [_sort]: _order === "desc" ? -1 : 1,
             },
-            populate: "products",
+            populate: "products.idProduct",
         };
         const shipments = await Shipment.paginate({}, options);
 
@@ -84,10 +84,10 @@ export const findAll = async (req, res) => {
     }
 }
 
-export const getOne = async (req, res) => {
+export const findOne = async (req, res) => {
     try {
         const { id } = req.params
-        const shipment = await Shipment.findById(id).populate('products')
+        const shipment = await Shipment.findById(id).populate('products.idProduct')
 
         if (!shipment) return res.status(404).json({ status: 404, message: "No Shipment found" })
 
@@ -118,7 +118,7 @@ export const updateShipment = async (req, res) => {
         if (!shipment) return res.status(404).json({ status: 404, message: "No Shipment found" })
 
         shipment.products.map(async (product) => {
-            await Products.findByIdAndUpdate(product.productId, {
+            await Products.findByIdAndUpdate(product.idProduct, {
                 $pull: {
                     shipments: { idShipment: shipment._id }
                 }
@@ -126,7 +126,7 @@ export const updateShipment = async (req, res) => {
         })
 
         req.body.products.map(async (product) => {
-            await Products.findByIdAndUpdate(product.productId, {
+            await Products.findByIdAndUpdate(product.idProduct, {
                 $push: {
                     shipments: { 
                         idShipment: shipment._id,
@@ -159,7 +159,7 @@ export const removeShipment = async (req, res) => {
         if (!shipment) return res.status(404).json({ status: 404, message: "No Shipment found" })
 
         shipment.products.map(async (product) => {
-            await Products.findByIdAndUpdate(product.productId, {
+            await Products.findByIdAndUpdate(product.idProduct, {
                 $pull: {
                     shipments: { idShipment: shipment._id }
                 }
