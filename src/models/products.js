@@ -19,6 +19,7 @@ const productSchema = new mongoose.Schema(
           type: String,
           required: true,
         },
+       _id:false
       },
     ],
     desc: {
@@ -44,7 +45,6 @@ const productSchema = new mongoose.Schema(
           idShipment: {
             type: mongoose.Types.ObjectId,
             ref: "Shipment",
-            required: true,
           },
           weight: Number,
           date: String,
