@@ -7,4 +7,5 @@ export const categorySchema = joi.object({
       public_id: joi.string().required(),
    }),
    type: joi.string(),
+   products: joi.array(),
 });

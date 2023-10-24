@@ -14,7 +14,19 @@ const shipmentSchema = new mongoose.Schema(
             type: String,
             required: true,
           },
+          originWeight: {
+            type: Number,
+            required: true,
+          },
           weight: {
+            type: Number,
+            required: true,
+          },
+          originPrice: {
+            type: Number,
+            required: true,
+          },
+          price: {
             type: Number,
             required: true,
           },

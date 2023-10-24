@@ -17,8 +17,10 @@ export const createShipment = async (req, res) => {
                 $push: {
                     shipments: {
                         idShipment: newShipment._id,
+                        originWeight: data.weight,
                         weight: data.weight,
                         date: data.date,
+                        originPrice: data.price,
                         price: data.price,
                     }
                 }
@@ -130,8 +132,10 @@ export const updateShipment = async (req, res) => {
                 $push: {
                     shipments: { 
                         idShipment: shipment._id,
+                        originWeight: product.weight,
                         weight: product.weight,
                         date: product.date,
+                        originPrice: product.price,
                         price: product.price,
                     }
                 }
