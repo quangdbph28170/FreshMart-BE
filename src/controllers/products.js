@@ -1,6 +1,7 @@
 import Products from "../models/products";
 import Categories from "../models/categories";
 import { validateProduct } from "../validation/products";
+import mongoose from "mongoose";
 export const getProducts = async (req, res) => {
   const {
     _page = 1,
@@ -38,10 +39,37 @@ export const getProducts = async (req, res) => {
     });
   }
 };
+
+export const getRelatedProducts = async (req, res) => {
+  try {
+    const { id } = req.params
+    
+    const products = await Products.aggregate([{ $match: { categoryId: new mongoose.Types.ObjectId(id) } }, { $sample: { size: 10 } }])
+    console.log(products);
+    if (!products) {
+      return res.status(404).json({
+        status: 404,
+        message: 'No Product found',
+      });
+    } else {
+      return res.status(200).json({
+        body: products,
+        status: 200,
+        message: 'Product found',
+      })
+    }
+
+} catch (error) {
+  return res.status(500).json({
+    status: 500,
+    message: error.message,
+  });
+}
+}
 export const getOneProduct = async (req, res) => {
   try {
     const product = await Products.findById(req.params.id).populate(
-      "categoryId"
+      "categoryId",
     );
     if (!product) {
       return res.status(404).json({
