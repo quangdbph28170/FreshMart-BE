@@ -42,10 +42,24 @@ export const getProducts = async (req, res) => {
 
 export const getRelatedProducts = async (req, res) => {
   try {
-    const { id } = req.params
-    
-    const products = await Products.aggregate([{ $match: { categoryId: new mongoose.Types.ObjectId(id) } }, { $sample: { size: 10 } }])
-    console.log(products);
+    const { cate_id, product_id } = req.params;
+    const products = await Products.aggregate([
+      {
+        $match: {
+          categoryId: new mongoose.Types.ObjectId(cate_id),
+          _id: { $ne: new mongoose.Types.ObjectId(product_id) }
+        }
+      },
+      { $sample: { size: 10 } },
+      {
+        $lookup: {
+          from: 'shipments',
+          localField: 'idShipment',
+          foreignField: '_id',
+          as: 'shipment'
+        }
+      }
+    ]);
     if (!products) {
       return res.status(404).json({
         status: 404,
