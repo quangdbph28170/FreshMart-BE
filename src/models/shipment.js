@@ -16,7 +16,7 @@ const shipmentSchema = new mongoose.Schema(
           },
           originWeight: {
             type: Number,
-            required: true,
+            required: false,
           },
           weight: {
             type: Number,
@@ -42,6 +42,7 @@ const shipmentSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    
   },
   { timestamps: true }
 );

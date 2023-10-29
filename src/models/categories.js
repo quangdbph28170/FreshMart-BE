@@ -1,34 +1,38 @@
-import mongoose from 'mongoose';
+import mongoose from "mongoose";
 
 const categorySchema = new mongoose.Schema(
-   {
-      cateName: {
-         type: String,
-         required: true,
-      },
-      products: [
-         {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: 'Products',
-         },
+  {
+    cateName: {
+      type: String,
+      required: true,
+    },
+    products: {
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Products",
+          default: [],
+        },
       ],
-      image: {
-         url: {
-           type: String,
-           required: true,
-         },
-         public_id: {
-           type: String,
-           required: true,
-         },
-       },
-      type: {
-         type: String,
-         enum: ['normal', 'default'],
-         default: 'normal',
+      default: [],
+    },
+    image: {
+      url: {
+        type: String,
+        required: true,
       },
-   },
-   { timestamps: true, versionKey: false },
+      public_id: {
+        type: String,
+        required: true,
+      },
+    },
+    type: {
+      type: String,
+      enum: ["normal", "default"],
+      default: "normal",
+    },
+  },
+  { timestamps: true, versionKey: false }
 );
 
-export default mongoose.model('Category', categorySchema);
+export default mongoose.model("Category", categorySchema);
