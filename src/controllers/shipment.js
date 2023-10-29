@@ -30,7 +30,9 @@ export const createShipment = async (req, res) => {
         })
 
         return res.status(201).json({
-            body: newShipment,
+            body: {
+                data: newShipment
+            },
             status: 201,
             message: "Create shipment successfully",
         });
@@ -70,7 +72,7 @@ export const findAll = async (req, res) => {
 
         return res.status(201).json({
             body: {
-                shipments: shipments.docs,
+                data: shipments.docs,
                 pagination: {
                     currentPage: shipments.page,
                     totalPages: shipments.totalPages,
@@ -96,8 +98,10 @@ export const findOne = async (req, res) => {
         if (!shipment) return res.status(404).json({ status: 404, message: "No Shipment found" })
 
         return res.status(200).json({
+            body: {
+                data: shipment
+            },
             status: 200,
-            shipment,
             message: "Get Shipment success"
         })
     } catch (error) {
@@ -132,7 +136,7 @@ export const updateShipment = async (req, res) => {
         req.body.products.map(async (product) => {
             await Products.findByIdAndUpdate(product.idProduct, {
                 $push: {
-                    shipments: { 
+                    shipments: {
                         idShipment: shipment._id,
                         weight: product.weight,
                         date: product.date,
@@ -141,7 +145,8 @@ export const updateShipment = async (req, res) => {
                 }
             })
         })
-        await Shipment.findByIdAndUpdate(req.params.id, {
+        
+        const shipmentUpdate = await Shipment.findByIdAndUpdate(req.params.id, {
             ...req.body,
             originWeight: req.body.weight,
             originPrice: req.body.price,
@@ -149,6 +154,9 @@ export const updateShipment = async (req, res) => {
 
         return res.status(200).json({
             status: 200,
+            body: {
+                data: shipmentUpdate
+            },
             message: 'Updated shipment complete'
         });
     } catch (error) {

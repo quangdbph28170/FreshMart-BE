@@ -22,7 +22,7 @@ export const getProducts = async (req, res) => {
     const products = await Products.paginate({}, options);
     return res.status(201).json({
       body: {
-        products: products.docs,
+        data: products.docs,
         pagination: {
           currentPage: products.page,
           totalPages: products.totalPages,
@@ -67,7 +67,9 @@ export const getRelatedProducts = async (req, res) => {
       });
     } else {
       return res.status(200).json({
-        body: products,
+        body: {
+          data:products
+        },
         status: 200,
         message: 'Product found',
       })
@@ -93,7 +95,9 @@ export const getOneProduct = async (req, res) => {
     }
     await product.populate("categoryId.productId");
     return res.status(201).json({
-      body: product,
+      body:{
+        data:product
+      },
       status: 201,
       message: "Get product successfully",
     });
@@ -120,7 +124,9 @@ export const createProduct = async (req, res) => {
     });
 
     return res.status(201).json({
-      body: product,
+      body:{
+        data:product
+      },
       status: 201,
       message: "Create product successfully",
     });
@@ -160,7 +166,9 @@ export const updateProduct = async (req, res) => {
     });
 
     return res.status(201).json({
-      body: product,
+      body: {
+        data:product
+      },
       status: 201,
       message: "Update product successfully",
     });
