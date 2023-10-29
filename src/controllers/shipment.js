@@ -11,16 +11,18 @@ export const createShipment = async (req, res) => {
         });
     }
     try {
-        const newShipment = await Shipment.create(req.body);
+        const newShipment = await Shipment.create({
+            ...req.body,
+            originWeight: req.body.weight,
+            originPrice: req.body.price,
+        });
         req.body.products.map(async (data) => {
             await Products.findByIdAndUpdate(data.idProduct, {
                 $push: {
                     shipments: {
                         idShipment: newShipment._id,
-                        originWeight: data.weight,
                         weight: data.weight,
                         date: data.date,
-                        originPrice: data.price,
                         price: data.price,
                     }
                 }
@@ -29,7 +31,7 @@ export const createShipment = async (req, res) => {
 
         return res.status(201).json({
             body: {
-                data:newShipment
+                data: newShipment
             },
             status: 201,
             message: "Create shipment successfully",
@@ -96,8 +98,8 @@ export const findOne = async (req, res) => {
         if (!shipment) return res.status(404).json({ status: 404, message: "No Shipment found" })
 
         return res.status(200).json({
-            body:{
-                data:shipment
+            body: {
+                data: shipment
             },
             status: 200,
             message: "Get Shipment success"
@@ -134,22 +136,25 @@ export const updateShipment = async (req, res) => {
         req.body.products.map(async (product) => {
             await Products.findByIdAndUpdate(product.idProduct, {
                 $push: {
-                    shipments: { 
+                    shipments: {
                         idShipment: shipment._id,
-                        originWeight: product.weight,
                         weight: product.weight,
                         date: product.date,
-                        originPrice: product.price,
                         price: product.price,
                     }
                 }
             })
         })
-     const shipmentUpdate =  await Shipment.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        
+        const shipmentUpdate = await Shipment.findByIdAndUpdate(req.params.id, {
+            ...req.body,
+            originWeight: req.body.weight,
+            originPrice: req.body.price,
+        }, { new: true });
 
         return res.status(200).json({
             status: 200,
-            body:{
+            body: {
                 data: shipmentUpdate
             },
             message: 'Updated shipment complete'
