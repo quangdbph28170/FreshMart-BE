@@ -11,10 +11,16 @@ export const createShipment = async (req, res) => {
         });
     }
     try {
+        const products = req.body?.products?.map((product) => {
+            return {
+                ...product,
+                originWeight: product.weight,
+                originPrice: product.price,
+            }
+        })
         const newShipment = await Shipment.create({
             ...req.body,
-            originWeight: req.body.weight,
-            originPrice: req.body.price,
+            products: products,
         });
         req.body.products.map(async (data) => {
             await Products.findByIdAndUpdate(data.idProduct, {
@@ -145,11 +151,18 @@ export const updateShipment = async (req, res) => {
                 }
             })
         })
-        
+
+        const products = req.body?.products?.map((product) => {
+            return {
+                ...product,
+                originWeight: product.weight,
+                originPrice: product.price,
+            }
+        })
+
         const shipmentUpdate = await Shipment.findByIdAndUpdate(req.params.id, {
             ...req.body,
-            originWeight: req.body.weight,
-            originPrice: req.body.price,
+            products: products,
         }, { new: true });
 
         return res.status(200).json({
