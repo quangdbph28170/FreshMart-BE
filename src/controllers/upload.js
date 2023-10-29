@@ -15,7 +15,9 @@ export const uploadImage = async (req, res) => {
       public_id: result.public_id,
     }));
     return res.status(200).json({
-      body: uploadedFiles,
+      body:{
+        data:uploadedFiles
+      },
     });
   } catch (error) {
     console.log(error.message);

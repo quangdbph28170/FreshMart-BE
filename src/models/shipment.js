@@ -30,10 +30,6 @@ const shipmentSchema = new mongoose.Schema(
             type: Number,
             required: true,
           },
-          origin: {
-            type: String,
-            required: true,
-          },
         },
       ],
       default: [],

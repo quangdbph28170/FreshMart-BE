@@ -22,7 +22,7 @@ export const getProducts = async (req, res) => {
     const products = await Products.paginate({}, options);
     return res.status(201).json({
       body: {
-        products: products.docs,
+        data: products.docs,
         pagination: {
           currentPage: products.page,
           totalPages: products.totalPages,
@@ -42,10 +42,24 @@ export const getProducts = async (req, res) => {
 
 export const getRelatedProducts = async (req, res) => {
   try {
-    const { id } = req.params
-    
-    const products = await Products.aggregate([{ $match: { categoryId: new mongoose.Types.ObjectId(id) } }, { $sample: { size: 10 } }])
-    console.log(products);
+    const { cate_id, product_id } = req.params;
+    const products = await Products.aggregate([
+      {
+        $match: {
+          categoryId: new mongoose.Types.ObjectId(cate_id),
+          _id: { $ne: new mongoose.Types.ObjectId(product_id) }
+        }
+      },
+      { $sample: { size: 10 } },
+      {
+        $lookup: {
+          from: 'shipments',
+          localField: 'idShipment',
+          foreignField: '_id',
+          as: 'shipment'
+        }
+      }
+    ]);
     if (!products) {
       return res.status(404).json({
         status: 404,
@@ -53,7 +67,9 @@ export const getRelatedProducts = async (req, res) => {
       });
     } else {
       return res.status(200).json({
-        body: products,
+        body: {
+          data:products
+        },
         status: 200,
         message: 'Product found',
       })
@@ -79,7 +95,9 @@ export const getOneProduct = async (req, res) => {
     }
     await product.populate("categoryId.productId");
     return res.status(201).json({
-      body: product,
+      body:{
+        data:product
+      },
       status: 201,
       message: "Get product successfully",
     });
@@ -106,7 +124,9 @@ export const createProduct = async (req, res) => {
     });
 
     return res.status(201).json({
-      body: product,
+      body:{
+        data:product
+      },
       status: 201,
       message: "Create product successfully",
     });
@@ -146,7 +166,9 @@ export const updateProduct = async (req, res) => {
     });
 
     return res.status(201).json({
-      body: product,
+      body: {
+        data:product
+      },
       status: 201,
       message: "Update product successfully",
     });

@@ -28,7 +28,9 @@ export const createShipment = async (req, res) => {
     });
 
     return res.status(201).json({
-      body: newShipment,
+      body: {
+        data: newShipment,
+      },
       status: 201,
       message: "Create shipment successfully",
     });
@@ -85,7 +87,6 @@ export const findAll = async (req, res) => {
     });
   }
 };
-
 export const findOne = async (req, res) => {
   try {
     const { id } = req.params;
@@ -97,8 +98,10 @@ export const findOne = async (req, res) => {
         .json({ status: 404, message: "No Shipment found" });
 
     return res.status(200).json({
+      body: {
+        data: shipment,
+      },
       status: 200,
-      body:shipment,
       message: "Get Shipment success",
     });
   } catch (error) {
@@ -141,13 +144,13 @@ export const updateShipment = async (req, res) => {
             originWeight: product.weight,
             weight: product.weight,
             date: product.date,
-            originPrice: product.originPrice,
+            originPrice: product.price,
             price: product.price,
           },
         },
       });
     });
-    const updatedShipment = await Shipment.findByIdAndUpdate(
+    const shipmentUpdate = await Shipment.findByIdAndUpdate(
       req.params.id,
       req.body,
       { new: true }
@@ -155,8 +158,10 @@ export const updateShipment = async (req, res) => {
 
     return res.status(200).json({
       status: 200,
+      body: {
+        data: shipmentUpdate,
+      },
       message: "Updated shipment complete",
-      body: updatedShipment,
     });
   } catch (error) {
     return res.status(400).json({
