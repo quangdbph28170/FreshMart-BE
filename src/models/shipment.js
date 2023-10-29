@@ -29,11 +29,7 @@ const shipmentSchema = new mongoose.Schema(
           price: {
             type: Number,
             required: true,
-          },
-          origin: {
-            type: String,
-            required: true,
-          },
+          }
         },
       ],
       default: [],
