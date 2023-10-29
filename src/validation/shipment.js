@@ -1,7 +1,7 @@
 import joi from "joi";
 
 export const validateShipment = joi.object({
-  isDisabled: joi.boolean().default(false),
+  isDisable: joi.boolean().default(false),
   totalMoney: joi.number().default(0).required(),
   products: joi.array().items(
     joi.object({
@@ -9,7 +9,6 @@ export const validateShipment = joi.object({
       date: joi.string().required(),
       weight: joi.number().required(),
       price: joi.number().required(),
-      origin: joi.string().required(),
     })
   ).default([])
 });

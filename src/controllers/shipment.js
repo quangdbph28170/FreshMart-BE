@@ -11,16 +11,18 @@ export const createShipment = async (req, res) => {
         });
     }
     try {
-        const newShipment = await Shipment.create(req.body);
+        const newShipment = await Shipment.create({
+            ...req.body,
+            originWeight: req.body.weight,
+            originPrice: req.body.price,
+        });
         req.body.products.map(async (data) => {
             await Products.findByIdAndUpdate(data.idProduct, {
                 $push: {
                     shipments: {
                         idShipment: newShipment._id,
-                        originWeight: data.weight,
                         weight: data.weight,
                         date: data.date,
-                        originPrice: data.price,
                         price: data.price,
                     }
                 }
@@ -132,16 +134,18 @@ export const updateShipment = async (req, res) => {
                 $push: {
                     shipments: { 
                         idShipment: shipment._id,
-                        originWeight: product.weight,
                         weight: product.weight,
                         date: product.date,
-                        originPrice: product.price,
                         price: product.price,
                     }
                 }
             })
         })
-        await Shipment.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        await Shipment.findByIdAndUpdate(req.params.id, {
+            ...req.body,
+            originWeight: req.body.weight,
+            originPrice: req.body.price,
+        }, { new: true });
 
         return res.status(200).json({
             status: 200,
