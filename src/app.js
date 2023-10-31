@@ -9,6 +9,8 @@ import uploadRouter from "./routers/upload";
 import shipmentRouter from "./routers/shipment";
 import mailRouter from "./routers/mail"
 import originRouter from "./routers/origin";
+import authRouter from './routers/auth';
+import userRouter from './routers/user';
 const app = express();
 dotenv.config();
 
@@ -26,6 +28,8 @@ app.use("/api", uploadRouter);
 app.use("/api", shipmentRouter);
 app.use("/api", mailRouter);
 app.use("/api", originRouter);
+app.use('/api', authRouter);
+app.use('/api', userRouter);
 mongoose
   .connect(MONGO_URL)
   .then(() => console.log("connected to db"))
