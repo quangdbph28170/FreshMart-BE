@@ -1,5 +1,5 @@
 import User from '../models/user';
-import { signinSchema, singupSchema } from '../schemas/auth';
+import { signinSchema, singupSchema } from '../validation/auth';
 import bcrypt from 'bcrypt';
 import jwt, { decode } from 'jsonwebtoken';
 import dotenv from 'dotenv';

@@ -1,7 +1,7 @@
 import express from 'express';
-import { clearToken, redirect, refresh, signIn, signUp } from '../controller/auth';
+import { clearToken, refresh, signIn, signUp } from '../controllers/auth';
 import { responseSender } from '../middleware/configResponse';
-import passport from 'passport';
+// import passport from 'passport';
 const router = express.Router();
 
 router.post('/login', signIn, responseSender);

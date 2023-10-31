@@ -1,6 +1,6 @@
 import { typeRequestMw } from '../middleware/configResponse';
 import User from '../models/user';
-import { userSchema } from '../schemas/auth';
+import { userSchema } from '../validation/auth';
 import bcrypt from 'bcrypt';
 
 const { RESPONSE_MESSAGE, RESPONSE_STATUS, RESPONSE_OBJ } = typeRequestMw;
