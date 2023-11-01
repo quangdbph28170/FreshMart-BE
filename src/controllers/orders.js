@@ -113,7 +113,7 @@ export const CreateOrder = async (req, res) => {
                     <div>
                     <p style="font-size: 16px;color: #2a9dcc; margin:0"> ${product.productId.productName} (${product.weight}kg)</p> 
                    <div>
-                   <p style="font-size: 16px; color: red;"> ${product.price.toLocaleString("vi-VN")}VNĐ x ${product.quantity} </p>
+                   <p style="font-size: 16px; color: red;"> ${product.price.toLocaleString("vi-VN")}VNĐ </p>
                    </div>
                     </div>
                     </div>
