@@ -5,34 +5,21 @@ import Shipment from "../models/shipment"
 import { validateCheckout, validatePhoneAndMail } from "../validation/checkout"
 import { transporter } from "../config/mail"
 
-const orderExist = (data, res) => {
-    // console.log("data: " + data);
-    if (!data) {
-        return res.status(404).json({
-            status: 404,
-            message: "Order not found"
-        })
-    }
-    if (data.length == 0) {
-        return res.status(200).json({
-            status: 200,
-            message: "There are no orders"
-        })
-    }
-    return res.status(201).json({
-        body: {
-            data: data.docs,
-            pagination: {
-                currentPage: data.page,
-                totalPages: data.totalPages,
-                totalItems: data.totalDocs,
-            },
-        },
-        status: 201,
-        message: "Get order successfully"
-    })
-};
+const checkCancellationTime = (order) => {
+    const checkTime = new Date(order.createdAt);
+    const currentTime = new Date();
+    const timeDifference = (currentTime - checkTime) / 1000 / 60 / 60;
 
+    if (timeDifference < 24) {
+        return {
+            canCancel: true,
+        };
+    } else {
+        return {
+            canCancel: false,
+        };
+    }
+};
 //Tạo mới đơn hàng
 export const CreateOrder = async (req, res) => {
     try {
@@ -126,13 +113,13 @@ export const CreateOrder = async (req, res) => {
                     <div>
                     <p style="font-size: 16px;color: #2a9dcc; margin:0"> ${product.productId.productName} (${product.weight}kg)</p> 
                    <div>
-                   <p style="font-size: 16px; color: red;"> ${product.price.toLocaleString("vi-VN")}đ x ${product.quantity} </p>
+                   <p style="font-size: 16px; color: red;"> ${product.price.toLocaleString("vi-VN")}VNĐ x ${product.quantity} </p>
                    </div>
                     </div>
                     </div>
                 `).join('')}
                    </div>
-                   <p style="color: red;font-weight:bold";>Tổng tiền thanh toán: ${data.totalPayment.toLocaleString("vi-VN")}đ</p>
+                   <p style="color: red;font-weight:bold";>Tổng tiền thanh toán: ${data.totalPayment.toLocaleString("vi-VN")}VNĐ</p>
                    <p>Thanh toán thanh toán: ${data.pay == false ? "Thanh toán khi nhận hàng" : "Đã thanh toán online"}</p>
                    <p>Trạng thái đơn hàng: ${data.status}</p>
                   </div>`,
@@ -151,13 +138,8 @@ export const CreateOrder = async (req, res) => {
 }
 //Admin lấy tất cả đơn hàng
 export const GetAllOrders = async (req, res) => {
-    const {
-        _page = 1,
-        _order = "asc",
-        _limit = 10,
-        _sort = "createdAt",
-        _q = "",
-    } = req.query;
+    const { _page = 1, _order = "asc", _limit = 10, _sort = "createdAt", _q = "" } = req.query;
+
     const options = {
         page: _page,
         limit: _limit,
@@ -165,9 +147,27 @@ export const GetAllOrders = async (req, res) => {
             [_sort]: _order === "desc" ? -1 : 1,
         },
     };
+
     try {
-        const data = await Order.paginate({}, options)
-        orderExist(data, res);
+        const data = await Order.paginate({},options)
+        if ( data.docs.length == 0) {
+            return res.status(200).json({
+                status: 200,
+                message: "There are no orders"
+            })
+        }
+        return res.status(201).json({
+            body: {
+                data: data.docs,
+                pagination: {
+                    currentPage: data.page,
+                    totalPages: data.totalPages,
+                    totalItems: data.totalDocs,
+                },
+            },
+            status: 201,
+            message: "Get order successfully"
+        })
     } catch (error) {
         return res.status(500).json({
             status: 500,
@@ -177,7 +177,6 @@ export const GetAllOrders = async (req, res) => {
 }
 // Khách vãng lai(ko đăng nhập) tra cứu đơn hàng qua phone or email
 export const OrdersForGuest = async (req, res) => {
-
     try {
         const { email, phoneNumber } = req.body
         const { error } = validatePhoneAndMail.validate(req.body)
@@ -187,8 +186,20 @@ export const OrdersForGuest = async (req, res) => {
                 message: error.message
             })
         }
-        const data = email ? await Order.find({ email }) : await Order.find({ phoneNumber })
-        orderExist(data, res);
+        const data = email ? await Order.find({ email }) : await Order.find({ phoneNumber:phoneNumber })
+        if(data.length == 0){
+            return res.status(200).json({
+                status: 200,
+                message: "Order not found"
+            })
+        }
+        return res.status(201).json({
+            body: {
+                data  
+            },
+            status: 201,
+            message: "Get order successfully"
+        })
     } catch (error) {
         return res.status(500).json({
             status: 500,
@@ -201,7 +212,19 @@ export const OrdersForMember = async (req, res) => {
     try {
         const userId = req.user._id
         const data = await Order.find({ userId })
-        orderExist(data, res);
+        if(data.length == 0){
+            return res.status(200).json({
+                status: 200,
+                message: "Order not found"
+            })
+        }
+        return res.status(201).json({
+            body: {
+                data  
+            },
+            status: 201,
+            message: "Get order successfully"
+        })
     } catch (error) {
         return res.status(500).json({
             status: 500,
@@ -216,7 +239,19 @@ export const FilterOrdersForMember = async (req, res) => {
         const { status } = req.body
         const userId = req.user._id
         const data = await Order.find({ userId }, { status })
-        orderExist(data, res);
+        if(data.length == 0){
+            return res.status(200).json({
+                status: 200,
+                message: "Order not found"
+            })
+        }
+        return res.status(201).json({
+            body: {
+                data  
+            },
+            status: 201,
+            message: "Get order successfully"
+        })
     } catch (error) {
         return res.status(500).json({
             status: 500,
@@ -317,20 +352,5 @@ export const UpdateOrder = async (req, res) => {
         })
     }
 }
-const checkCancellationTime = (order) => {
-    const checkTime = new Date(order.createdAt);
-    const currentTime = new Date();
 
-    const timeDifference = (currentTime - checkTime) / 1000 / 60 / 60;
-
-    if (timeDifference < 24) {
-        return {
-            canCancel: true,
-        };
-    } else {
-        return {
-            canCancel: false,
-        };
-    }
-};
 
