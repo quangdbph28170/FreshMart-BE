@@ -1,5 +1,5 @@
 import mongoose from "mongoose"
-
+import mongoosePaginate from "mongoose-paginate-v2"
 const orderSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Schema.Types.Mixed,
@@ -12,14 +12,11 @@ const orderSchema = new mongoose.Schema({
                 ref: "Products",
                 required: true
             },
-            size:{
+            weight: {
                 type: Number,
                 required: true
             },
-            quantity: {
-                type: Number,
-                required: true
-            },
+           
             price: {
                 type: Number,
                 required: true
@@ -35,35 +32,35 @@ const orderSchema = new mongoose.Schema({
         required: true
     },
     phoneNumber: {
-        type:String,
-        required:true
+        type: String,
+        required: true
     },
     email: {
-        type:String,
-        required:true
+        type: String,
+        required: true
     },
     note: {
-        type:String,
-        default:null
+        type: String,
+        default: null
     },
     shippingAddress: {
-        type:String,
-        required:true
+        type: String,
+        required: true
     },
     receivedDate: {
-        type:String,
-        default:null
+        type: String,
+        default: null
     },
     pay: {
-       type:Boolean,
-       default:false
+        type: Boolean,
+        default: false
     },
     status: {
-    type:String,
-    enum :["chờ xác nhận", "đang giao hàng", "đã hoàn thành", "đã hủy"],
-    default:"chờ xác nhận"
+        type: String,
+        enum: ["chờ xác nhận", "đang giao hàng", "đã hoàn thành", "đã hủy"],
+        default: "chờ xác nhận"
     }
 
 }, { versionKey: false, timestamps: true })
-
+orderSchema.plugin(mongoosePaginate)
 export default mongoose.model('Orders', orderSchema)
