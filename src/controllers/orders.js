@@ -1,9 +1,10 @@
-// import User from "../models/users";
+import User from "../models/user";
 import Order from "../models/orders"
 import Product from "../models/products"
+import Shipment from "../models/shipment"
 import { validateCheckout, validatePhoneAndMail } from "../validation/checkout"
 import { transporter } from "../config/mail"
-// Kiểm tra order
+
 const orderExist = (data, res) => {
     // console.log("data: " + data);
     if (!data) {
@@ -19,7 +20,14 @@ const orderExist = (data, res) => {
         })
     }
     return res.status(201).json({
-        body: { data },
+        body: {
+            data: data.docs,
+            pagination: {
+                currentPage: data.page,
+                totalPages: data.totalPages,
+                totalItems: data.totalDocs,
+            },
+        },
         status: 201,
         message: "Get order successfully"
     })
@@ -42,19 +50,62 @@ export const CreateOrder = async (req, res) => {
                 message: "Cannot place an order due to empty product"
             })
         }
+
         for (let item of products) {
-            const product = await Product.findOne({ id: item._id }).populate("shipments.idShipment")
-            let size = item.size
-            for (let shipment of product.shipments) {
-                if (size > 0) {
-                 
-                }
-
-
+            const prd = await Product.findById(item.productId)
+            const currentTotalWeight = prd.shipments.reduce((accumulator, shipment) => accumulator + shipment.weight,0)
+            let totalWeight = item.weight
+            if (item.weight > currentTotalWeight) {
+                return res.status(400).json({
+                    status: 400,
+                    message: "Ko đủ số lượng "
+                })
             }
+            if (totalWeight != 0 || currentTotalWeight != 0) {
+                for (let shipment of prd.shipments) {
+                    if (totalWeight == 0) {
+                        break;
+                    }
+                    if (shipment.weight - totalWeight <= 0) {
+                        await Product.findOneAndUpdate({ _id: prd._id, "shipments.idShipment": shipment.idShipment }, {
+                            $set: {
+                                'shipments.$.weight': 0
+                            }
+                        })
+                        await Shipment.findOneAndUpdate({ _id: shipment.idShipment, "products.idProduct": prd._id }, {
+                            $set: {
+                                'products.$.weight': 0,
+                                isDisable: true
+                            }
+                        })
+                        totalWeight = -(shipment.weight - totalWeight)
 
+                    } else {
+                        await Product.findOneAndUpdate({ _id: prd._id, "shipments.idShipment": shipment.idShipment }, {
+                            $set: {
+                                'shipments.$.weight': shipment.weight - totalWeight
+                            }
+                        })
+                        await Shipment.findOneAndUpdate({ _id: shipment.idShipment, "products.idProduct": prd._id }, {
+                            $set: {
+                                'products.$.weight': shipment.weight - totalWeight,
+                            }
+                        })
+                        totalWeight = 0
+                    }
+                }
+            }
         }
+        // console.log(req.user);
         const data = await Order.create(req.body)
+        if(req.user != null){
+            await Order.findByIdAndUpdate(data._id, {userId: req.user._id})
+            await User.findByIdAndUpdate(req.user._id,{
+                $push:{
+                    orders:data._id
+                }
+            })
+        }
         await data.populate("products.productId")
         await transporter.sendMail({
             from: 'namphpmailer@gmail.com',
@@ -73,7 +124,7 @@ export const CreateOrder = async (req, res) => {
                   <div style="display: flex;padding:20px">
                     <img alt="image" src="${product.productId.images[0].url}" style="width: 90px; height: 90px;margin-right: 15px;border-radius:5px " />
                     <div>
-                    <p style="font-size: 16px;color: #2a9dcc; margin:0"> ${product.productId.productName} (${product.size}kg)</p> 
+                    <p style="font-size: 16px;color: #2a9dcc; margin:0"> ${product.productId.productName} (${product.weight}kg)</p> 
                    <div>
                    <p style="font-size: 16px; color: red;"> ${product.price.toLocaleString("vi-VN")}đ x ${product.quantity} </p>
                    </div>
@@ -100,8 +151,22 @@ export const CreateOrder = async (req, res) => {
 }
 //Admin lấy tất cả đơn hàng
 export const GetAllOrders = async (req, res) => {
+    const {
+        _page = 1,
+        _order = "asc",
+        _limit = 10,
+        _sort = "createdAt",
+        _q = "",
+    } = req.query;
+    const options = {
+        page: _page,
+        limit: _limit,
+        sort: {
+            [_sort]: _order === "desc" ? -1 : 1,
+        },
+    };
     try {
-        const data = await Order.find()
+        const data = await Order.paginate({}, options)
         orderExist(data, res);
     } catch (error) {
         return res.status(500).json({
@@ -112,6 +177,7 @@ export const GetAllOrders = async (req, res) => {
 }
 // Khách vãng lai(ko đăng nhập) tra cứu đơn hàng qua phone or email
 export const OrdersForGuest = async (req, res) => {
+
     try {
         const { email, phoneNumber } = req.body
         const { error } = validatePhoneAndMail.validate(req.body)
@@ -161,9 +227,15 @@ export const FilterOrdersForMember = async (req, res) => {
 // Chi tiết đơn đặt hàng
 export const OrderDetail = async (req, res) => {
     try {
-        const oderId = req.params.id
-        const data = await Order.findById(oderId)
-        orderExist(data, res);
+        const orderId = req.params.id
+        const data = await Order.findById(orderId).populate("products.productId")
+        const { canCancel } = checkCancellationTime(data);
+        return res.status(201).json({
+            body: { data },
+            status: 201,
+            message: "Get order successfully",
+            canCancel
+        })
     } catch (error) {
         return res.status(500).json({
             status: 500,
@@ -175,19 +247,28 @@ export const OrderDetail = async (req, res) => {
 // Khách hàng hủy đơn đặt hàng
 export const CanceledOrder = async (req, res) => {
     try {
-        const oderId = req.params.id
-        const data = await Order.findByIdAndUpdate(oderId, { status: "Đã hủy" }, { new: true })
-        if (!data) {
-            return res.status(400).json({
-                status: 400,
-                message: "Cancel failed"
+        const orderId = req.params.id
+        const order = await Order.findById(orderId)
+        const { canCancel } = checkCancellationTime(order);
+        if (canCancel) {
+            const data = await Order.findByIdAndUpdate(orderId, { status: "đã hủy" }, { new: true })
+            if (!data) {
+                return res.status(400).json({
+                    status: 400,
+                    message: "Cancel failed"
+                })
+            }
+            return res.status(201).json({
+                body: { data },
+                status: 201,
+                message: "Cancel successfully"
             })
         }
-        return res.status(201).json({
-            body: { data },
-            status: 201,
-            message: "Cancel successfully"
+        return res.status(402).json({
+            status: 402,
+            message: "Can not cancel this order"
         })
+
     } catch (error) {
         return res.status(500).json({
             status: 500,
@@ -199,14 +280,31 @@ export const CanceledOrder = async (req, res) => {
 // Admin cập nhật đơn hàng gồm: ngày dự kiến nhận hàng, trạng thái đơn hàng, trạng thái thanh toán.
 export const UpdateOrder = async (req, res) => {
     try {
-        const oderId = req.params.id
-        const data = await Order.findByIdAndUpdate(oderId, req.req.body, { new: true })
-        if (!data) {
-            return res.status(400).json({
-                status: 400,
-                message: "Order update failed"
-            })
+        const orderId = req.params.id
+        const { status } = req.body;
+        const currentOrder = await Order.findById(orderId);
+        if (!currentOrder) {
+            return res.status(404).json({
+                status: 404,
+                message: "Order not found"
+            });
         }
+        const validStatuses = ["chờ xác nhận", "đang giao hàng", "đã hoàn thành", "đã hủy"];
+        if (!validStatuses.includes(status)) {
+            return res.status(402).json({
+                status: 402,
+                message: "Invalid status update"
+            });
+        }
+        const currentStatusIndex = validStatuses.indexOf(currentOrder.status);
+        const newStatusIndex = validStatuses.indexOf(status);
+        if (newStatusIndex < currentStatusIndex) {
+            return res.status(401).json({
+                status: 400,
+                message: "Invalid status update. Status can only be updated in a sequential order."
+            });
+        }
+        const data = await Order.findByIdAndUpdate(orderId, req.req.body, { new: true })
         return res.status(201).json({
             body: { data },
             status: 201,
@@ -219,4 +317,20 @@ export const UpdateOrder = async (req, res) => {
         })
     }
 }
+const checkCancellationTime = (order) => {
+    const checkTime = new Date(order.createdAt);
+    const currentTime = new Date();
+
+    const timeDifference = (currentTime - checkTime) / 1000 / 60 / 60;
+
+    if (timeDifference < 24) {
+        return {
+            canCancel: true,
+        };
+    } else {
+        return {
+            canCancel: false,
+        };
+    }
+};
 

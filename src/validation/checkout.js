@@ -21,6 +21,12 @@ export const validateCheckout = joi.object({
         "string.required": "ShippingAddress is required",
         "string.empty": "ShippingAddress is not empty!"
     }),
+    products:joi.array().items(joi.object({
+        productId:joi.string().required().trim(),
+        price:joi.number().required(),
+        weight:joi.number().required(),
+       
+    }))
 })
 
 export const validatePhoneAndMail = joi.object({
