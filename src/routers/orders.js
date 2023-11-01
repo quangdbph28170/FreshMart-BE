@@ -46,7 +46,7 @@ jwt.verify(token, process.env.SERECT_REFRESHTOKEN_KEY, async (err, payload) => {
 router.get("/orders", GetAllOrders);
 router.get("/orders-guest", OrdersForGuest);
 router.get("/orders-member",authentication, OrdersForMember);
-router.get("/orders-member-filter", FilterOrdersForMember);
+router.get("/orders-member-filter",authentication, FilterOrdersForMember);
 router.get("/orders/:id", OrderDetail);
 router.put("/orders/:id", authentication,CanceledOrder);
 router.patch("/orders/:id",authorization, UpdateOrder);
