@@ -61,8 +61,8 @@ export const CreateOrder = async (req, res) => {
                         })
                         await Shipment.findOneAndUpdate({ _id: shipment.idShipment, "products.idProduct": prd._id }, {
                             $set: {
-                                'products.$.weight': 0,
-                                isDisable: true
+                                'products.$.weight': 0
+                                
                             }
                         })
                         totalWeight = -(shipment.weight - totalWeight)
