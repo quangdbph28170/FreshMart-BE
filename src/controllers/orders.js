@@ -82,7 +82,8 @@ export const CreateOrder = async (req, res) => {
                 `).join('')}
                    </div>
                    <p style="color: red;font-weight:bold";>Tổng tiền thanh toán: ${data.totalPayment.toLocaleString("vi-VN")}đ</p>
-                   <p>Thanh toán: ${data.pay == false ? "Thanh toán khi nhận hàng" : "Đã thanh toán online"}</p>
+                   <p>Thanh toán thanh toán: ${data.pay == false ? "Thanh toán khi nhận hàng" : "Đã thanh toán online"}</p>
+                   <p>Trạng thái đơn hàng: ${data.status}</p>
                   </div>`,
         })
         return res.status(201).json({
