@@ -13,6 +13,7 @@ export const validateProduct = joi.object({
     .required(),
   desc: joi.string().required().trim(),
   categoryId: joi.string().required().trim(),
+  originId: joi.string().required().trim(),
   discount: joi.number().required(),
   shipments: joi.array().items(
     joi.object({

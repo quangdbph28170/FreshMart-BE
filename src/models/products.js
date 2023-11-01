@@ -19,7 +19,7 @@ const productSchema = new mongoose.Schema(
           type: String,
           required: true,
         },
-       _id:false
+        _id: false
       },
     ],
     desc: {
@@ -52,6 +52,10 @@ const productSchema = new mongoose.Schema(
         },
       ],
       default: [],
+    },
+    originId: {
+      type: mongoose.Types.ObjectId,
+      ref: "Origin",
     },
     comments: {
       type: [
