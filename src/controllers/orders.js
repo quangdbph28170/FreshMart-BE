@@ -238,7 +238,8 @@ export const FilterOrdersForMember = async (req, res) => {
     try {
         const { status } = req.body
         const userId = req.user._id
-        const data = await Order.find({ userId }, { status })
+        console.log(userId);
+        const data = await Order.find({ userId,status })
         if(data.length == 0){
             return res.status(200).json({
                 status: 200,
