@@ -20,6 +20,12 @@ const checkCancellationTime = (order) => {
         };
     }
 };
+const formatDateTime = (dateTime)=> {
+    const date = new Date(dateTime);
+    const formattedDate = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+    const formattedTime = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+    return `${formattedDate} ${formattedTime}`;
+  }
 //Tạo mới đơn hàng
 export const CreateOrder = async (req, res) => {
     try {
@@ -105,7 +111,7 @@ export const CreateOrder = async (req, res) => {
             </a>
             <p style="color:#2986cc;">Kính gửi Anh/chị: ${data.customerName} </p> 
             <p>Cảm ơn Anh/chị đã mua hàng tại FRESH MART. Chúng tôi cảm thấy may mắn khi được phục vụ Anh/chị. Sau đây là hóa đơn chi tiết về đơn hàng</p>
-            <p style="font-weight:bold">Hóa đơn được tạo lúc: ${data.createdAt.toLocaleTimeString()}</p>
+            <p style="font-weight:bold">Hóa đơn được tạo lúc: ${formatDateTime(data.createdAt)}</p>
             <div style="border:1px solid #ccc;border-radius:10px; padding:10px 20px;width: max-content">
             <p>Mã hóa đơn: ${formatID}</p>
             <p>Khách hàng: ${data.customerName}</p>
