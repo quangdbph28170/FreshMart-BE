@@ -4,7 +4,7 @@ import Product from "../models/products"
 import Shipment from "../models/shipment"
 import { validateCheckout, validatePhoneAndMail } from "../validation/checkout"
 import { transporter } from "../config/mail"
-
+import shortMongoId from "short-mongo-id"
 const checkCancellationTime = (order) => {
     const checkTime = new Date(order.createdAt);
     const currentTime = new Date();
@@ -94,35 +94,54 @@ export const CreateOrder = async (req, res) => {
             })
         }
         await data.populate("products.productId")
+        const formatID = "#" + shortMongoId(data._id)
         await transporter.sendMail({
             from: 'namphpmailer@gmail.com',
             to: req.body.email,
             subject: "Thông báo đặt hàng thành công ✔",
             html: `<div>
-                 <a target="_blank" href="http:localhost:5173"> <img src="https://spacingtech.com/html/tm/freozy/freezy-ltr/image/logo/logo.png" style="width:150px;color:#000"/></a>
-                   <h4 style="color:#2986cc;font-size:20px;border-bottom:1px solid #2986cc">Thông tin chi tiết đơn hàng</h4> 
-                   <p>Mã đơn hàng: ${data._id}</p>
-                   <p>Người đặt hàng: ${data.customerName}</p>
-                   <p>Số điện thoại: ${data.phoneNumber}</p>
-                   <p>Địa chỉ nhận hàng: ${data.shippingAddress}</p>
-                   <p>Thời gian đặt hàng: ${data.createdAt.toLocaleTimeString()}</p>
-                   <div>Chi tiết sản phẩm: 
-                   ${data.products.map(product => `
-                  <div style="display: flex;padding:20px">
-                    <img alt="image" src="${product.productId.images[0].url}" style="width: 90px; height: 90px;margin-right: 15px;border-radius:5px " />
-                    <div>
-                    <p style="font-size: 16px;color: #2a9dcc; margin:0"> ${product.productId.productName} (${product.weight}kg)</p> 
-                   <div>
-                   <p style="font-size: 16px; color: red;"> ${product.price.toLocaleString("vi-VN")}VNĐ </p>
-                   </div>
-                    </div>
-                    </div>
-                `).join('')}
-                   </div>
-                   <p style="color: red;font-weight:bold";>Tổng tiền thanh toán: ${data.totalPayment.toLocaleString("vi-VN")}VNĐ</p>
-                   <p>Thanh toán thanh toán: ${data.pay == false ? "Thanh toán khi nhận hàng" : "Đã thanh toán online"}</p>
-                   <p>Trạng thái đơn hàng: ${data.status}</p>
-                  </div>`,
+            <a target="_blank" href="http:localhost:5173">
+              <img src="https://spacingtech.com/html/tm/freozy/freezy-ltr/image/logo/logo.png" style="width:80px;color:#000"/>
+            </a>
+            <p style="color:#2986cc;">Kính gửi Anh/chị: ${data.customerName} </p> 
+            <p>Cảm ơn Anh/chị đã mua hàng tại FRESH MART. Chúng tôi cảm thấy may mắn khi được phục vụ Anh/chị. Sau đây là hóa đơn chi tiết về đơn hàng</p>
+            <p style="font-weight:bold">Hóa đơn được tạo lúc: ${data.createdAt.toLocaleTimeString()}</p>
+            <div style="border:1px solid #ccc;border-radius:10px; padding:10px 20px;width: max-content">
+            <p>Mã hóa đơn: ${formatID}</p>
+            <p>Khách hàng: ${data.customerName}</p>
+            <p>Điện thoại: ${data.phoneNumber}</p>
+            <p>Địa chỉ nhận hàng: ${data.shippingAddress}</p>
+            
+            <table style="text-align:center">
+            <thead>
+              <tr style="background-color: #CFE2F3;">
+                <th style="padding: 10px;">STT</th>
+                <th style="padding: 10px;">Sản phẩm</th>
+                <th style="padding: 10px;">Cân nặng</th>
+                <th style="padding: 10px;">Đơn giá</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${data.products.map((product, index) => `
+                <tr style="border-bottom:1px solid #ccc">
+                  <td style="padding: 10px;">${index + 1}</td>
+                  <td style="padding: 10px;"><img alt="image" src="${product.productId.images[0].url}" style="width: 90px; height: 90px;border-radius:5px">
+                  <p>${product.productId.productName}</p>
+                  </td>
+                  <td style="padding: 10px;">${product.weight}kg</td>
+                  <td style="padding: 10px;">${product.price.toLocaleString("vi-VN")}VNĐ</td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+            
+            <p style="color: red;font-weight:bold;margin-top:20px">Tổng tiền thanh toán: ${data.totalPayment.toLocaleString("vi-VN")}VNĐ</p>
+            <p>Thanh toán: ${data.pay == false ? "Thanh toán khi nhận hàng" : "Đã thanh toán online"}</p>
+            <p>Trạng thái đơn hàng: ${data.status}</p>
+            </div>
+             <p>Xin cảm ơn quý khách!</p>
+             <p style="color:#2986CC;font-weight:500;">Bộ phận chăm sóc khách hàng FRESH MART: <a href="tel:0565079665">0565 079 665</a></p>
+          </div>`,
         })
         return res.status(201).json({
             body: { data },
@@ -238,7 +257,7 @@ export const FilterOrdersForMember = async (req, res) => {
     try {
         const { status } = req.body
         const userId = req.user._id
-        console.log(userId);
+        // console.log(userId);
         const data = await Order.find({ userId,status })
         if(data.length == 0){
             return res.status(200).json({

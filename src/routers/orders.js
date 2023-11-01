@@ -16,7 +16,7 @@ const router = express.Router();
 
 router.post("/orders", async (req, res, next) => {
 const token = req.cookies?.refreshToken
-console.log(token);
+// console.log(token);
 if(!token){
     req.user = null
     next()
