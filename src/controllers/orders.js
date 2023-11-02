@@ -315,6 +315,12 @@ export const OrderDetail = async (req, res) => {
     try {
         const orderId = req.params.id
         const data = await Order.findById(orderId)
+        if(!data){
+            return res.status(404).json({
+                status:404,
+                message:"Not found order"
+            })
+        }
         const { canCancel } = checkCancellationTime(data);
         return res.status(201).json({
             body: { data },
