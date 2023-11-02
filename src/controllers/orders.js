@@ -126,7 +126,7 @@ export const CreateOrder = async (req, res) => {
                 }
             })
         }
-        await data.populate("products.productId")
+        await data.populate("products._id")
         const formatID = "#" + shortMongoId(data._id)
         await transporter.sendMail({
             from: 'namphpmailer@gmail.com',
@@ -158,8 +158,8 @@ export const CreateOrder = async (req, res) => {
               ${data.products.map((product, index) => `
                 <tr style="border-bottom:1px solid #ccc">
                   <td style="padding: 10px;">${index + 1}</td>
-                  <td style="padding: 10px;"><img alt="image" src="${product.productId.images[0].url}" style="width: 90px; height: 90px;border-radius:5px">
-                  <p>${product.productId.productName}</p>
+                  <td style="padding: 10px;"><img alt="image" src="${product._id.images[0].url}" style="width: 90px; height: 90px;border-radius:5px">
+                  <p>${product._id.productName}</p>
                   </td>
                   <td style="padding: 10px;">${product.weight}kg</td>
                   <td style="padding: 10px;">${product.price.toLocaleString("vi-VN")}VNĐ</td>
@@ -316,7 +316,7 @@ export const FilterOrdersForMember = async (req, res) => {
 export const OrderDetail = async (req, res) => {
     try {
         const orderId = req.params.id
-        const data = await Order.findById(orderId).populate("products.productId")
+        const data = await Order.findById(orderId).populate("products._id")
         const { canCancel } = checkCancellationTime(data);
         return res.status(201).json({
             body: { data },
