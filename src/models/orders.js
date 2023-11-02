@@ -7,11 +7,16 @@ const orderSchema = new mongoose.Schema({
     },
     products: [
         {
-            productId: {
+            _id: {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "Products",
                 required: true
             },
+            name: {
+                type: String,
+                required: true
+            },
+           
             weight: {
                 type: Number,
                 required: true
@@ -20,6 +25,10 @@ const orderSchema = new mongoose.Schema({
             price: {
                 type: Number,
                 required: true
+            },
+            images: {
+                type: String,
+                required:true
             },
         }
     ],
