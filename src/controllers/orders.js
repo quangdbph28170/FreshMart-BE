@@ -30,7 +30,7 @@ const formatDateTime = (dateTime)=> {
 export const CreateOrder = async (req, res) => {
     try {
         const { customerName, phoneNumber, email, shippingAddress, products } = req.body
-        const { error } = validateCheckout.validate({ customerName, phoneNumber, email, shippingAddress }, { abortEarly: false });
+        const { error } = validateCheckout.validate(req.body, { abortEarly: false });
         if (error) {
             return res.status(401).json({
                 status: 401,
@@ -43,16 +43,43 @@ export const CreateOrder = async (req, res) => {
                 message: "Cannot place an order due to empty product"
             })
         }
+       
+       
 
         for (let item of products) {
-            const prd = await Product.findById(item.productId)
+            const prd = await Product.findById(item._id)
+            if(!prd){
+                return res.status(404).json({
+                    status:404,
+                    _id:item._id,
+                    message:"Not found product: " + item.name 
+                })     
+            }
+            
+            if(item.price != prd.shipments[0].price){
+            
+                return res.status(404).json({
+                    status:404,
+                    _id:item._id,
+                    message:"Dữ liệu không trùng khớp (price) sản phẩm: " + item.name
+                })  
+            }
             const currentTotalWeight = prd.shipments.reduce((accumulator, shipment) => accumulator + shipment.weight,0)
             let totalWeight = item.weight
+            if(prd.shipments[0].weight == 0){
+                return res.status(404).json({
+                    status:404,
+                    _id:item._id,
+                    message:"Sản phẩm trong lô hiện tại đã hết hàng!"
+                })
+              
+            }
             if (item.weight > currentTotalWeight) {
                 return res.status(400).json({
                     status: 400,
                     message: "Ko đủ số lượng "
                 })
+                
             }
             if (totalWeight != 0 || currentTotalWeight != 0) {
                 for (let shipment of prd.shipments) {
