@@ -5,6 +5,8 @@ import Shipment from "../models/shipment"
 import { validateCheckout, validatePhoneAndMail } from "../validation/checkout"
 import { transporter } from "../config/mail"
 import shortMongoId from "short-mongo-id"
+import emailVerify from "email-verify"
+
 const checkCancellationTime = (order) => {
     const checkTime = new Date(order.createdAt);
     const currentTime = new Date();
@@ -37,6 +39,15 @@ export const CreateOrder = async (req, res) => {
                 message: error.details.map(error => error.message)
             })
         }
+    //    await  emailVerify.verify(req.body.email, (error, payload) => {
+    //         if (error) {
+    //             console.log(error);
+    //             return res.status(404).json({
+    //                 status: 404,
+    //                 message: "Email not found!"
+    //             })
+    //         }
+    //     })
         if (!products || products.length === 0) {
             return res.status(400).json({
                 status: 400,
@@ -54,14 +65,19 @@ export const CreateOrder = async (req, res) => {
                 })
             }
 
-            if (item.price != prd.shipments[0].price) {
-
+            if (item.price != prd.shipments[0].price){
                 return res.status(404).json({
+                    body:{
+                        data:[{
+                            _id: item._id,
+                            price:prd.shipments[0].price
+                        }]
+                    },
                     status: 404,
-                    _id: item._id,
-                    message: "Dữ liệu không trùng khớp (price) sản phẩm: " + item.name + " giá đúng là " +prd.shipments[0].price +"VNĐ"
+                    message:"Dữ liệu không hợp lệ (price)"
                 })
-            }
+                }        
+            
             const currentTotalWeight = prd.shipments.reduce((accumulator, shipment) => accumulator + shipment.weight, 0)
             let totalWeight = item.weight
             if (prd.shipments[0].weight == 0) {
@@ -124,7 +140,7 @@ export const CreateOrder = async (req, res) => {
                 }
             })
         }
-        
+
         const formatID = "#" + shortMongoId(data._id)
         await transporter.sendMail({
             from: 'namphpmailer@gmail.com',
@@ -174,6 +190,7 @@ export const CreateOrder = async (req, res) => {
              <p style="color:#2986CC;font-weight:500;">Bộ phận chăm sóc khách hàng FRESH MART: <a href="tel:0565079665">0565 079 665</a></p>
           </div>`,
         })
+
         return res.status(201).json({
             body: { data },
             status: 201,
@@ -315,10 +332,10 @@ export const OrderDetail = async (req, res) => {
     try {
         const orderId = req.params.id
         const data = await Order.findById(orderId)
-        if(!data){
+        if (!data) {
             return res.status(404).json({
-                status:404,
-                message:"Not found order"
+                status: 404,
+                message: "Not found order"
             })
         }
         const { canCancel } = checkCancellationTime(data);
