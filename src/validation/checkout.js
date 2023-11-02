@@ -28,7 +28,8 @@ export const validateCheckout = joi.object({
         weight:joi.number().required(),
        totalWeight:joi.number()
     })),
-    totalPayment:joi.number().required()
+    totalPayment:joi.number().required(),
+    note:joi.string().trim()
 })
 
 

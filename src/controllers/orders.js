@@ -20,12 +20,12 @@ const checkCancellationTime = (order) => {
         };
     }
 };
-const formatDateTime = (dateTime)=> {
+const formatDateTime = (dateTime) => {
     const date = new Date(dateTime);
     const formattedDate = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
     const formattedTime = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
     return `${formattedDate} ${formattedTime}`;
-  }
+}
 //Tạo mới đơn hàng
 export const CreateOrder = async (req, res) => {
     try {
@@ -43,43 +43,41 @@ export const CreateOrder = async (req, res) => {
                 message: "Cannot place an order due to empty product"
             })
         }
-       
-       
 
         for (let item of products) {
             const prd = await Product.findById(item._id)
-            if(!prd){
+            if (!prd) {
                 return res.status(404).json({
-                    status:404,
-                    _id:item._id,
-                    message:"Not found product: " + item.name 
-                })     
-            }
-            
-            if(item.price != prd.shipments[0].price){
-            
-                return res.status(404).json({
-                    status:404,
-                    _id:item._id,
-                    message:"Dữ liệu không trùng khớp (price) sản phẩm: " + item.name
-                })  
-            }
-            const currentTotalWeight = prd.shipments.reduce((accumulator, shipment) => accumulator + shipment.weight,0)
-            let totalWeight = item.weight
-            if(prd.shipments[0].weight == 0){
-                return res.status(404).json({
-                    status:404,
-                    _id:item._id,
-                    message:"Sản phẩm trong lô hiện tại đã hết hàng!"
+                    status: 404,
+                    _id: item._id,
+                    message: "Not found product: " + item.name
                 })
-              
+            }
+
+            if (item.price != prd.shipments[0].price) {
+
+                return res.status(404).json({
+                    status: 404,
+                    _id: item._id,
+                    message: "Dữ liệu không trùng khớp (price) sản phẩm: " + item.name + " giá đúng là " +prd.shipments[0].price +"VNĐ"
+                })
+            }
+            const currentTotalWeight = prd.shipments.reduce((accumulator, shipment) => accumulator + shipment.weight, 0)
+            let totalWeight = item.weight
+            if (prd.shipments[0].weight == 0) {
+                return res.status(404).json({
+                    status: 404,
+                    _id: item._id,
+                    message: "Sản phẩm trong lô hiện tại đã hết hàng!"
+                })
+
             }
             if (item.weight > currentTotalWeight) {
                 return res.status(400).json({
                     status: 400,
                     message: "Ko đủ số lượng "
                 })
-                
+
             }
             if (totalWeight != 0 || currentTotalWeight != 0) {
                 for (let shipment of prd.shipments) {
@@ -95,7 +93,7 @@ export const CreateOrder = async (req, res) => {
                         await Shipment.findOneAndUpdate({ _id: shipment.idShipment, "products.idProduct": prd._id }, {
                             $set: {
                                 'products.$.weight': 0
-                                
+
                             }
                         })
                         totalWeight = -(shipment.weight - totalWeight)
@@ -118,11 +116,11 @@ export const CreateOrder = async (req, res) => {
         }
         // console.log(req.user);
         const data = await Order.create(req.body)
-        if(req.user != null){
-            await Order.findByIdAndUpdate(data._id, {userId: req.user._id})
-            await User.findByIdAndUpdate(req.user._id,{
-                $push:{
-                    orders:data._id
+        if (req.user != null) {
+            await Order.findByIdAndUpdate(data._id, { userId: req.user._id })
+            await User.findByIdAndUpdate(req.user._id, {
+                $push: {
+                    orders: data._id
                 }
             })
         }
@@ -201,8 +199,8 @@ export const GetAllOrders = async (req, res) => {
     };
 
     try {
-        const data = await Order.paginate({},options)
-        if ( data.docs.length == 0) {
+        const data = await Order.paginate({}, options)
+        if (data.docs.length == 0) {
             return res.status(200).json({
                 status: 200,
                 message: "There are no orders"
@@ -238,8 +236,8 @@ export const OrdersForGuest = async (req, res) => {
                 message: error.message
             })
         }
-        const data = email ? await Order.find({ email }) : await Order.find({ phoneNumber:phoneNumber })
-        if(data.length == 0){
+        const data = email ? await Order.find({ email }) : await Order.find({ phoneNumber: phoneNumber })
+        if (data.length == 0) {
             return res.status(200).json({
                 status: 200,
                 message: "Order not found"
@@ -247,7 +245,7 @@ export const OrdersForGuest = async (req, res) => {
         }
         return res.status(201).json({
             body: {
-                data  
+                data
             },
             status: 201,
             message: "Get order successfully"
@@ -264,7 +262,7 @@ export const OrdersForMember = async (req, res) => {
     try {
         const userId = req.user._id
         const data = await Order.find({ userId })
-        if(data.length == 0){
+        if (data.length == 0) {
             return res.status(200).json({
                 status: 200,
                 message: "Order not found"
@@ -272,7 +270,7 @@ export const OrdersForMember = async (req, res) => {
         }
         return res.status(201).json({
             body: {
-                data  
+                data
             },
             status: 201,
             message: "Get order successfully"
@@ -291,8 +289,8 @@ export const FilterOrdersForMember = async (req, res) => {
         const { status } = req.body
         const userId = req.user._id
         // console.log(userId);
-        const data = await Order.find({ userId,status })
-        if(data.length == 0){
+        const data = await Order.find({ userId, status })
+        if (data.length == 0) {
             return res.status(200).json({
                 status: 200,
                 message: "Order not found"
@@ -300,7 +298,7 @@ export const FilterOrdersForMember = async (req, res) => {
         }
         return res.status(201).json({
             body: {
-                data  
+                data
             },
             status: 201,
             message: "Get order successfully"
