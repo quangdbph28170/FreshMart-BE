@@ -16,6 +16,10 @@ const orderSchema = new mongoose.Schema({
                 type: String,
                 required: true
             },
+            images: {
+                type: String,
+                required: true
+            },
            
             weight: {
                 type: Number,
