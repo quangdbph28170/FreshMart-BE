@@ -31,7 +31,7 @@ const formatDateTime = (dateTime) => {
 //Tạo mới đơn hàng
 export const CreateOrder = async (req, res) => {
     try {
-        const {  products } = req.body
+        const { products } = req.body
         const { error } = validateCheckout.validate(req.body, { abortEarly: false });
         if (error) {
             return res.status(401).json({
@@ -46,34 +46,49 @@ export const CreateOrder = async (req, res) => {
                 message: "Cannot place an order due to empty product"
             })
         }
+
         const err = []
         for (let item of products) {
             const prd = await Product.findById(item._id)
             if (!prd) {
                 err.push({
                     _id: item._id,
-                    message: "Not found product: " + item.name
                 })
-            }else{
-                if (item.price != prd.shipments[0].price) {
-                err.push({
-                    _id: item._id,
-                    price: prd.shipments[0].price,
-                    message: "Error price"
-                })
+
             }
-            }
-            
         }
         if (err.length > 0) {
             return res.status(404).json({
                 body: {
                     data: err,
                 },
-                message: "Failed to create order",
+                message: "Product not exist",
                 status: 404
             })
         }
+        const priceErr = []
+        for (let item of products) {
+
+            const prd = await Product.findById(item._id)
+            if (item.price != prd.shipments[0].price) {
+                priceErr.push({
+                    _id: item._id,
+                    price: prd.shipments[0].price,
+                   
+                })
+            }
+        }
+        if (priceErr.length > 0) {
+            return res.status(404).json({
+                body: {
+                    data: priceErr,
+                },
+                message: "Price is not valid",
+                status: 404
+            })
+        }
+
+
 
         for (let item of products) {
             const prd = await Product.findById(item._id)
