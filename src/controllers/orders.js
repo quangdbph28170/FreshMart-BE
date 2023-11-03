@@ -31,7 +31,7 @@ const formatDateTime = (dateTime) => {
 //Tạo mới đơn hàng
 export const CreateOrder = async (req, res) => {
     try {
-        const { customerName, phoneNumber, email, shippingAddress, products } = req.body
+        const {  products } = req.body
         const { error } = validateCheckout.validate(req.body, { abortEarly: false });
         if (error) {
             return res.status(401).json({
@@ -39,45 +39,44 @@ export const CreateOrder = async (req, res) => {
                 message: error.details.map(error => error.message)
             })
         }
-    //    await  emailVerify.verify(req.body.email, (error, payload) => {
-    //         if (error) {
-    //             console.log(error);
-    //             return res.status(404).json({
-    //                 status: 404,
-    //                 message: "Email not found!"
-    //             })
-    //         }
-    //     })
+
         if (!products || products.length === 0) {
             return res.status(400).json({
                 status: 400,
                 message: "Cannot place an order due to empty product"
             })
         }
-
+        const err = []
         for (let item of products) {
             const prd = await Product.findById(item._id)
             if (!prd) {
-                return res.status(404).json({
-                    status: 404,
+                err.push({
                     _id: item._id,
                     message: "Not found product: " + item.name
                 })
-            }
-
-            if (item.price != prd.shipments[0].price){
-                return res.status(404).json({
-                    body:{
-                        data:[{
-                            _id: item._id,
-                            price:prd.shipments[0].price
-                        }]
-                    },
-                    status: 404,
-                    message:"Dữ liệu không hợp lệ (price)"
+            }else{
+                if (item.price != prd.shipments[0].price) {
+                err.push({
+                    _id: item._id,
+                    price: prd.shipments[0].price,
+                    message: "Error price"
                 })
-                }        
+            }
+            }
             
+        }
+        if (err.length > 0) {
+            return res.status(404).json({
+                body: {
+                    data: err,
+                },
+                message: "Failed to create order",
+                status: 404
+            })
+        }
+
+        for (let item of products) {
+            const prd = await Product.findById(item._id)
             const currentTotalWeight = prd.shipments.reduce((accumulator, shipment) => accumulator + shipment.weight, 0)
             let totalWeight = item.weight
             if (prd.shipments[0].weight == 0) {
