@@ -1,6 +1,13 @@
 import mongoose from "mongoose"
 import mongoosePaginate from "mongoose-paginate-v2"
+import shortMongoId from "short-mongo-id"
 const orderSchema = new mongoose.Schema({
+    invoiceId:{
+        type:String,
+        default:function(){
+            return shortMongoId(this._id)
+        }
+    },
     userId: {
         type: mongoose.Schema.Types.Mixed,
         default: null
@@ -25,7 +32,6 @@ const orderSchema = new mongoose.Schema({
                 type: Number,
                 required: true
             },
-           
             price: {
                 type: Number,
                 required: true
@@ -68,6 +74,15 @@ const orderSchema = new mongoose.Schema({
         type: String,
         enum: ["chờ xác nhận", "đang giao hàng", "đã hoàn thành", "đã hủy"],
         default: "chờ xác nhận"
+    },
+    orderDate:{
+        type:String,
+        default:function(){
+            const currentDate = new Date();
+            const formattedDate = currentDate.toISOString().split("T")[0];
+            return formattedDate;
+
+        }
     }
 
 }, { versionKey: false, timestamps: true })

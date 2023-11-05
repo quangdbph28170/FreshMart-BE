@@ -4,8 +4,6 @@ import Product from "../models/products"
 import Shipment from "../models/shipment"
 import { validateCheckout, validatePhoneAndMail } from "../validation/checkout"
 import { transporter } from "../config/mail"
-import shortMongoId from "short-mongo-id"
-import emailVerify from "email-verify"
 
 const checkCancellationTime = (order) => {
     const checkTime = new Date(order.createdAt);
@@ -88,8 +86,6 @@ export const CreateOrder = async (req, res) => {
             })
         }
 
-
-
         for (let item of products) {
             const prd = await Product.findById(item._id)
             const currentTotalWeight = prd.shipments.reduce((accumulator, shipment) => accumulator + shipment.weight, 0)
@@ -100,14 +96,12 @@ export const CreateOrder = async (req, res) => {
                     _id: item._id,
                     message: "Sản phẩm trong lô hiện tại đã hết hàng!"
                 })
-
             }
             if (item.weight > currentTotalWeight) {
                 return res.status(400).json({
                     status: 400,
                     message: "Ko đủ số lượng "
                 })
-
             }
             if (totalWeight != 0 || currentTotalWeight != 0) {
                 for (let shipment of prd.shipments) {
@@ -115,9 +109,9 @@ export const CreateOrder = async (req, res) => {
                         break;
                     }
                     if (shipment.weight - totalWeight <= 0) {
-                        await Product.findOneAndUpdate({ _id: prd._id, "shipments.idShipment": shipment.idShipment }, {
-                            $set: {
-                                'shipments.$.weight': 0
+                        await Product.findOneAndUpdate({ _id: prd._id}, {
+                            $pull: {
+                                'shipments.idShipment': shipment.idShipment
                             }
                         })
                         await Shipment.findOneAndUpdate({ _id: shipment.idShipment, "products.idProduct": prd._id }, {
@@ -154,8 +148,6 @@ export const CreateOrder = async (req, res) => {
                 }
             })
         }
-
-        const formatID = "#" + shortMongoId(data._id)
         await transporter.sendMail({
             from: 'namphpmailer@gmail.com',
             to: req.body.email,
@@ -168,11 +160,10 @@ export const CreateOrder = async (req, res) => {
             <p>Cảm ơn Anh/chị đã mua hàng tại FRESH MART. Chúng tôi cảm thấy may mắn khi được phục vụ Anh/chị. Sau đây là hóa đơn chi tiết về đơn hàng</p>
             <p style="font-weight:bold">Hóa đơn được tạo lúc: ${formatDateTime(data.createdAt)}</p>
             <div style="border:1px solid #ccc;border-radius:10px; padding:10px 20px;width: max-content">
-            <p>Mã hóa đơn: ${formatID}</p>
+            <p>Mã hóa đơn: ${data.invoiceId}</p>
             <p>Khách hàng: ${data.customerName}</p>
             <p>Điện thoại: ${data.phoneNumber}</p>
             <p>Địa chỉ nhận hàng: ${data.shippingAddress}</p>
-            
             <table style="text-align:center">
             <thead>
               <tr style="background-color: #CFE2F3;">
@@ -195,7 +186,6 @@ export const CreateOrder = async (req, res) => {
               `).join('')}
             </tbody>
           </table>
-            
             <p style="color: red;font-weight:bold;margin-top:20px">Tổng tiền thanh toán: ${data.totalPayment.toLocaleString("vi-VN")}VNĐ</p>
             <p>Thanh toán: ${data.pay == false ? "Thanh toán khi nhận hàng" : "Đã thanh toán online"}</p>
             <p>Trạng thái đơn hàng: ${data.status}</p>
@@ -204,7 +194,6 @@ export const CreateOrder = async (req, res) => {
              <p style="color:#2986CC;font-weight:500;">Bộ phận chăm sóc khách hàng FRESH MART: <a href="tel:0565079665">0565 079 665</a></p>
           </div>`,
         })
-
         return res.status(201).json({
             body: { data },
             status: 201,
@@ -256,43 +245,21 @@ export const GetAllOrders = async (req, res) => {
         })
     }
 }
-// Khách vãng lai(ko đăng nhập) tra cứu đơn hàng qua phone or email
-export const OrdersForGuest = async (req, res) => {
-    try {
-        const { email, phoneNumber } = req.body
-        const { error } = validatePhoneAndMail.validate(req.body)
-        if (error) {
-            return res.status(401).json({
-                status: 401,
-                message: error.message
-            })
-        }
-        const data = email ? await Order.find({ email }) : await Order.find({ phoneNumber: phoneNumber })
-        if (data.length == 0) {
-            return res.status(200).json({
-                status: 200,
-                message: "Order not found"
-            })
-        }
-        return res.status(201).json({
-            body: {
-                data
-            },
-            status: 201,
-            message: "Get order successfully"
-        })
-    } catch (error) {
-        return res.status(500).json({
-            status: 500,
-            message: error.message
-        })
-    }
-}
+
 //Khách hàng (đã đăng nhập) tra cứu đơn hàng
 export const OrdersForMember = async (req, res) => {
     try {
         const userId = req.user._id
-        const data = await Order.find({ userId })
+        const { invoiceId, orderDate } = req.query;
+        console.log(req.query);
+        let query = { userId };
+        if (invoiceId) {
+          query.invoiceId = invoiceId;
+        }
+        if (orderDate) {
+          query.orderDate = orderDate;
+        }
+        const data = await Order.find(query);
         if (data.length == 0) {
             return res.status(200).json({
                 status: 200,
@@ -427,7 +394,7 @@ export const UpdateOrder = async (req, res) => {
                 message: "Invalid status update. Status can only be updated in a sequential order."
             });
         }
-        const data = await Order.findByIdAndUpdate(orderId, req.req.body, { new: true })
+        const data = await Order.findByIdAndUpdate(orderId, req.body, { new: true })
         return res.status(201).json({
             body: { data },
             status: 201,
