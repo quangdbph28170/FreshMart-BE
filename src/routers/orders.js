@@ -4,10 +4,9 @@ import User from "../models/user"
 import {
     UpdateOrder, FilterOrdersForMember,
     GetAllOrders, CanceledOrder, CreateOrder,
-    OrderDetail, OrdersForGuest, OrdersForMember,
+    OrderDetail, OrdersForMember,
 } from "../controllers/orders";
 import authentication from "../middleware/authentication";
-import user from "../models/user";
 import jwt  from "jsonwebtoken";
 import { authorization } from "../middleware/authorization";
 
@@ -37,18 +36,16 @@ jwt.verify(token, process.env.SERECT_REFRESHTOKEN_KEY, async (err, payload) => {
     }
        const user = await User.findById(payload._id);
        req.user = user;
-       
        next();
 }
 )
 
 }, CreateOrder);
 router.get("/orders", GetAllOrders);
-router.get("/orders-guest", OrdersForGuest);
 router.get("/orders-member",authentication, OrdersForMember);
 router.get("/orders-member-filter",authentication, FilterOrdersForMember);
 router.get("/orders/:id", OrderDetail);
 router.put("/orders/:id", authentication,CanceledOrder);
-router.patch("/orders/:id",authorization, UpdateOrder);
+router.patch("/orders/:id",authentication,authorization, UpdateOrder);
 
 export default router;

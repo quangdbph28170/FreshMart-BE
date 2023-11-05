@@ -6,12 +6,6 @@ const authentication = async (req, res, next) => {
    try {
     
       const rfToken = req.cookies.refreshToken;
-    //   if (!req.headers.authorization) {
-    //     return res.status(401).json({
-    //        message: 'Please log in !',
-    //     });
-    //  }
-      // console.log(token);
       jwt.verify(rfToken, process.env.SERECT_REFRESHTOKEN_KEY, async (err, payload) => {
          if (err) {
             if (err.name == 'JsonWebTokenError') {
