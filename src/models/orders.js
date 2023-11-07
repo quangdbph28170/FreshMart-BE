@@ -1,6 +1,6 @@
 import mongoose from "mongoose"
 import mongoosePaginate from "mongoose-paginate-v2"
-import shortMongoId from "short-mongo-id"
+import shortMongoId from "short-mongo-id";
 const orderSchema = new mongoose.Schema({
     invoiceId:{
         type:String,

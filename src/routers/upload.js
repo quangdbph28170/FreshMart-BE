@@ -16,7 +16,7 @@ const upload = multer({
   storage: storage,
 });
 
-router.post("/images", upload.array("images", 3), uploadImage);
+router.post("/images", upload.array("images", 4), uploadImage);
 router.delete("/images/:publicId", deleteImage);
 // còn phần update ảnh từ từ đã
 export default router;
