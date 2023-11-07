@@ -5,7 +5,7 @@ dotenv.config()
 
 export const authorization = async (req, res, next) => {
     try {
-        const token = req.cookies?.jwt
+        const token = req.cookies?.refreshToken
         const { _id } = jwt.verify(token, process.env.SERECT_REFRESHTOKEN_KEY)
         const user = await User.findById(_id)
         if(!user) {
