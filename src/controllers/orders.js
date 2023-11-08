@@ -5,6 +5,7 @@ import Shipment from "../models/shipment";
 import { validateCheckout, validatePhoneAndMail } from "../validation/checkout";
 import { transporter } from "../config/mail";
 import shortMongoId from "short-mongo-id";
+import { handleTransaction } from "./momo-pay";
 const checkCancellationTime = (order) => {
   const checkTime = new Date(order.createdAt);
   const currentTime = new Date();
@@ -31,7 +32,7 @@ const formatDateTime = (dateTime) => {
 //Tạo mới đơn hàng
 export const CreateOrder = async (req, res) => {
   try {
-    const { products } = req.body;
+    const { products, paymentMethod } = req.body;
     const { error } = validateCheckout.validate(req.body, {
       abortEarly: false,
     });
@@ -162,7 +163,31 @@ export const CreateOrder = async (req, res) => {
         },
       });
     }
-
+    if (paymentMethod === "momo") {
+      let dataFromMomo = {};
+      handleTransaction({
+        amount: data.totalPayment,
+        orderId: data._id,
+        orderInfo: data.customerName,
+        extraData: `email=${req.body.email}`,
+      })
+        .then((data) => {
+          dataFromMomo = data;
+          return res.status(201).json({
+            body: { data: dataFromMomo },
+            status: 201,
+            message: "Do transaction success",
+          });
+        })
+        .catch((error) => {
+          dataFromMomo = error;
+          return res.status(400).json({
+            body: { data: dataFromMomo },
+            status: 400,
+            message: "Do transaction fail",
+          });
+        });
+    }
     const formatID = "#" + shortMongoId(data._id);
     await transporter.sendMail({
       from: "namphpmailer@gmail.com",
@@ -291,11 +316,13 @@ export const GetAllOrders = async (req, res) => {
 export const OrdersForGuest = async (req, res) => {
   try {
     const { invoiceId } = req.body;
+    console.log(invoiceId);
     const data = await Order.find({ invoiceId: invoiceId });
     if (data.length == 0) {
       return res.status(200).json({
         status: 200,
         message: "Order not found",
+        data,
       });
     }
     return res.status(201).json({
