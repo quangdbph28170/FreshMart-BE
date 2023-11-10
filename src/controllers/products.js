@@ -149,10 +149,6 @@ export const createProduct = async (req, res) => {
     await Categories.findByIdAndUpdate(product.categoryId, {
       $push: { products: product._id },
     });
-    await Origin.findByIdAndUpdate(product.originId, {
-      $push: { products: product._id },
-    });
-
 
     return res.status(201).json({
       body: {
