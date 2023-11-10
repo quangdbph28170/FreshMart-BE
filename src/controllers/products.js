@@ -1,5 +1,6 @@
 import Products from "../models/products";
 import Categories from "../models/categories";
+import Origin from "../models/origin";
 import { validateProduct } from "../validation/products";
 import mongoose from "mongoose";
 export const getProducts = async (req, res) => {
@@ -9,6 +10,11 @@ export const getProducts = async (req, res) => {
     _limit = 10,
     _sort = "createdAt",
     _q = "",
+    _categoryId = "",
+    _originId = "",
+    _minPrice = "",
+    _maxPrice = "",
+
   } = req.query;
   const options = {
     page: _page,
@@ -18,8 +24,29 @@ export const getProducts = async (req, res) => {
     },
     populate: "categoryId",
   };
+  const query = {};
+
+  if (_q) {
+    query.productName = { $regex: _q, $options: "i" };
+  }
+
+  if (_categoryId) {
+    query.categoryId = _categoryId;
+  }
+
+  if (_minPrice) {
+    query["shipments.price"] = { $gte: _minPrice };
+  }
+  if (_maxPrice) {
+    query["shipments.price"] = { $lte: _maxPrice };
+  }
+
+  if (_originId) {
+    query.originId = _originId;
+  }
+
   try {
-    const products = await Products.paginate({}, options);
+    const products = await Products.paginate(query, options);
     return res.status(201).json({
       body: {
         data: products.docs,
@@ -68,19 +95,19 @@ export const getRelatedProducts = async (req, res) => {
     } else {
       return res.status(200).json({
         body: {
-          data:products
+          data: products
         },
         status: 200,
         message: 'Product found',
       })
     }
 
-} catch (error) {
-  return res.status(500).json({
-    status: 500,
-    message: error.message,
-  });
-}
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
 }
 export const getOneProduct = async (req, res) => {
   try {
@@ -95,8 +122,8 @@ export const getOneProduct = async (req, res) => {
     }
     await product.populate("categoryId.productId");
     return res.status(201).json({
-      body:{
-        data:product
+      body: {
+        data: product
       },
       status: 201,
       message: "Get product successfully",
@@ -122,10 +149,14 @@ export const createProduct = async (req, res) => {
     await Categories.findByIdAndUpdate(product.categoryId, {
       $push: { products: product._id },
     });
+    await Origin.findByIdAndUpdate(product.originId, {
+      $push: { products: product._id },
+    });
+
 
     return res.status(201).json({
-      body:{
-        data:product
+      body: {
+        data: product
       },
       status: 201,
       message: "Create product successfully",
@@ -167,7 +198,7 @@ export const updateProduct = async (req, res) => {
 
     return res.status(201).json({
       body: {
-        data:product
+        data: product
       },
       status: 201,
       message: "Update product successfully",
