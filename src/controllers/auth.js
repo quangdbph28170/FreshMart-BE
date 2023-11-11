@@ -67,12 +67,12 @@ export const signUp = async (req, res, next) => {
       res.cookie('accessToken', accessToken, {
          expires: new Date(Date.now() + 5 * 60 * 1000),
          httpOnly: true,
-         secure: true,
+         domain: '.localhost'
       });
       res.cookie('refreshToken', refreshToken, {
          expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
          httpOnly: true,
-         secure: true,
+         domain: '.localhost'
       });
 
       user.password = undefined;
@@ -135,12 +135,12 @@ export const signIn = async (req, res, next) => {
       res.cookie('accessToken', accessToken, {
          expires: new Date(Date.now() + 5 * 60 * 1000),
          httpOnly: true,
-         secure: true,
+         domain: '.localhost'
       });
       res.cookie('refreshToken', refreshToken, {
          expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
          httpOnly: true,
-         secure: true,
+         domain: '.localhost'
       });
 
       user.password = undefined;
@@ -162,12 +162,12 @@ export const redirect = (req, res) => {
    res.cookie('accessToken', req.user?.accessToken, {
       expires: new Date(Date.now() + 60 * 1000),
       httpOnly: true,
-      secure: true,
+      domain: '.localhost'
    });
    res.cookie('refreshToken', req.user?.refreshToken, {
       expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
       httpOnly: true,
-      secure: true,
+      domain: '.localhost'
    });
    // Successful authentication, redirect success.
    res.redirect('http://localhost:5173/');
@@ -197,6 +197,11 @@ export const refresh = async (req, res, next) => {
             }
             const accessToken = jwt.sign({ _id: user._id }, process.env.SERECT_ACCESSTOKEN_KEY, {
                expiresIn: '1m',
+            });
+            res.cookie('accessToken', accessToken, {
+               expires: new Date(Date.now() + 5 * 60 * 1000),
+               httpOnly: true,
+               domain: '.localhost'
             });
             req[RESPONSE_OBJ] = {
                accessToken,
