@@ -478,7 +478,7 @@ export const UpdateOrder = async (req, res) => {
     const validStatuses = [
       "chờ xác nhận",
       "đang giao hàng",
-      "đã hoàn thành",
+      "giao hàng thành công",
       "đã hủy",
     ];
     if (!validStatuses.includes(status)) {
@@ -496,7 +496,7 @@ export const UpdateOrder = async (req, res) => {
           "Invalid status update. Status can only be updated in a sequential order.",
       });
     }
-    const data = await Order.findByIdAndUpdate(orderId, req.req.body, {
+    const data = await Order.findByIdAndUpdate(orderId, req.body, {
       new: true,
     });
     return res.status(201).json({
