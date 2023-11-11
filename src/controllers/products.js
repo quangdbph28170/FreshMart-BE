@@ -41,12 +41,21 @@ export const getProducts = async (req, res) => {
     query["shipments.price"] = { $lte: _maxPrice };
   }
 
+ 
   if (_originId) {
-    query.originId = _originId;
+    const originIds = _originId.split(',').map(id => id.trim());
+    query.originId = { $in: originIds };
   }
 
   try {
     const products = await Products.paginate(query, options);
+    let maxPrice =0
+    for(let item of products.docs) {
+      for(let index of item.shipments){
+        maxPrice = Math.max(index.price)
+      }
+    }
+  
     return res.status(201).json({
       body: {
         data: products.docs,
@@ -55,6 +64,7 @@ export const getProducts = async (req, res) => {
           totalPages: products.totalPages,
           totalItems: products.totalDocs,
         },
+        maxPrice
       },
       status: 201,
       message: "Get products successfully",
