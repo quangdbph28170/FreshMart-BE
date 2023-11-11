@@ -11,8 +11,7 @@ export const validateShipment = joi.object({
         date: joi.string().required(),
         weight: joi.number().required(),
         price: joi.number().required(),
-        originPrice: joi.number().required(),
       })
     )
-    .default([]),
+    .required(),
 });

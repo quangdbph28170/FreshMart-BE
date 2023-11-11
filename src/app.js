@@ -12,11 +12,51 @@ import originRouter from "./routers/origin";
 import orderRouter from "./routers/orders";
 import authRouter from './routers/auth';
 import userRouter from './routers/user';
+import { createServer } from "http";
+import { Server } from "socket.io";
+import cron from 'node-cron'
+import product from "./models/products";
+
 const app = express();
+const httpServer = createServer(app);
+
 dotenv.config();
 
 const PORT = process.env.PORT;
 const MONGO_URL = process.env.MONGODB_LOCAL;
+
+const io = new Server(httpServer, { cors: '*' });
+
+io.on("connection", (socket) => {
+  console.log(socket.id);
+  cron.schedule('1-59 * * * *', async () => {
+    const products = await product.find();
+    const response = []
+    for (const product of products) {
+      for (const shipment of product.shipments) {
+        // Chuyển đổi chuỗi ngày từ MongoDB thành đối tượng Date
+        const targetDate = new Date(shipment.date);
+
+        // Lấy ngày hiện tại
+        const currentDate = new Date();
+
+        // Số mili giây trong 7 ngày
+        const sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000;
+
+        // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 7 ngày không
+        const isWithinSevenDays = targetDate - currentDate < sevenDaysInMillis;
+        
+        if (isWithinSevenDays) {
+          response.push("Sản phẩm có mã '" + product._id + "' trong lô hàng mã '" + shipment.idShipment + "' sắp hết hạn")
+        }
+      }
+    }
+
+    if (response.length > 0) {
+      io.emit('alert', response)
+    }
+  })
+});
 
 app.use(express.json());
 app.use(cors({ origin: true, credentials: true }));
@@ -36,6 +76,6 @@ mongoose
   .connect(MONGO_URL)
   .then(() => console.log("connected to db"))
   .catch((err) => console.log(`error in connect db : ${err}`));
-app.listen(PORT, () => {
+httpServer.listen(PORT, () => {
   console.log(`listening success ${PORT}`);
 });
