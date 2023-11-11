@@ -174,10 +174,10 @@ export const CreateOrder = async (req, res) => {
                     }
                     if (shipment.weight - totalWeight <= 0) {
                         await Product.findOneAndUpdate(
-                            { _id: prd._id, "shipments.idShipment": shipment.idShipment },
+                            { _id: prd._id },
                             {
-                                $set: {
-                                    "shipments.$.weight": 0,
+                                $pull: {
+                                    "shipments.idShipment": shipment.idShipment,
                                 },
                             }
                         );
