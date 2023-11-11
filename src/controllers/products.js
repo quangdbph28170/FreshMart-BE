@@ -34,28 +34,29 @@ export const getProducts = async (req, res) => {
     query.categoryId = _categoryId;
   }
 
-  if (_minPrice) {
+  if (_minPrice && _maxPrice) {
+    query["shipments.price"] = { $gte: _minPrice, $lte: _maxPrice };
+  } else if (_minPrice) {
     query["shipments.price"] = { $gte: _minPrice };
-  }
-  if (_maxPrice) {
+  } else if (_maxPrice) {
     query["shipments.price"] = { $lte: _maxPrice };
   }
 
- 
   if (_originId) {
-    const originIds = _originId.split(',').map(id => id.trim());
-    query.originId = { $in: originIds };
+    const originIds = _originId.split('%').map(id => id.trim());
+    const regexOriginIds = originIds.map(id => new RegExp(id, 'i'));
+    query.originId = { $in: regexOriginIds };
   }
 
   try {
     const products = await Products.paginate(query, options);
-    let maxPrice =0
-    for(let item of products.docs) {
-      for(let index of item.shipments){
+    let maxPrice = 0
+    for (let item of products.docs) {
+      for (let index of item.shipments) {
         maxPrice = Math.max(index.price)
       }
     }
-  
+
     return res.status(201).json({
       body: {
         data: products.docs,
