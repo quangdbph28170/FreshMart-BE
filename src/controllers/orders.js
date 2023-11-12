@@ -4,6 +4,7 @@ import Product from "../models/products";
 import Shipment from "../models/shipment";
 import { validateCheckout } from "../validation/checkout";
 import { transporter } from "../config/mail";
+import { statusOrder } from "../config/constants";
 
 const checkCancellationTime = (order) => {
     const checkTime = new Date(order.createdAt);
@@ -89,6 +90,8 @@ const sendMailer = async (email, data) => {
                 </div>`,
     });
 }
+
+
 //Tạo mới đơn hàng
 export const CreateOrder = async (req, res) => {
     try {
@@ -154,7 +157,7 @@ export const CreateOrder = async (req, res) => {
                 (accumulator, shipment) => accumulator + shipment.weight, 0
             );
             let totalWeight = item.weight;
-            if (prd.shipments[0].weight == 0) {
+            if (prd.shipments.length == 0) {
                 return res.status(404).json({
                     status: 404,
                     _id: item._id,
@@ -242,14 +245,14 @@ export const GetAllOrders = async (req, res) => {
     const {
         _page = 1,
         _order = "asc",
-        _limit = 10,
+
         _sort = "createdAt",
         _q = "",
     } = req.query;
 
     const options = {
         page: _page,
-        limit: _limit,
+
         sort: {
             [_sort]: _order === "desc" ? -1 : 1,
         },
@@ -311,16 +314,12 @@ export const OrdersForGuest = async (req, res) => {
 export const OrdersForMember = async (req, res) => {
     try {
         const userId = req.user._id;
-        const { invoiceId, orderDate } = req.query;
-        console.log(req.query);
-        let query = { userId };
-        if (invoiceId) {
-            query.invoiceId = invoiceId;
-        }
-        if (orderDate) {
-            query.orderDate = orderDate;
-        }
-        const data = await Order.find(query);
+        // const { invoiceId } = req.query;
+        // let query = { userId };
+        // if (invoiceId) {
+        //     query.invoiceId = invoiceId;
+        // }
+        const data = await Order.find({ userId });
         if (data.length == 0) {
             return res.status(200).json({
                 status: 200,
@@ -341,20 +340,84 @@ export const OrdersForMember = async (req, res) => {
         });
     }
 };
+// Hàm xử lý lọc đơn hàng theo ngày gần nhất
+export const filterOrderDay = async (data, day, res) => {
+    const today = new Date();
+    const order = [];
+    const dateNow = []
+    for (let i = 0; i < day; i++) {
+        const currentDate = new Date(today);
+        currentDate.setDate(today.getDate() - i);
+        const day = ("0" + currentDate.getDate()).slice(-2);
+        const month = ("0" + (currentDate.getMonth() + 1)).slice(-2);
+        const year = currentDate.getFullYear();
+        const formattedDate = `${day}-${month}-${year}`;
+        dateNow.push(formattedDate);
+    }
+    for (let item of data) {
+        order.push(item.orderDate);
+    }
+    const filterData = [];
+    for (let item of order) {
+        if (dateNow.includes(item)) {
+            const filteredItems = data.filter(index => index.orderDate === item);
+            console.log("filter", filteredItems);
+            // for(let i of filteredItems){
+            //     filterData.push(i);
+            // }
+            filterData.push(...filteredItems);
+        }
+    }
+    if (filterData.length == 0) {
+        return res.json({
+            message: "Order not found",
+        })
+    }
+    return res.status(201).json({
+        body: { data: filterData },
+        message: "Filter order successfully",
+        status: 201
+    })
 
-//Khách hàng(đã đăng nhập) lọc đơn hàng theo trạng thái
+    //  console.log(filterData);
+}
+
+//Khách hàng(đã đăng nhập) lọc 
 export const FilterOrdersForMember = async (req, res) => {
     try {
-        const { status } = req.body;
         const userId = req.user._id;
-        // console.log(userId);
-        const data = await Order.find({ userId, status });
+        const { day, status, invoiceId } = req.query
+        // console.log(req.query);
+        let data = await Order.find({ userId })
+
+        //lọc theo trạng thái đơn hàng
+        if (status) {
+            if (!statusOrder.includes(status)) {
+                return res.status(402).json({
+                    status: 402,
+                    message: "Invalid status",
+                    statusOrder
+                });
+            }
+            data = await Order.find({ userId, status })
+        }
+        //lọc theo ngày gần nhất
+        if (day) {
+            filterOrderDay(data, day, res)
+            return
+        }
+        //lọc theo mã đơn hàng
+        if (invoiceId) {
+            data = await Order.find({ invoiceId })
+        }
+        //Ko có đơn hàng nào
         if (data.length == 0) {
             return res.status(200).json({
                 status: 200,
                 message: "Order not found",
             });
         }
+
         return res.status(201).json({
             body: {
                 data,
@@ -443,28 +506,25 @@ export const UpdateOrder = async (req, res) => {
                 message: "Order not found",
             });
         }
-        const validStatuses = [
-            "chờ xác nhận",
-            "đang giao hàng",
-            "đã hoàn thành",
-            "đã hủy",
-        ];
-        if (!validStatuses.includes(status)) {
+
+        if (!statusOrder.includes(status)) {
             return res.status(402).json({
                 status: 402,
-                message: "Invalid status update",
+                message: "Invalid status",
+                statusOrder
             });
         }
-        const currentStatusIndex = validStatuses.indexOf(currentOrder.status);
-        const newStatusIndex = validStatuses.indexOf(status);
-        if (newStatusIndex < currentStatusIndex) {
+        const currentStatusIndex = statusOrder.indexOf(currentOrder.status);
+        const newStatusIndex = statusOrder.indexOf(status);
+        if (newStatusIndex != currentStatusIndex + 1) {
             return res.status(401).json({
                 status: 400,
                 message:
-                    "Invalid status update. Status can only be updated in a sequential order.",
+                    "Trạng thái đơn hàng update phải theo tuần tự!",
+                statusOrder
             });
         }
-        const data = await Order.findByIdAndUpdate(orderId, req.req.body, {
+        const data = await Order.findByIdAndUpdate(orderId, req.body, {
             new: true,
         });
         return res.status(201).json({

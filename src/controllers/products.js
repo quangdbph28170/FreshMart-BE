@@ -44,8 +44,7 @@ export const getProducts = async (req, res) => {
 
   if (_originId) {
     const originIds = _originId.split('%').map(id => id.trim());
-    const regexOriginIds = originIds.map(id => new RegExp(id, 'i'));
-    query.originId = { $in: regexOriginIds };
+    query.originId = { $in: originIds };
   }
 
   try {
