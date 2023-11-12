@@ -7,14 +7,15 @@ import categoryRouter from "./routers/categories";
 import productRouter from "./routers/products";
 import uploadRouter from "./routers/upload";
 import shipmentRouter from "./routers/shipment";
-import mailRouter from "./routers/mail"
+import mailRouter from "./routers/mail";
 import originRouter from "./routers/origin";
 import orderRouter from "./routers/orders";
-import authRouter from './routers/auth';
-import userRouter from './routers/user';
+import authRouter from "./routers/auth";
+import userRouter from "./routers/user";
+import momoRouter from "./routers/momo-pay";
 import { createServer } from "http";
 import { Server } from "socket.io";
-import cron from 'node-cron'
+import cron from "node-cron";
 import product from "./models/products";
 
 const app = express();
@@ -25,13 +26,13 @@ dotenv.config();
 const PORT = process.env.PORT;
 const MONGO_URL = process.env.MONGODB_LOCAL;
 
-const io = new Server(httpServer, { cors: '*' });
+const io = new Server(httpServer, { cors: "*" });
 
 io.on("connection", (socket) => {
   console.log(socket.id);
-  cron.schedule('1-59 * * * *', async () => {
+  cron.schedule("1-59 * * * *", async () => {
     const products = await product.find();
-    const response = []
+    const response = [];
     for (const product of products) {
       for (const shipment of product.shipments) {
         // Chuyển đổi chuỗi ngày từ MongoDB thành đối tượng Date
@@ -45,17 +46,23 @@ io.on("connection", (socket) => {
 
         // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 7 ngày không
         const isWithinSevenDays = targetDate - currentDate < sevenDaysInMillis;
-        
+
         if (isWithinSevenDays) {
-          response.push("Sản phẩm có mã '" + product._id + "' trong lô hàng mã '" + shipment.idShipment + "' sắp hết hạn")
+          response.push(
+            "Sản phẩm có mã '" +
+              product._id +
+              "' trong lô hàng mã '" +
+              shipment.idShipment +
+              "' sắp hết hạn"
+          );
         }
       }
     }
 
     if (response.length > 0) {
-      io.emit('alert', response)
+      io.emit("alert", response);
     }
-  })
+  });
 });
 
 app.use(express.json());
@@ -70,8 +77,9 @@ app.use("/api", shipmentRouter);
 app.use("/api", mailRouter);
 app.use("/api", originRouter);
 app.use("/api", orderRouter);
-app.use('/api', authRouter);
-app.use('/api', userRouter);
+app.use("/api", authRouter);
+app.use("/api", userRouter);
+app.use("/api", momoRouter);
 mongoose
   .connect(MONGO_URL)
   .then(() => console.log("connected to db"))
