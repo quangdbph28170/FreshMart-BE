@@ -7,7 +7,7 @@ export const getProducts = async (req, res) => {
   const {
     _page = 1,
     _order = "asc",
-    _limit = 10,
+    _limit = 9999,
     _sort = "createdAt",
     _q = "",
     _categoryId = "",
