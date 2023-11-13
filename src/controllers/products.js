@@ -201,7 +201,7 @@ export const updateProduct = async (req, res) => {
         products: product._id,
       },
     });
-
+   
     return res.status(201).json({
       body: {
         data: product

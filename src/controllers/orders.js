@@ -156,8 +156,8 @@ export const CreateOrder = async (req, res) => {
         (accumulator, shipment) => accumulator + shipment.weight,
         0
       );
-      let totalWeight = item.weight;
-      if (prd.shipments[0].weight == 0) {
+      let itemWeight = item.weight;
+      if (prd.shipments.length === 0) {
         return res.status(404).json({
           status: 404,
           _id: item._id,
@@ -170,20 +170,24 @@ export const CreateOrder = async (req, res) => {
           message: "Ko đủ số lượng ",
         });
       }
-      if (totalWeight != 0 || currentTotalWeight != 0) {
+      if (itemWeight != 0 || currentTotalWeight != 0) {
+        // lặp lô hàng trong sản phẩm
         for (let shipment of prd.shipments) {
-          if (totalWeight == 0) {
+          if (itemWeight == 0) {
             break;
           }
-          if (shipment.weight - totalWeight <= 0) {
+          //TH1: Nếu số lượng mua lớn hơn só lượng trong lô hàng hiện tại
+          if (shipment.weight - itemWeight <= 0) {
+            // xóa lô hàng hiện tại trong record của sản phẩm hiện tại
             await Product.findOneAndUpdate(
-              { _id: prd._id, "shipments.idShipment": shipment.idShipment },
+              { _id: prd._id },
               {
-                $set: {
-                  "shipments.$.weight": 0,
+                $pull: {
+                  "shipments.idShipment": shipment.idShipment,
                 },
               }
             );
+            // thay đổi số lượng của sản phẩm trong lô hàng về 0
             await Shipment.findOneAndUpdate(
               { _id: shipment.idShipment, "products.idProduct": prd._id },
               {
@@ -192,25 +196,28 @@ export const CreateOrder = async (req, res) => {
                 },
               }
             );
-            totalWeight = -(shipment.weight - totalWeight);
+            itemWeight = -(shipment.weight - itemWeight);
           } else {
+            //TH2 : số lượng mua bé hơn số lượng trong lô hàng hiện tại của sản phẩm
+            // thay đổi số lượng trong lô hàng của sản phẩm
             await Product.findOneAndUpdate(
               { _id: prd._id, "shipments.idShipment": shipment.idShipment },
               {
                 $set: {
-                  "shipments.$.weight": shipment.weight - totalWeight,
+                  "shipments.$.weight": shipment.weight - itemWeight,
                 },
               }
             );
+            // thay đổi số lượng sản phẩm trong lô hàng
             await Shipment.findOneAndUpdate(
               { _id: shipment.idShipment, "products.idProduct": prd._id },
               {
                 $set: {
-                  "products.$.weight": shipment.weight - totalWeight,
+                  "products.$.weight": shipment.weight - itemWeight,
                 },
               }
             );
-            totalWeight = 0;
+            itemWeight = 0;
           }
         }
       }
@@ -277,7 +284,7 @@ export const GetAllOrders = async (req, res) => {
 
   const options = {
     page: _page,
-    limit = _limit,
+    limit : _limit,
     sort: {
       [_sort]: _order === "desc" ? -1 : 1,
     },
@@ -386,7 +393,7 @@ export const filterOrderDay = async (data, day, res) => {
   for (let item of order) {
     if (dateNow.includes(item)) {
       const filteredItems = data.filter(index => index.orderDate === item);
-      console.log("filter", filteredItems);
+      // console.log("filter", filteredItems);
       // for(let i of filteredItems){
       //     filterData.push(i);
       // }
