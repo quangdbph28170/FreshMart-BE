@@ -15,7 +15,6 @@ export const createShipment = async (req, res) => {
       return {
         ...data,
         originWeight: data.weight,
-        originPrice: data.price,
       }
     })
     const newShipment = await Shipment.create(req.body);
@@ -27,7 +26,7 @@ export const createShipment = async (req, res) => {
             originWeight: data.weight,
             weight: data.weight,
             date: data.date,
-            originPrice: data.price,
+            originPrice: data.originPrice,
             price: data.price,
           },
         },
@@ -151,7 +150,7 @@ export const updateShipment = async (req, res) => {
               originWeight: product.weight,
               weight: product.weight,
               date: product.date,
-              originPrice: product.price,
+              originPrice: product.originPrice,
               price: product.price,
             },
           },
@@ -162,7 +161,6 @@ export const updateShipment = async (req, res) => {
       return {
         ...data,
         originWeight: data.weight,
-        originPrice: data.price,
       }
     })
     const shipmentUpdate = await Shipment.findByIdAndUpdate(
