@@ -16,3 +16,7 @@ export const validateShipment = joi.object({
     )
     .required(),
 });
+
+export const validateUpdateShipment = joi.object({
+  isDisable: joi.boolean().default(false),
+});
