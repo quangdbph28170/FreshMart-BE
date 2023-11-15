@@ -14,7 +14,6 @@ export const getProducts = async (req, res) => {
     _originId = "",
     _minPrice = "",
     _maxPrice = "",
-
   } = req.query;
   const options = {
     page: _page,
@@ -43,16 +42,16 @@ export const getProducts = async (req, res) => {
   }
 
   if (_originId) {
-    const originIds = _originId.split('%').map(id => id.trim());
+    const originIds = _originId.split("%").map((id) => id.trim());
     query.originId = { $in: originIds };
   }
 
   try {
     const products = await Products.paginate(query, options);
-    let maxPrice = 0
+    let maxPrice = 0;
     for (let item of products.docs) {
       for (let index of item.shipments) {
-        maxPrice = Math.max(index.price)
+        maxPrice = Math.max(index.price);
       }
     }
 
@@ -64,7 +63,7 @@ export const getProducts = async (req, res) => {
           totalPages: products.totalPages,
           totalItems: products.totalDocs,
         },
-        maxPrice
+        maxPrice,
       },
       status: 201,
       message: "Get products successfully",
@@ -84,45 +83,44 @@ export const getRelatedProducts = async (req, res) => {
       {
         $match: {
           categoryId: new mongoose.Types.ObjectId(cate_id),
-          _id: { $ne: new mongoose.Types.ObjectId(product_id) }
-        }
+          _id: { $ne: new mongoose.Types.ObjectId(product_id) },
+        },
       },
       { $sample: { size: 10 } },
       {
         $lookup: {
-          from: 'shipments',
-          localField: 'idShipment',
-          foreignField: '_id',
-          as: 'shipment'
-        }
-      }
+          from: "shipments",
+          localField: "idShipment",
+          foreignField: "_id",
+          as: "shipment",
+        },
+      },
     ]);
     if (!products) {
       return res.status(404).json({
         status: 404,
-        message: 'No Product found',
+        message: "No Product found",
       });
     } else {
       return res.status(200).json({
         body: {
-          data: products
+          data: products,
         },
         status: 200,
-        message: 'Product found',
-      })
+        message: "Product found",
+      });
     }
-
   } catch (error) {
     return res.status(500).json({
       status: 500,
       message: error.message,
     });
   }
-}
+};
 export const getOneProduct = async (req, res) => {
   try {
     const product = await Products.findById(req.params.id).populate(
-      "categoryId",
+      "categoryId"
     );
     if (!product) {
       return res.status(404).json({
@@ -133,7 +131,7 @@ export const getOneProduct = async (req, res) => {
     await product.populate("categoryId.productId");
     return res.status(201).json({
       body: {
-        data: product
+        data: product,
       },
       status: 201,
       message: "Get product successfully",
@@ -162,7 +160,7 @@ export const createProduct = async (req, res) => {
 
     return res.status(201).json({
       body: {
-        data: product
+        data: product,
       },
       status: 201,
       message: "Create product successfully",
@@ -196,15 +194,15 @@ export const updateProduct = async (req, res) => {
         products: product._id,
       },
     });
-    await Categories.findByIdAndUpdate(categoryId, {
+    const res = await Categories.findByIdAndUpdate(categoryId, {
       $addToSet: {
         products: product._id,
       },
     });
-   
+    console.log(categoryId, res);
     return res.status(201).json({
       body: {
-        data: product
+        data: product,
       },
       status: 201,
       message: "Update product successfully",
