@@ -1,6 +1,6 @@
 import Products from "../models/products";
 import Shipment from "../models/shipment";
-import { validateShipment } from "../validation/shipment";
+import { validateShipment, validateUpdateShipment } from "../validation/shipment";
 
 export const createShipment = async (req, res) => {
   const { error } = validateShipment.validate(req.body, { abortEarly: false });
@@ -119,7 +119,7 @@ export const findOne = async (req, res) => {
 };
 
 export const updateShipment = async (req, res) => {
-  const { error } = validateShipment.validate(req.body, { abortEarly: false });
+  const { error } = validateUpdateShipment.validate(req.body, { abortEarly: false });
   if (error) {
     return res.status(401).json({
       status: 401,
@@ -134,35 +134,6 @@ export const updateShipment = async (req, res) => {
         .status(404)
         .json({ status: 404, message: "No Shipment found" });
 
-    shipment.products.map(async (product) => {
-      await Products.findByIdAndUpdate(product.idProduct, {
-        $pull: {
-          shipments: { idShipment: shipment._id },
-        },
-      });
-    });
-    if (req.body.isDisable == false) {
-      req.body.products.map(async (product) => {
-        await Products.findByIdAndUpdate(product.idProduct, {
-          $push: {
-            shipments: {
-              idShipment: shipment._id,
-              originWeight: product.weight,
-              weight: product.weight,
-              date: product.date,
-              originPrice: product.originPrice,
-              price: product.price,
-            },
-          },
-        });
-      });
-    }
-    req.body.products = req.body.products.map((data) => {
-      return {
-        ...data,
-        originWeight: data.weight,
-      }
-    })
     const shipmentUpdate = await Shipment.findByIdAndUpdate(
       req.params.id,
       req.body,
