@@ -79,9 +79,8 @@ const orderSchema = new mongoose.Schema({
         type:String,
         default:function(){
             const currentDate = new Date();
-            const formattedDate = currentDate.toISOString().split("T")[0];
+            const formattedDate = `${("0" + currentDate.getDate()).slice(-2)}-${("0" + (currentDate.getMonth() + 1)).slice(-2)}-${currentDate.getFullYear()}`
             return formattedDate;
-
         }
     }
 

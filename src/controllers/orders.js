@@ -5,7 +5,7 @@ import Shipment from "../models/shipment";
 import { validateCheckout } from "../validation/checkout";
 import { transporter } from "../config/mail";
 import { handleTransaction } from "./momo-pay";
-
+import { statusOrder } from "../config/constants";
 const checkCancellationTime = (order) => {
   const checkTime = new Date(order.createdAt);
   const currentTime = new Date();
@@ -160,8 +160,8 @@ export const CreateOrder = async (req, res) => {
         (accumulator, shipment) => accumulator + shipment.weight,
         0
       );
-      let totalWeight = item.weight;
-      if (prd.shipments[0].weight == 0) {
+      let itemWeight = item.weight;
+      if (prd.shipments.length === 0) {
         return res.status(404).json({
           status: 404,
           _id: item._id,
@@ -174,20 +174,26 @@ export const CreateOrder = async (req, res) => {
           message: "Ko đủ số lượng ",
         });
       }
-      if (totalWeight != 0 || currentTotalWeight != 0) {
+      if (itemWeight != 0 || currentTotalWeight != 0) {
+        // lặp lô hàng trong sản phẩm
         for (let shipment of prd.shipments) {
-          if (totalWeight == 0) {
+          if (itemWeight == 0) {
             break;
           }
-          if (shipment.weight - totalWeight <= 0) {
+          //TH1: Nếu số lượng mua lớn hơn só lượng trong lô hàng hiện tại
+          if (shipment.weight - itemWeight <= 0) {
+            // xóa lô hàng hiện tại trong record của sản phẩm hiện tại
             await Product.findOneAndUpdate(
-              { _id: prd._id, "shipments.idShipment": shipment.idShipment },
+              { _id: prd._id },
               {
-                $set: {
-                  "shipments.$.weight": 0,
+                $pull: {
+                  shipments: {
+                    idShipment: shipment.idShipment,
+                  },
                 },
               }
             );
+            // thay đổi số lượng của sản phẩm trong lô hàng về 0
             await Shipment.findOneAndUpdate(
               { _id: shipment.idShipment, "products.idProduct": prd._id },
               {
@@ -196,25 +202,28 @@ export const CreateOrder = async (req, res) => {
                 },
               }
             );
-            totalWeight = -(shipment.weight - totalWeight);
+            itemWeight = -(shipment.weight - itemWeight);
           } else {
+            //TH2 : số lượng mua bé hơn số lượng trong lô hàng hiện tại của sản phẩm
+            // thay đổi số lượng trong lô hàng của sản phẩm
             await Product.findOneAndUpdate(
               { _id: prd._id, "shipments.idShipment": shipment.idShipment },
               {
                 $set: {
-                  "shipments.$.weight": shipment.weight - totalWeight,
+                  "shipments.$.weight": shipment.weight - itemWeight,
                 },
               }
             );
+            // thay đổi số lượng sản phẩm trong lô hàng
             await Shipment.findOneAndUpdate(
               { _id: shipment.idShipment, "products.idProduct": prd._id },
               {
                 $set: {
-                  "products.$.weight": shipment.weight - totalWeight,
+                  "products.$.weight": shipment.weight - itemWeight,
                 },
               }
             );
-            totalWeight = 0;
+            itemWeight = 0;
           }
         }
       }
@@ -274,9 +283,8 @@ export const GetAllOrders = async (req, res) => {
   const {
     _page = 1,
     _order = "asc",
-    _limit = 10,
+    _limit = 9999,
     _sort = "createdAt",
-    _q = "",
   } = req.query;
 
   const options = {
@@ -343,16 +351,12 @@ export const OrdersForGuest = async (req, res) => {
 export const OrdersForMember = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { invoiceId, orderDate } = req.query;
-    console.log(req.query);
-    let query = { userId };
-    if (invoiceId) {
-      query.invoiceId = invoiceId;
-    }
-    if (orderDate) {
-      query.orderDate = orderDate;
-    }
-    const data = await Order.find(query);
+    // const { invoiceId } = req.query;
+    // let query = { userId };
+    // if (invoiceId) {
+    //     query.invoiceId = invoiceId;
+    // }
+    const data = await Order.find({ userId });
     if (data.length == 0) {
       return res.status(200).json({
         status: 200,
@@ -373,20 +377,84 @@ export const OrdersForMember = async (req, res) => {
     });
   }
 };
+// Hàm xử lý lọc đơn hàng theo ngày gần nhất
+export const filterOrderDay = async (data, day, res) => {
+  const today = new Date();
+  const order = [];
+  const dateNow = [];
+  for (let i = 0; i < day; i++) {
+    const currentDate = new Date(today);
+    currentDate.setDate(today.getDate() - i);
+    const day = ("0" + currentDate.getDate()).slice(-2);
+    const month = ("0" + (currentDate.getMonth() + 1)).slice(-2);
+    const year = currentDate.getFullYear();
+    const formattedDate = `${day}-${month}-${year}`;
+    dateNow.push(formattedDate);
+  }
+  for (let item of data) {
+    order.push(item.orderDate);
+  }
+  const filterData = [];
+  for (let item of order) {
+    if (dateNow.includes(item)) {
+      const filteredItems = data.filter((index) => index.orderDate === item);
+      // console.log("filter", filteredItems);
+      // for(let i of filteredItems){
+      //     filterData.push(i);
+      // }
+      filterData.push(...filteredItems);
+    }
+  }
+  if (filterData.length == 0) {
+    return res.json({
+      message: "Order not found",
+    });
+  }
+  return res.status(201).json({
+    body: { data: filterData },
+    message: "Filter order successfully",
+    status: 201,
+  });
 
-//Khách hàng(đã đăng nhập) lọc đơn hàng theo trạng thái
+  //  console.log(filterData);
+};
+
+//Khách hàng(đã đăng nhập) lọc
 export const FilterOrdersForMember = async (req, res) => {
   try {
-    const { status } = req.body;
     const userId = req.user._id;
-    // console.log(userId);
-    const data = await Order.find({ userId, status });
+    const { day, status, invoiceId } = req.query;
+    // console.log(req.query);
+    let data = await Order.find({ userId });
+
+    //lọc theo trạng thái đơn hàng
+    if (status) {
+      if (!statusOrder.includes(status)) {
+        return res.status(402).json({
+          status: 402,
+          message: "Invalid status",
+          statusOrder,
+        });
+      }
+      data = await Order.find({ userId, status });
+    }
+    //lọc theo ngày gần nhất
+    if (day) {
+      filterOrderDay(data, day, res);
+      return;
+    }
+    //lọc theo mã đơn hàng
+    if (invoiceId) {
+      data = await Order.find({ invoiceId });
+    }
+    //Ko có đơn hàng nào
     if (data.length == 0) {
       return res.status(200).json({
         status: 200,
         message: "Order not found",
       });
     }
+
     return res.status(201).json({
       body: {
         data,
@@ -475,28 +543,24 @@ export const UpdateOrder = async (req, res) => {
         message: "Order not found",
       });
     }
-    const validStatuses = [
-      "chờ xác nhận",
-      "đang giao hàng",
-      "đã hoàn thành",
-      "đã hủy",
-    ];
-    if (!validStatuses.includes(status)) {
+
+    if (!statusOrder.includes(status)) {
       return res.status(402).json({
         status: 402,
-        message: "Invalid status update",
+        message: "Invalid status",
+        statusOrder,
       });
     }
-    const currentStatusIndex = validStatuses.indexOf(currentOrder.status);
-    const newStatusIndex = validStatuses.indexOf(status);
-    if (newStatusIndex < currentStatusIndex) {
+    const currentStatusIndex = statusOrder.indexOf(currentOrder.status);
+    const newStatusIndex = statusOrder.indexOf(status);
+    if (newStatusIndex != currentStatusIndex + 1) {
       return res.status(401).json({
         status: 400,
-        message:
-          "Invalid status update. Status can only be updated in a sequential order.",
+        message: "Trạng thái đơn hàng update phải theo tuần tự!",
+        statusOrder,
       });
     }
-    const data = await Order.findByIdAndUpdate(orderId, req.req.body, {
+    const data = await Order.findByIdAndUpdate(orderId, req.body, {
       new: true,
     });
     return res.status(201).json({
