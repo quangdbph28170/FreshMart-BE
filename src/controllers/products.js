@@ -14,7 +14,6 @@ export const getProducts = async (req, res) => {
     _originId = "",
     _minPrice = "",
     _maxPrice = "",
-
   } = req.query;
   const options = {
     page: _page,
@@ -87,45 +86,44 @@ export const getRelatedProducts = async (req, res) => {
       {
         $match: {
           categoryId: new mongoose.Types.ObjectId(cate_id),
-          _id: { $ne: new mongoose.Types.ObjectId(product_id) }
-        }
+          _id: { $ne: new mongoose.Types.ObjectId(product_id) },
+        },
       },
       { $sample: { size: 10 } },
       {
         $lookup: {
-          from: 'shipments',
-          localField: 'idShipment',
-          foreignField: '_id',
-          as: 'shipment'
-        }
-      }
+          from: "shipments",
+          localField: "idShipment",
+          foreignField: "_id",
+          as: "shipment",
+        },
+      },
     ]);
     if (!products) {
       return res.status(404).json({
         status: 404,
-        message: 'No Product found',
+        message: "No Product found",
       });
     } else {
       return res.status(200).json({
         body: {
-          data: products
+          data: products,
         },
         status: 200,
-        message: 'Product found',
-      })
+        message: "Product found",
+      });
     }
-
   } catch (error) {
     return res.status(500).json({
       status: 500,
       message: error.message,
     });
   }
-}
+};
 export const getOneProduct = async (req, res) => {
   try {
     const product = await Products.findById(req.params.id).populate(
-      "categoryId",
+      "categoryId"
     );
     if (!product) {
       return res.status(404).json({
@@ -136,7 +134,7 @@ export const getOneProduct = async (req, res) => {
     await product.populate("categoryId.productId");
     return res.status(201).json({
       body: {
-        data: product
+        data: product,
       },
       status: 201,
       message: "Get product successfully",
@@ -165,7 +163,7 @@ export const createProduct = async (req, res) => {
 
     return res.status(201).json({
       body: {
-        data: product
+        data: product,
       },
       status: 201,
       message: "Create product successfully",
@@ -207,7 +205,7 @@ export const updateProduct = async (req, res) => {
 
     return res.status(201).json({
       body: {
-        data: product
+        data: product,
       },
       status: 201,
       message: "Update product successfully",
