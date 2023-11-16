@@ -567,13 +567,65 @@ export const UpdateOrder = async (req, res) => {
         statusOrder,
       });
     }
-    const data = await Order.findByIdAndUpdate(orderId, req.body, {
-      new: true,
-    });
+    const data = await Order.findByIdAndUpdate(
+      orderId,
+      { ...req.body, userId: new mongoose.Types.ObjectId(req.body.userId) },
+      {
+        new: true,
+      }
+    );
     return res.status(201).json({
       body: { data },
       status: 201,
       message: "Order update successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
+};
+//
+export const FilterOrdersForAdmin = async (req, res) => {
+  try {
+    const { day, status, invoiceId } = req.query;
+    let data = await Order.find();
+    //lọc theo trạng thái đơn hàng
+    if (status) {
+      if (!statusOrder.includes(status)) {
+        return res.status(402).json({
+          status: 402,
+          message: "Invalid status",
+          statusOrder,
+        });
+      }
+      data = await Order.find({ status });
+    }
+    //lọc theo ngày gần nhất
+    if (day) {
+      filterOrderDay(data, day, res);
+      return;
+    }
+    //lọc theo mã đơn hàng
+    if (invoiceId) {
+      data = await Order.find({ invoiceId });
+    }
+    //Ko có đơn hàng nào
+    if (data.length == 0) {
+      return res.status(200).json({
+        status: 200,
+        message: "Order not found",
+        body:{data:[]}
+      });
+    }
+
+    return res.status(201).json({
+      body: {
+        data,
+      },
+      status: 201,
+      message: "Get order successfully",
     });
   } catch (error) {
     return res.status(500).json({
