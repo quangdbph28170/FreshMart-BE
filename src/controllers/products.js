@@ -48,14 +48,17 @@ export const getProducts = async (req, res) => {
 
   try {
     const products = await Products.paginate(query, options);
+    const prd = await Products.find()
     let maxPrice = 0
-    let minPrice = 0
-    for (let item of products.docs) {
+    let minPrice = Number.MAX_SAFE_INTEGER
+  
+    for (let item of prd) {
       for (let index of item.shipments) {
-        maxPrice = Math.max(index.price)
-        minPrice = Math.min(index.price)
+        maxPrice = Math.max(maxPrice,index.price)
+        minPrice = Math.min(minPrice,index.price)
       }
-    }
+    } 
+    console.log(minPrice, maxPrice);
 
     return res.status(201).json({
       body: {
