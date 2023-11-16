@@ -277,7 +277,7 @@ export const GetAllOrders = async (req, res) => {
 
   const options = {
     page: _page,
-    limit = _limit,
+    limit : _limit,
     sort: {
       [_sort]: _order === "desc" ? -1 : 1,
     },
@@ -289,6 +289,7 @@ export const GetAllOrders = async (req, res) => {
       return res.status(200).json({
         status: 200,
         message: "There are no orders",
+        body:{data:[]}
       });
     }
     return res.status(201).json({
@@ -319,6 +320,7 @@ export const OrdersForGuest = async (req, res) => {
       return res.status(200).json({
         status: 200,
         message: "Order not found",
+        body:{data:[]}
       });
     }
     return res.status(201).json({
@@ -349,6 +351,7 @@ export const OrdersForMember = async (req, res) => {
       return res.status(200).json({
         status: 200,
         message: "Order not found",
+        body:{data:[]}
       });
     }
     return res.status(201).json({
@@ -396,6 +399,7 @@ export const filterOrderDay = async (data, day, res) => {
   if (filterData.length == 0) {
     return res.json({
       message: "Order not found",
+      body:{data:[]}
     })
   }
   return res.status(201).json({
@@ -440,6 +444,7 @@ export const FilterOrdersForMember = async (req, res) => {
       return res.status(200).json({
         status: 200,
         message: "Order not found",
+        body:{data:[]}
       });
     }
 
@@ -466,6 +471,7 @@ export const OrderDetail = async (req, res) => {
       return res.status(404).json({
         status: 404,
         message: "Not found order",
+        body:{data:{}}
       });
     }
     const { canCancel } = checkCancellationTime(data);
@@ -529,6 +535,7 @@ export const UpdateOrder = async (req, res) => {
       return res.status(404).json({
         status: 404,
         message: "Order not found",
+        body:{data:{}}
       });
     }
 

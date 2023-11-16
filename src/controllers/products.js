@@ -43,16 +43,18 @@ export const getProducts = async (req, res) => {
   }
 
   if (_originId) {
-    const originIds = _originId.split('%').map(id => id.trim());
+    const originIds = _originId.split(",").map(id=>id.trim());
     query.originId = { $in: originIds };
   }
 
   try {
     const products = await Products.paginate(query, options);
     let maxPrice = 0
+    let minPrice = 0
     for (let item of products.docs) {
       for (let index of item.shipments) {
         maxPrice = Math.max(index.price)
+        minPrice = Math.min(index.price)
       }
     }
 
@@ -64,7 +66,8 @@ export const getProducts = async (req, res) => {
           totalPages: products.totalPages,
           totalItems: products.totalDocs,
         },
-        maxPrice
+        maxPrice,
+        minPrice
       },
       status: 201,
       message: "Get products successfully",
@@ -183,7 +186,7 @@ export const updateProduct = async (req, res) => {
         message: error.details.map((error) => error.message),
       });
     }
-    const { categoryId } = req.body;
+    // const { categoryId } = req.body;
     const product = await Products.findByIdAndUpdate(req.params.id, req.body);
     if (!product) {
       return res.status(404).json({
@@ -191,16 +194,16 @@ export const updateProduct = async (req, res) => {
         message: "Product not found",
       });
     }
-    await Categories.findByIdAndUpdate(product.categoryId, {
-      $pull: {
-        products: product._id,
-      },
-    });
-    await Categories.findByIdAndUpdate(categoryId, {
-      $addToSet: {
-        products: product._id,
-      },
-    });
+    // await Categories.findByIdAndUpdate(product.categoryId, {
+    //   $pull: {
+    //     products: product._id,
+    //   },
+    // });
+    // await Categories.findByIdAndUpdate(categoryId, {
+    //   $addToSet: {
+    //     products: product._id,
+    //   },
+    // });
 
     return res.status(201).json({
       body: {
