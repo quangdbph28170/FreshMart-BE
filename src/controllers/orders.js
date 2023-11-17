@@ -22,9 +22,8 @@ const checkCancellationTime = (order) => {
 };
 const formatDateTime = (dateTime) => {
   const date = new Date(dateTime);
-  const formattedDate = `${date.getDate()}/${
-    date.getMonth() + 1
-  }/${date.getFullYear()}`;
+  const formattedDate = `${date.getDate()}/${date.getMonth() + 1
+    }/${date.getFullYear()}`;
   const formattedTime = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
   return `${formattedDate} ${formattedTime}`;
 };
@@ -38,13 +37,12 @@ const sendMailer = async (email, data) => {
                   <a target="_blank" href="http:localhost:5173">
                     <img src="https://spacingtech.com/html/tm/freozy/freezy-ltr/image/logo/logo.png" style="width:80px;color:#000"/>
                   </a>
-                  <p style="color:#2986cc;">Kính gửi Anh/chị: ${
-                    data.customerName
-                  } </p> 
+                  <p style="color:#2986cc;">Kính gửi Anh/chị: ${data.customerName
+      } </p> 
                   <p>Cảm ơn Anh/chị đã mua hàng tại FRESH MART. Chúng tôi cảm thấy may mắn khi được phục vụ Anh/chị. Sau đây là hóa đơn chi tiết về đơn hàng</p>
                   <p style="font-weight:bold">Hóa đơn được tạo lúc: ${formatDateTime(
-                    data.createdAt
-                  )}</p>
+        data.createdAt
+      )}</p>
                   <div style="border:1px solid #ccc;border-radius:10px; padding:10px 20px;width: max-content">
                   <p>Mã hóa đơn: ${data.invoiceId}</p>
                   <p>Khách hàng: ${data.customerName}</p>
@@ -61,33 +59,31 @@ const sendMailer = async (email, data) => {
                   </thead>
                   <tbody>
                     ${data.products
-                      .map(
-                        (product, index) => `
+        .map(
+          (product, index) => `
                       <tr style="border-bottom:1px solid #ccc">
                         <td style="padding: 10px;">${index + 1}</td>
-                        <td style="padding: 10px;"><img alt="image" src="${
-                          product.images
-                        }" style="width: 90px; height: 90px;border-radius:5px">
+                        <td style="padding: 10px;"><img alt="image" src="${product.images
+            }" style="width: 90px; height: 90px;border-radius:5px">
                         <p>${product.name}</p>
                         </td>
                         <td style="padding: 10px;">${product.weight}kg</td>
                         <td style="padding: 10px;">${product.price.toLocaleString(
-                          "vi-VN"
-                        )}VNĐ</td>
+              "vi-VN"
+            )}VNĐ</td>
                       </tr>
                    `
-                      )
-                      .join("")}
+        )
+        .join("")}
                   </tbody>
                 </table>  
                   <p style="color: red;font-weight:bold;margin-top:20px">Tổng tiền thanh toán: ${data.totalPayment.toLocaleString(
-                    "vi-VN"
-                  )}VNĐ</p>
-                  <p>Thanh toán: ${
-                    data.pay == false
-                      ? "Thanh toán khi nhận hàng"
-                      : "Đã thanh toán online"
-                  }</p>
+          "vi-VN"
+        )}VNĐ</p>
+                  <p>Thanh toán: ${data.pay == false
+        ? "Thanh toán khi nhận hàng"
+        : "Đã thanh toán online"
+      }</p>
                   <p>Trạng thái đơn hàng: ${data.status}</p>
                   </div>
                    <p>Xin cảm ơn quý khách!</p>
@@ -229,15 +225,11 @@ export const CreateOrder = async (req, res) => {
       }
     }
     // console.log(req.user);
-    const data = await Order.create(req.body);
     if (req.user != null) {
-      await Order.findByIdAndUpdate(data._id, { userId: req.user._id });
-      await User.findByIdAndUpdate(req.user._id, {
-        $push: {
-          orders: data._id,
-        },
-      });
+     req.body["userId"] = req.user._id;
     }
+    const data = await Order.create(req.body);
+   
     // kiểm tra phương thức thanh toán là momo
     if (paymentMethod === "momo") {
       let dataFromMomo = {};
@@ -289,7 +281,7 @@ export const GetAllOrders = async (req, res) => {
 
   const options = {
     page: _page,
-    limit : _limit,
+    limit: _limit,
     sort: {
       [_sort]: _order === "desc" ? -1 : 1,
     },
@@ -301,7 +293,7 @@ export const GetAllOrders = async (req, res) => {
       return res.status(200).json({
         status: 200,
         message: "There are no orders",
-        body:{data:[]}
+        body: { data: [] }
       });
     }
     return res.status(201).json({
@@ -332,7 +324,7 @@ export const OrdersForGuest = async (req, res) => {
       return res.status(200).json({
         status: 200,
         message: "Order not found",
-        body:{data:[]}
+        body: { data: [] }
       });
     }
     return res.status(201).json({
@@ -363,7 +355,7 @@ export const OrdersForMember = async (req, res) => {
       return res.status(200).json({
         status: 200,
         message: "Order not found",
-        body:{data:[]}
+        body: { data: [] }
       });
     }
     return res.status(201).json({
@@ -383,35 +375,21 @@ export const OrdersForMember = async (req, res) => {
 // Hàm xử lý lọc đơn hàng theo ngày gần nhất
 export const filterOrderDay = async (data, day, res) => {
   const today = new Date();
-  const order = [];
-  const dateNow = [];
-  for (let i = 0; i < day; i++) {
-    const currentDate = new Date(today);
-    currentDate.setDate(today.getDate() - i);
-    const day = ("0" + currentDate.getDate()).slice(-2);
-    const month = ("0" + (currentDate.getMonth() + 1)).slice(-2);
-    const year = currentDate.getFullYear();
-    const formattedDate = `${day}-${month}-${year}`;
-    dateNow.push(formattedDate);
-  }
+  const dayOfPast = today - (day * 24 * 60 * 60 * 1000)
+  const filterData = []
+
   for (let item of data) {
-    order.push(item.orderDate);
-  }
-  const filterData = [];
-  for (let item of order) {
-    if (dateNow.includes(item)) {
-      const filteredItems = data.filter((index) => index.orderDate === item);
-      // console.log("filter", filteredItems);
-      // for(let i of filteredItems){
-      //     filterData.push(i);
-      // }
-      filterData.push(...filteredItems);
+    const itemDate = new Date(item.createdAt)
+    // console.log(itemDate );
+    if (itemDate >= dayOfPast && itemDate <= today) {
+      filterData.push(item)
     }
   }
+  // console.log(today, dayOfPast, filterData);
   if (filterData.length == 0) {
     return res.json({
       message: "Order not found",
-      body:{data:[]}
+      body: { data: [] }
     })
   }
   return res.status(201).json({
@@ -456,7 +434,7 @@ export const FilterOrdersForMember = async (req, res) => {
       return res.status(200).json({
         status: 200,
         message: "Order not found",
-        body:{data:[]}
+        body: { data: [] }
       });
     }
 
@@ -483,7 +461,7 @@ export const OrderDetail = async (req, res) => {
       return res.status(404).json({
         status: 404,
         message: "Not found order",
-        body:{data:{}}
+        body: { data: {} }
       });
     }
     const { canCancel } = checkCancellationTime(data);
@@ -547,7 +525,7 @@ export const UpdateOrder = async (req, res) => {
       return res.status(404).json({
         status: 404,
         message: "Order not found",
-        body:{data:{}}
+        body: { data: {} }
       });
     }
 
@@ -616,7 +594,7 @@ export const FilterOrdersForAdmin = async (req, res) => {
       return res.status(200).json({
         status: 200,
         message: "Order not found",
-        body:{data:[]}
+        body: { data: [] }
       });
     }
 

@@ -42,7 +42,7 @@ export const getProducts = async (req, res) => {
   }
 
   if (_originId) {
-    const originIds = _originId.split(",").map(id=>id.trim());
+    const originIds = _originId.split(",").map(id => id.trim());
     query.originId = { $in: originIds };
   }
 
@@ -51,13 +51,13 @@ export const getProducts = async (req, res) => {
     const prd = await Products.find()
     let maxPrice = 0
     let minPrice = Number.MAX_SAFE_INTEGER
-  
+
     for (let item of prd) {
       for (let index of item.shipments) {
-        maxPrice = Math.max(maxPrice,index.price)
-        minPrice = Math.min(minPrice,index.price)
+        maxPrice = Math.max(maxPrice, index.price)
+        minPrice = Math.min(minPrice, index.price)
       }
-    } 
+    }
     console.log(minPrice, maxPrice);
 
     return res.status(201).json({
@@ -116,6 +116,30 @@ export const getRelatedProducts = async (req, res) => {
         message: "Product found",
       });
     }
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
+};
+export const getProductSold = async (req, res) => {
+  try {
+    const products = await Products.find()
+    const data = products.sort((a, b) => b.sold - a.sold).slice(0, 10)
+    if (!products) {
+      return res.status(404).json({
+        status: 404,
+        message: "Product not found",
+      });
+    }
+    return res.status(201).json({
+      body: {
+        data
+      },
+      status: 201,
+      message: "Get product successfully",
+    });
   } catch (error) {
     return res.status(500).json({
       status: 500,
