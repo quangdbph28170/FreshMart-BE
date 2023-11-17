@@ -226,10 +226,10 @@ export const CreateOrder = async (req, res) => {
     }
     // console.log(req.user);
     if (req.user != null) {
-     req.body["userId"] = req.user._id;
+      req.body["userId"] = req.user._id;
     }
     const data = await Order.create(req.body);
-   
+
     // kiểm tra phương thức thanh toán là momo
     if (paymentMethod === "momo") {
       let dataFromMomo = {};
@@ -272,11 +272,16 @@ export const CreateOrder = async (req, res) => {
 };
 //Admin lấy tất cả đơn hàng
 export const GetAllOrders = async (req, res) => {
+
   const {
     _page = 1,
     _order = "asc",
     _limit = 9999,
     _sort = "createdAt",
+    _status = "",
+    _day,
+    _invoiceId = ""
+
   } = req.query;
 
   const options = {
@@ -288,7 +293,25 @@ export const GetAllOrders = async (req, res) => {
   };
 
   try {
-    const data = await Order.paginate({}, options);
+    const query = {}
+    const data = await Order.paginate(query, options);
+    if (_status) {
+      query.status = _status;
+    }
+    if (_invoiceId) {
+      const data = await Order.findOne({invoiceId:_invoiceId})
+      return res.status(201).json({
+        body: {
+          data: data,
+        },
+        status: 201,
+        message: "Get order successfully"})
+    }
+    if (_day) {
+      filterOrderDay(data, _day, res);
+      return;
+    }
+
     if (data.docs.length == 0) {
       return res.status(200).json({
         status: 200,
@@ -345,11 +368,6 @@ export const OrdersForGuest = async (req, res) => {
 export const OrdersForMember = async (req, res) => {
   try {
     const userId = req.user._id;
-    // const { invoiceId } = req.query;
-    // let query = { userId };
-    // if (invoiceId) {
-    //     query.invoiceId = invoiceId;
-    // }
     const data = await Order.find({ userId });
     if (data.length == 0) {
       return res.status(200).json({
@@ -378,7 +396,7 @@ export const filterOrderDay = async (data, day, res) => {
   const dayOfPast = today - (day * 24 * 60 * 60 * 1000)
   const filterData = []
 
-  for (let item of data) {
+  for (let item of data.docs) {
     const itemDate = new Date(item.createdAt)
     // console.log(itemDate );
     if (itemDate >= dayOfPast && itemDate <= today) {
@@ -393,7 +411,13 @@ export const filterOrderDay = async (data, day, res) => {
     })
   }
   return res.status(201).json({
-    body: { data: filterData },
+    body: { data: filterData,
+      pagination: {
+        currentPage: data.page,
+        totalPages: data.totalPages,
+        totalItems: data.totalDocs,
+      },
+    },
     message: "Filter order successfully",
     status: 201,
   });
@@ -565,50 +589,4 @@ export const UpdateOrder = async (req, res) => {
   }
 };
 //
-export const FilterOrdersForAdmin = async (req, res) => {
-  try {
-    const { day, status, invoiceId } = req.query;
-    let data = await Order.find();
-    //lọc theo trạng thái đơn hàng
-    if (status) {
-      if (!statusOrder.includes(status)) {
-        return res.status(402).json({
-          status: 402,
-          message: "Invalid status",
-          statusOrder,
-        });
-      }
-      data = await Order.find({ status });
-    }
-    //lọc theo ngày gần nhất
-    if (day) {
-      filterOrderDay(data, day, res);
-      return;
-    }
-    //lọc theo mã đơn hàng
-    if (invoiceId) {
-      data = await Order.find({ invoiceId });
-    }
-    //Ko có đơn hàng nào
-    if (data.length == 0) {
-      return res.status(200).json({
-        status: 200,
-        message: "Order not found",
-        body: { data: [] }
-      });
-    }
 
-    return res.status(201).json({
-      body: {
-        data,
-      },
-      status: 201,
-      message: "Get order successfully",
-    });
-  } catch (error) {
-    return res.status(500).json({
-      status: 500,
-      message: error.message,
-    });
-  }
-};
