@@ -14,12 +14,14 @@ export const getProducts = async (req, res) => {
     _originId = "",
     _minPrice = "",
     _maxPrice = "",
+    
   } = req.query;
   const options = {
     page: _page,
     limit: _limit,
     sort: {
       [_sort]: _order === "desc" ? -1 : 1,
+      "shipments.price": _order === "desc" ? -1 : 1,
     },
     populate: "categoryId",
   };
