@@ -1,6 +1,9 @@
 import Products from "../models/products";
 import Shipment from "../models/shipment";
-import { validateShipment, validateUpdateShipment } from "../validation/shipment";
+import {
+  validateShipment,
+  validateUpdateShipment,
+} from "../validation/shipment";
 
 export const createShipment = async (req, res) => {
   const { error } = validateShipment.validate(req.body, { abortEarly: false });
@@ -15,8 +18,8 @@ export const createShipment = async (req, res) => {
       return {
         ...data,
         originWeight: data.weight,
-      }
-    })
+      };
+    });
     const newShipment = await Shipment.create(req.body);
     req.body.products.map(async (data) => {
       await Products.findByIdAndUpdate(data.idProduct, {
@@ -119,7 +122,9 @@ export const findOne = async (req, res) => {
 };
 
 export const updateShipment = async (req, res) => {
-  const { error } = validateUpdateShipment.validate(req.body, { abortEarly: false });
+  const { error } = validateUpdateShipment.validate(req.body, {
+    abortEarly: false,
+  });
   if (error) {
     return res.status(401).json({
       status: 401,
@@ -128,7 +133,6 @@ export const updateShipment = async (req, res) => {
   }
   try {
     const shipment = await Shipment.findById(req.params.id);
-
     if (!shipment)
       return res
         .status(404)
@@ -139,7 +143,17 @@ export const updateShipment = async (req, res) => {
       req.body,
       { new: true }
     );
-
+    const productsOfShipment = shipmentUpdate.products;
+    for (let product of productsOfShipment) {
+      await Products.findByIdAndUpdate(
+        { _id: product.idProduct },
+        {
+          $pull: {
+            shipments: shipmentUpdate._id,
+          },
+        }
+      );
+    }
     return res.status(200).json({
       status: 200,
       body: {

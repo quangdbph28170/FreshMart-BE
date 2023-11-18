@@ -1,4 +1,5 @@
 import User from "../models/user";
+import mongoose from "mongoose";
 import Order from "../models/orders";
 import Product from "../models/products";
 import Shipment from "../models/shipment";
@@ -22,8 +23,9 @@ const checkCancellationTime = (order) => {
 };
 const formatDateTime = (dateTime) => {
   const date = new Date(dateTime);
-  const formattedDate = `${date.getDate()}/${date.getMonth() + 1
-    }/${date.getFullYear()}`;
+  const formattedDate = `${date.getDate()}/${
+    date.getMonth() + 1
+  }/${date.getFullYear()}`;
   const formattedTime = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
   return `${formattedDate} ${formattedTime}`;
 };
@@ -37,12 +39,13 @@ const sendMailer = async (email, data) => {
                   <a target="_blank" href="http:localhost:5173">
                     <img src="https://spacingtech.com/html/tm/freozy/freezy-ltr/image/logo/logo.png" style="width:80px;color:#000"/>
                   </a>
-                  <p style="color:#2986cc;">Kính gửi Anh/chị: ${data.customerName
-      } </p> 
+                  <p style="color:#2986cc;">Kính gửi Anh/chị: ${
+                    data.customerName
+                  } </p> 
                   <p>Cảm ơn Anh/chị đã mua hàng tại FRESH MART. Chúng tôi cảm thấy may mắn khi được phục vụ Anh/chị. Sau đây là hóa đơn chi tiết về đơn hàng</p>
                   <p style="font-weight:bold">Hóa đơn được tạo lúc: ${formatDateTime(
-        data.createdAt
-      )}</p>
+                    data.createdAt
+                  )}</p>
                   <div style="border:1px solid #ccc;border-radius:10px; padding:10px 20px;width: max-content">
                   <p>Mã hóa đơn: ${data.invoiceId}</p>
                   <p>Khách hàng: ${data.customerName}</p>
@@ -59,31 +62,33 @@ const sendMailer = async (email, data) => {
                   </thead>
                   <tbody>
                     ${data.products
-        .map(
-          (product, index) => `
+                      .map(
+                        (product, index) => `
                       <tr style="border-bottom:1px solid #ccc">
                         <td style="padding: 10px;">${index + 1}</td>
-                        <td style="padding: 10px;"><img alt="image" src="${product.images
-            }" style="width: 90px; height: 90px;border-radius:5px">
+                        <td style="padding: 10px;"><img alt="image" src="${
+                          product.images
+                        }" style="width: 90px; height: 90px;border-radius:5px">
                         <p>${product.name}</p>
                         </td>
                         <td style="padding: 10px;">${product.weight}kg</td>
                         <td style="padding: 10px;">${product.price.toLocaleString(
-              "vi-VN"
-            )}VNĐ</td>
+                          "vi-VN"
+                        )}VNĐ</td>
                       </tr>
                    `
-        )
-        .join("")}
+                      )
+                      .join("")}
                   </tbody>
                 </table>  
                   <p style="color: red;font-weight:bold;margin-top:20px">Tổng tiền thanh toán: ${data.totalPayment.toLocaleString(
-          "vi-VN"
-        )}VNĐ</p>
-                  <p>Thanh toán: ${data.pay == false
-        ? "Thanh toán khi nhận hàng"
-        : "Đã thanh toán online"
-      }</p>
+                    "vi-VN"
+                  )}VNĐ</p>
+                  <p>Thanh toán: ${
+                    data.pay == false
+                      ? "Thanh toán khi nhận hàng"
+                      : "Đã thanh toán online"
+                  }</p>
                   <p>Trạng thái đơn hàng: ${data.status}</p>
                   </div>
                    <p>Xin cảm ơn quý khách!</p>
@@ -272,7 +277,6 @@ export const CreateOrder = async (req, res) => {
 };
 //Admin lấy tất cả đơn hàng
 export const GetAllOrders = async (req, res) => {
-
   const {
     _page = 1,
     _order = "asc",
@@ -280,8 +284,7 @@ export const GetAllOrders = async (req, res) => {
     _sort = "createdAt",
     _status = "",
     _day,
-    _invoiceId = ""
-
+    _invoiceId = "",
   } = req.query;
 
   const options = {
@@ -293,22 +296,23 @@ export const GetAllOrders = async (req, res) => {
   };
 
   try {
-    const query = {}
-    const data = await Order.paginate(query, options);
+    const query = {};
     if (_status) {
       query.status = _status;
     }
+    const data = await Order.paginate(query, options);
     if (_invoiceId) {
-      const data = await Order.findOne({invoiceId:_invoiceId})
+      const data = await Order.findOne({ invoiceId: _invoiceId });
       return res.status(201).json({
         body: {
           data: data,
         },
         status: 201,
-        message: "Get order successfully"})
+        message: "Get order successfully",
+      });
     }
     if (_day) {
-      filterOrderDay(data, _day, res);
+      filterOrderDay(data.docs, _day, res);
       return;
     }
 
@@ -316,7 +320,7 @@ export const GetAllOrders = async (req, res) => {
       return res.status(200).json({
         status: 200,
         message: "There are no orders",
-        body: { data: [] }
+        body: { data: [] },
       });
     }
     return res.status(201).json({
@@ -347,7 +351,7 @@ export const OrdersForGuest = async (req, res) => {
       return res.status(200).json({
         status: 200,
         message: "Order not found",
-        body: { data: [] }
+        body: { data: [] },
       });
     }
     return res.status(201).json({
@@ -366,15 +370,31 @@ export const OrdersForGuest = async (req, res) => {
 };
 //Khách hàng (đã đăng nhập) tra cứu đơn hàng
 export const OrdersForMember = async (req, res) => {
+  const { _status = "", _day } = req.query;
   try {
     const userId = req.user._id;
-    const data = await Order.find({ userId });
+    let data = await Order.find({ userId });
     if (data.length == 0) {
       return res.status(200).json({
         status: 200,
         message: "Order not found",
-        body: { data: [] }
+        body: { data: [] },
       });
+    }
+    if (_status) {
+      if (!statusOrder.includes(_status)) {
+        return res.status(402).json({
+          status: 402,
+          message: "Invalid status",
+          statusOrder,
+        });
+      }
+      data = await Order.find({ userId, status: _status });
+    }
+    //lọc theo ngày gần nhất
+    if (_day) {
+      filterOrderDay(data, _day, res);
+      return;
     }
     return res.status(201).json({
       body: {
@@ -393,25 +413,26 @@ export const OrdersForMember = async (req, res) => {
 // Hàm xử lý lọc đơn hàng theo ngày gần nhất
 export const filterOrderDay = async (data, day, res) => {
   const today = new Date();
-  const dayOfPast = today - (day * 24 * 60 * 60 * 1000)
-  const filterData = []
+  const dayOfPast = today - day * 24 * 60 * 60 * 1000;
+  const filterData = [];
 
-  for (let item of data.docs) {
-    const itemDate = new Date(item.createdAt)
+  for (let item of data) {
+    const itemDate = new Date(item.createdAt);
     // console.log(itemDate );
     if (itemDate >= dayOfPast && itemDate <= today) {
-      filterData.push(item)
+      filterData.push(item);
     }
   }
   // console.log(today, dayOfPast, filterData);
   if (filterData.length == 0) {
     return res.json({
       message: "Order not found",
-      body: { data: [] }
-    })
+      body: { data: [] },
+    });
   }
   return res.status(201).json({
-    body: { data: filterData,
+    body: {
+      data: filterData,
       pagination: {
         currentPage: data.page,
         totalPages: data.totalPages,
@@ -429,24 +450,24 @@ export const filterOrderDay = async (data, day, res) => {
 export const FilterOrdersForMember = async (req, res) => {
   try {
     const userId = req.user._id;
-    const { day, status, invoiceId } = req.query;
+    const { _day, _status, invoiceId } = req.query;
     // console.log(req.query);
     let data = await Order.find({ userId });
 
     //lọc theo trạng thái đơn hàng
-    if (status) {
-      if (!statusOrder.includes(status)) {
+    if (_status) {
+      if (!statusOrder.includes(_status)) {
         return res.status(402).json({
           status: 402,
           message: "Invalid status",
           statusOrder,
         });
       }
-      data = await Order.find({ userId, status });
+      data = await Order.find({ userId, status: _status });
     }
     //lọc theo ngày gần nhất
-    if (day) {
-      filterOrderDay(data, day, res);
+    if (_day) {
+      filterOrderDay(data, _day, res);
       return;
     }
     //lọc theo mã đơn hàng
@@ -458,7 +479,7 @@ export const FilterOrdersForMember = async (req, res) => {
       return res.status(200).json({
         status: 200,
         message: "Order not found",
-        body: { data: [] }
+        body: { data: [] },
       });
     }
 
@@ -485,7 +506,7 @@ export const OrderDetail = async (req, res) => {
       return res.status(404).json({
         status: 404,
         message: "Not found order",
-        body: { data: {} }
+        body: { data: {} },
       });
     }
     const { canCancel } = checkCancellationTime(data);
@@ -549,7 +570,7 @@ export const UpdateOrder = async (req, res) => {
       return res.status(404).json({
         status: 404,
         message: "Order not found",
-        body: { data: {} }
+        body: { data: {} },
       });
     }
 
@@ -589,4 +610,3 @@ export const UpdateOrder = async (req, res) => {
   }
 };
 //
-
