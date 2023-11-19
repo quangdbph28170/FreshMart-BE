@@ -295,5 +295,116 @@ export const removeAllProductInCart = async (req, res) => {
 
 //Check cart local 
 export const cartLocal = async (req, res) => {
-    
+    try {
+        const err = [];
+        const products = req.body.products
+        for (let item of products) {
+            const prd = await Product.findById(item._id);
+            if (!prd) {
+                err.push({
+                    _id: item._id,
+                });
+            }
+        }
+        if (err.length > 0) {
+            return res.status(404).json({
+                body: {
+                    data: err,
+                },
+                message: "Product not exist",
+                status: 404,
+            });
+        }
+        const priceErr = [];
+        for (let item of products) {
+            const prd = await Product.findById(item._id);
+            if (item.price != prd.price) {
+                priceErr.push({
+                    _id: item._id,
+                    price: prd.price,
+                });
+            }
+        }
+        if (priceErr.length > 0) {
+            return res.status(404).json({
+                body: {
+                    data: priceErr,
+                },
+                message: "Price is not valid",
+                status: 404,
+            });
+        }
+        const nameErr = [];
+        for (let item of products) {
+            const prd = await Product.findById(item._id);
+            if (item.name != prd.productName) {
+                nameErr.push({
+                    _id: item._id,
+                    name: prd.productName,
+                });
+            }
+        }
+        if (nameErr.length > 0) {
+            return res.status(404).json({
+                body: {
+                    data: nameErr,
+                },
+                message: "Product name is not valid",
+                status: 404,
+            });
+        }
+        const imgErr = [];
+        for (let item of products) {
+            const prd = await Product.findById(item._id);
+            if (item.images != prd.images[0].url) {
+                imgErr.push({
+                    _id: item._id,
+                    image: prd.images[0].url,
+                });
+            }
+        }
+        if (imgErr.length > 0) {
+            return res.status(404).json({
+                body: {
+                    data: imgErr,
+                },
+                message: "Product image is not valid",
+                status: 404,
+            });
+        }
+        for (let item of products) {
+            const prd = await Product.findById(item._id);
+            //   console.log(prd.shipments);
+            const currentTotalWeight = prd.shipments.reduce(
+                (accumulator, shipment) => accumulator + shipment.weight,
+                0
+            );
+
+            if (prd.shipments.length === 0) {
+                return res.status(404).json({
+                    status: 404,
+                    _id: item._id,
+                    message: "Sản phẩm trong kho hiện tại đã hết hàng!",
+                });
+            }
+            if (item.weight > currentTotalWeight) {
+                return res.status(400).json({
+                    status: 400,
+                    message: "Sản phẩm trong kho hiện không đủ số lượng! ",
+                    body: { data: { maxWeight: currentTotalWeight } }
+                });
+            }
+
+        }
+        return res.status(200).json({
+            status: 200,
+            message: "Valid",
+            body: { data: true },
+        })
+    } catch (error) {
+        return res.status(500).json({
+            status: 500,
+            message: error.message,
+        });
+    }
 }
