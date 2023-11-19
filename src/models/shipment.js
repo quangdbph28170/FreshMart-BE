@@ -10,6 +10,10 @@ const shipmentSchema = new mongoose.Schema(
             ref: "Products",
             required: true,
           },
+          productName: {
+            type: String,
+            required: true,
+          },
           date: {
             type: String,
             required: true,
@@ -22,11 +26,8 @@ const shipmentSchema = new mongoose.Schema(
             type: Number,
             required: true,
           },
+
           originPrice: {
-            type: Number,
-            required: true,
-          },
-          price: {
             type: Number,
             required: true,
           }
@@ -42,7 +43,7 @@ const shipmentSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    
+
   },
   { timestamps: true }
 );

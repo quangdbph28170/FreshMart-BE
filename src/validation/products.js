@@ -2,6 +2,7 @@ import joi from "joi";
 
 export const validateProduct = joi.object({
   productName: joi.string().required().trim(),
+  price: joi.string().required().trim(),
   images: joi
     .array()
     .items(
