@@ -11,7 +11,7 @@ const checkWeight = async (productId, weight, userId) => {
         totalWeight += item.weight
     }
     //Trong kho hết hàng
-    if (totalWeight == 0) {
+    if (checkProduct.shipments.length == 0) {
         throw new Error("Sản phẩm hiện đã hết hàng!");
     }
     //Check cân gửi lên lớn hơn tổng cân trong kho
@@ -294,13 +294,6 @@ export const removeAllProductInCart = async (req, res) => {
 }
 
 //Check cart local 
-export const cartLocal = async () => {
-    try {
-
-    } catch (error) {
-        return res.status(500).json({
-            status: 500,
-            message: error.message,
-        });
-    }
+export const cartLocal = async (req, res) => {
+    
 }
