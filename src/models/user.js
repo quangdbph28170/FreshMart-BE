@@ -33,15 +33,18 @@ const userSchema = new mongoose.Schema(
          enum: ['admin', 'member'],
          default: 'member',
       },
-    
-      orders:[
+
+      orders: [
          {
             type: mongoose.Types.ObjectId,
-            ref:"Order",
+            ref: "Order",
             default: null
          }
-      ] ,
-      notifications: [String],
+      ],
+      notifications: [{
+         type: mongoose.Types.ObjectId,
+         ref: "Notification",
+      }],
       vouchers: [String],
       state: {
          type: Boolean,
