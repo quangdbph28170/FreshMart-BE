@@ -69,6 +69,11 @@ const productSchema = new mongoose.Schema(
       ],
       default: [],
     },
+    isSale:{
+      type:Boolean,
+      default: false,
+    }
+
   },
   { timestamps: true, versionKey: false }
 );
