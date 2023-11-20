@@ -28,9 +28,7 @@ const MONGO_URL = process.env.MONGODB_LOCAL;
 
 const io = new Server(httpServer, { cors: "*" });
 
-io.on("connection", (socket) => {
-  //chạy lại từ phút số 1 -> phút số 59 (vì đang test nên để thời gian ngắn)
-  //chạy lại từ 0h(24h) và 12h nếu config (* 0,12 * * *)
+io.of("/admin").on("connection", (socket) => {
   cron.schedule("1-59 * * * *", async () => {
     const products = await product.find();
     const response = [];
@@ -48,23 +46,16 @@ io.on("connection", (socket) => {
         const isWithinSevenDays = targetDate - currentDate < sevenDaysInMillis;
         
         if (isWithinSevenDays) {
-          response.push(
-            {
-              message: "Sản phẩm có mã '" +
-                product._id +
-                "' trong lô hàng mã '" +
-                shipment.idShipment +
-                "' sắp hết hạn",
-              productId: product._id,
-              shipmentId: shipment.idShipment
-            }
-          );
+          response.push({
+            productId: product._id,
+            shipmentId: shipment._id,
+          });
         }
       }
     }
 
     if (response.length > 0) {
-      io.to('adminRoom').emit("alert", response);
+      io.of("/admin").emit("expireProduct", response);
     }
   });
 
@@ -127,5 +118,3 @@ mongoose
 httpServer.listen(PORT, () => {
   console.log(`listening success ${PORT}`);
 });
-
-
