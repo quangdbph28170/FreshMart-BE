@@ -138,10 +138,10 @@ export const CreateOrder = async (req, res) => {
     const priceErr = [];
     for (let item of products) {
       const prd = await Product.findById(item._id);
-      if (item.price != prd.shipments[0].price) {
+      if (item.price != prd.price) {
         priceErr.push({
           _id: item._id,
-          price: prd.shipments[0].price,
+          price: prd.price,
         });
       }
     }

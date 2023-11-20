@@ -72,17 +72,17 @@ const orderSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["chờ xác nhận", "đang giao hàng", "đã hoàn thành", "đã hủy"],
+        enum: ["chờ xác nhận", "đang giao hàng", "giao hàng thành công", "đã nhận được hàng","đã hủy đơn hàng"],
         default: "chờ xác nhận"
     },
-    orderDate:{
-        type:String,
-        default:function(){
-            const currentDate = new Date();
-            const formattedDate = `${("0" + currentDate.getDate()).slice(-2)}-${("0" + (currentDate.getMonth() + 1)).slice(-2)}-${currentDate.getFullYear()}`
-            return formattedDate;
-        }
-    }
+    // orderDate:{
+    //     type:String,
+    //     default:function(){
+    //         const currentDate = new Date();
+    //         const formattedDate = `${("0" + currentDate.getDate()).slice(-2)}-${("0" + (currentDate.getMonth() + 1)).slice(-2)}-${currentDate.getFullYear()}`
+    //         return formattedDate;
+    //     }
+    // }
 
 }, { versionKey: false, timestamps: true })
 orderSchema.plugin(mongoosePaginate)
