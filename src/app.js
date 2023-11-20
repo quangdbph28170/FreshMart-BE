@@ -28,7 +28,7 @@ const MONGO_URL = process.env.MONGODB_LOCAL;
 
 const io = new Server(httpServer, { cors: "*" });
 
-io.on("connection", (socket) => {
+io.of("/admin").on("connection", (socket) => {
   cron.schedule("1-59 * * * *", async () => {
     const products = await product.find();
     const response = [];
@@ -47,19 +47,16 @@ io.on("connection", (socket) => {
         const isWithinSevenDays = targetDate - currentDate < sevenDaysInMillis;
 
         if (isWithinSevenDays) {
-          response.push(
-            "Sản phẩm có mã '" +
-              product._id +
-              "' trong lô hàng mã '" +
-              shipment.idShipment +
-              "' sắp hết hạn"
-          );
+          response.push({
+            productId: product._id,
+            shipmentId: shipment._id,
+          });
         }
       }
     }
 
     if (response.length > 0) {
-      io.emit("alert", response);
+      io.of("/admin").emit("expireProduct", response);
     }
   });
 });
@@ -86,5 +83,3 @@ mongoose
 httpServer.listen(PORT, () => {
   console.log(`listening success ${PORT}`);
 });
-
-
