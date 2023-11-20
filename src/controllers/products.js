@@ -1,6 +1,5 @@
 import Products from "../models/products";
 import Categories from "../models/categories";
-import Origin from "../models/origin";
 import { validateProduct } from "../validation/products";
 import mongoose from "mongoose";
 export const getProducts = async (req, res) => {
@@ -14,7 +13,7 @@ export const getProducts = async (req, res) => {
     _originId = "",
     _minPrice = "",
     _maxPrice = "",
-    
+
   } = req.query;
   const options = {
     page: _page,
@@ -55,12 +54,10 @@ export const getProducts = async (req, res) => {
     let minPrice = Number.MAX_SAFE_INTEGER
 
     for (let item of prd) {
-      for (let index of item.shipments) {
-        maxPrice = Math.max(maxPrice, index.price)
-        minPrice = Math.min(minPrice, index.price)
-      }
+      maxPrice = Math.max(maxPrice, item.price)
+      minPrice = Math.min(minPrice, item.price)
     }
-
+    // console.log(minPrice, maxPrice);
     return res.status(201).json({
       body: {
         data: products.docs,
@@ -212,7 +209,7 @@ export const updateProduct = async (req, res) => {
         message: error.details.map((error) => error.message),
       });
     }
-    // const { categoryId } = req.body;
+
     const product = await Products.findByIdAndUpdate(req.params.id, req.body);
     if (!product) {
       return res.status(404).json({
@@ -220,16 +217,7 @@ export const updateProduct = async (req, res) => {
         message: "Product not found",
       });
     }
-    // await Categories.findByIdAndUpdate(product.categoryId, {
-    //   $pull: {
-    //     products: product._id,
-    //   },
-    // });
-    // await Categories.findByIdAndUpdate(categoryId, {
-    //   $addToSet: {
-    //     products: product._id,
-    //   },
-    // });
+
 
     return res.status(201).json({
       body: {
@@ -273,3 +261,4 @@ export const removeProduct = async (req, res) => {
     });
   }
 };
+
