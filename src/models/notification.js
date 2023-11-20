@@ -13,11 +13,12 @@ const notificationSchema = new mongoose.Schema(
       userId: {
         type: mongoose.Types.ObjectId,
         ref: 'User',
-        required: true,
+        default: null,
       },
       type: {
         type: String,
-        enum: ['clinet', 'admin'],
+        enum: ['client', 'admin'],
+        default: 'client',
         required: true,
       },
       isRead: {
