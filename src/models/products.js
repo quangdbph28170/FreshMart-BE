@@ -6,7 +6,7 @@ const productSchema = new mongoose.Schema(
       type: String,
       required: true,
     },
-   
+
     images: [
       {
         url: {
@@ -33,6 +33,10 @@ const productSchema = new mongoose.Schema(
       ref: "Category",
       required: true,
     },
+    price: {
+      type: Number,
+      required: true,
+    },
     sold: {
       type: Number,
       default: 0,
@@ -46,9 +50,8 @@ const productSchema = new mongoose.Schema(
           },
           originWeight: Number,
           weight: Number,
-          date: String,
+          date: String,        
           originPrice: Number,
-          price: Number,
         },
       ],
       default: [],
