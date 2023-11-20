@@ -7,6 +7,7 @@ import {
   removeProduct,
   getRelatedProducts,
   getProductSold,
+  liquidationProduct,
 } from "../controllers/products";
 
 const router = express.Router();
@@ -17,4 +18,5 @@ router.get("/products-sold", getProductSold);
 router.get("/products/related/:cate_id/:product_id", getRelatedProducts);
 router.get("/products/:id", getOneProduct);
 router.delete("/products/:id", removeProduct);
+router.post("/products-process/", liquidationProduct);
 export default router;
