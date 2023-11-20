@@ -60,7 +60,6 @@ export const getProducts = async (req, res) => {
         minPrice = Math.min(minPrice, index.price)
       }
     }
-    console.log(minPrice, maxPrice);
 
     return res.status(201).json({
       body: {
