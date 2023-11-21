@@ -1,4 +1,5 @@
 import Products from "../models/products";
+import Shipment from "../models/shipment";
 import Categories from "../models/categories";
 import { validateProduct } from "../validation/products";
 import mongoose from "mongoose";
@@ -13,6 +14,7 @@ export const getProducts = async (req, res) => {
     _originId = "",
     _minPrice = "",
     _maxPrice = "",
+    _isSale,
 
   } = req.query;
   const options = {
@@ -32,6 +34,9 @@ export const getProducts = async (req, res) => {
 
   if (_categoryId) {
     query.categoryId = _categoryId;
+  }
+  if (_isSale) {
+    query.isSale = _isSale;
   }
 
   if (_minPrice && _maxPrice) {
@@ -253,6 +258,74 @@ export const removeProduct = async (req, res) => {
     return res.status(201).json({
       status: 201,
       message: "Remove product successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
+};
+export const liquidationProduct = async (req, res) => {
+  try {
+    const { _productId, _shipmentId } = req.query
+    console.log(req.query);
+    const { error } = validateProduct.validate(req.body, { abortEarly: false });
+    if (error) {
+      return res.status(401).json({
+        status: 401,
+        message: error.details.map((error) => error.message),
+      });
+    }
+
+
+    // Kiểm tra id sp CẦN_THANH_LÝ
+    const productExist = await Products.findById(_productId);
+    if (!productExist) {
+      return res.status(404).json({
+        status: 404,
+        message: "Product not found!",
+      });
+    }
+    //Kiểm tra id shipment
+    const shipmentExist = productExist.shipments.find(item => item.idShipment == _shipmentId);
+    if (!shipmentExist) {
+      return res.status(404).json({
+        status: 404,
+        message: "Shipment not found!",
+      });
+    }
+
+    //Kiểm tra xem sp CẦN_THANH_LÝ còn trong lô hàng đó ko
+   if(productExist.shipments.find(item=> item.idShipment != _shipmentId)){
+    return res.status(404).json({
+      status: 404,
+      message: "Sản phẩm đã không còn trong lô hàng này!",
+    });
+   }
+
+    const data = await Products.create(req.body);
+
+    // Xóa cái lô của sp CẦN_THANH_LÝ ở bảng products
+    await Products.findByIdAndUpdate(_productId, {
+      $pull: {
+        shipments: {
+          idShipment: _shipmentId,
+        }
+      }
+    }, { new: true })
+
+    //Cập nhật lại trong bảng shipment id sp CẦN_THANH_LÝ => is sp THANH_LÝ
+    await Shipment.findOneAndUpdate({ _id: _shipmentId, "products.idProduct": _productId }, {
+      $set: {
+        "products.$.idProduct": data._id
+      }
+    }, { new: true })
+
+    return res.status(200).json({
+      status: 200,
+      message: "Đã thanh lý xong <3",
+      body:{data}
     });
   } catch (error) {
     return res.status(500).json({

@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-const commentRateSchema = new mongoose.Schema({
+const evaluationSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Types.ObjectId,
         required: true,
@@ -13,22 +13,28 @@ const commentRateSchema = new mongoose.Schema({
     },
     content: {
         type: String,
-        default:null
+        default: null
     },
-    images: {
+    imgUrl: {
         type: String,
-        default:null
+        default: null
     },
-    star:{
-        type:Number,
+    star: {
+        type: Number,
         required: true
     },
-    orderId:{
+    orderId: {
         type: mongoose.Types.ObjectId,
         required: true,
         ref: "Order"
+    },
+    isReviewVisible: {
+        type: Boolean,
+        default: true
     }
+
+    // date: => createdAt
 
 }, { timestamps: true, versionKey: false });
 
-export default mongoose.model("CommentRate", commentRateSchema)
+export default mongoose.model("Evaluation", evaluationSchema)
