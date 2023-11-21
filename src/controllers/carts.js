@@ -41,7 +41,11 @@ const calculateTotalPrice = async (data) => {
     await data.populate("products.productId");
     let totalPrice = 0;
     for (let item of data.products) {
-        totalPrice += item.productId.price * item.weight;
+        //Đảm bảo tính tổng tiền những sp còn tồn tại (.) kho
+        if (item.productId) {
+            totalPrice += item.productId.price * item.weight;
+        }
+
     }
     return totalPrice;
 }
@@ -51,7 +55,7 @@ export const addToCart = async (req, res) => {
     try {
         const userId = req.user._id;
         const { productId, weight } = req.body;
-
+        let totalPrice = 0;
         const checkProduct = await Product.findById(productId);
         if (!checkProduct) {
             return res.status(404).json({
@@ -98,14 +102,8 @@ export const addToCart = async (req, res) => {
             await data.populate("products.productId");
         }
 
-        // Tính tổng giá tiền
-        for (let item of data.products) {
-            // tránh th sp trong giỏ hàng ko còn trong products nó sẽ lỗi price
-            if (await Product.findById(item.productId)) {
-                totalPrice += item.productId.price * item.weight;
-            }
-        }
-
+        // Tính tổng tiền
+        totalPrice += await calculateTotalPrice(data)
         return res.status(200).json({
             message: "Add to cart successfully",
             body: { data, totalPrice },
