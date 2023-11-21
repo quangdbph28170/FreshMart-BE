@@ -121,6 +121,7 @@ export const addToCart = async (req, res) => {
 export const updateProductWeightInCart = async (req, res) => {
     try {
         const { weight, productId } = req.body
+        let totalPrice = 0;
         await checkWeight(productId, weight)
         const data = await Cart.findOneAndUpdate(
             { userId: req.user._id, "products.productId": productId },
@@ -128,11 +129,15 @@ export const updateProductWeightInCart = async (req, res) => {
                 $set: {
                     "products.$.weight": weight
                 }
-            }, { new: true }).populate("products.productId")
+            }, { new: true })
+
+        //Tính tổng lại tiền
+        totalPrice = await calculateTotalPrice(data)
+        
         return res.status(200).json({
             status: 200,
             message: "Update weight successfully",
-            body: { data }
+            body: { data, totalPrice }
         });
     } catch (error) {
         return res.status(500).json({
