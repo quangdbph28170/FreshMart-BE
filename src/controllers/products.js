@@ -154,7 +154,7 @@ export const getOneProduct = async (req, res) => {
   try {
     const product = await Products.findById(req.params.id).populate(
       "categoryId"
-    );
+    ).populate("originId")
     if (!product) {
       return res.status(404).json({
         status: 404,
