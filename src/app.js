@@ -18,6 +18,7 @@ import { Server } from "socket.io";
 import cron from "node-cron";
 import product from "./models/products";
 import cartRouter from "./routers/carts";
+import commentRateRouter from "./routers/evaluation";
 const app = express();
 const httpServer = createServer(app);
 
@@ -120,6 +121,7 @@ app.use("/api", authRouter);
 app.use("/api", userRouter);
 app.use("/api", momoRouter);
 app.use("/api", cartRouter);
+app.use("/api", commentRateRouter);
 mongoose
   .connect(MONGO_URL)
   .then(() => console.log("connected to db"))
