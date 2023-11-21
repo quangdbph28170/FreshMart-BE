@@ -30,7 +30,8 @@ const MONGO_URL = process.env.MONGODB_LOCAL;
 
 const io = new Server(httpServer, { cors: "*" });
 
-io.on("connection", (socket) => {
+
+io.of('/admin').on("connection", (socket) => {
   cron.schedule("1-59 * * * *", async () => {
     const products = await product.find();
     const response = [];
@@ -44,12 +45,36 @@ io.on("connection", (socket) => {
         // Số mili giây trong 7 ngày
         const sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000;
 
-        // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 7 ngày không
-        const isWithinSevenDays = targetDate - currentDate < sevenDaysInMillis;
-
-        if (isWithinSevenDays) {
+        if (targetDate - currentDate <= 0) {
+          await addNotification({
+            title: `Thông báo: Sản phẩm ${product.productName} đã hết Hạn`,
+            message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
+            link: '/admin/products/' + product._id,
+          })
           response.push({
             productId: product._id,
+            timeLeft: 0,
+            shipmentId: shipment._id,
+          });
+        }
+
+        // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 7 ngày không
+        const isWithinSevenDays = targetDate - currentDate < sevenDaysInMillis;
+        
+        if (isWithinSevenDays && targetDate - currentDate > 0) {
+          const totalMilliseconds = sevenDaysInMillis - (targetDate - currentDate);
+          const totalSeconds = Math.floor(totalMilliseconds / 1000);
+          const hours = Math.floor(totalSeconds / 3600);
+          
+          await addNotification({
+            title: `Thông báo: Sản phẩm ${product.productName} sắp Hết Hạn sau ${hours} tiếng nữa`,
+            message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
+            link: '/admin/products/' + product._id,
+          })
+
+          response.push({
+            productId: product._id,
+            timeLeft: hours,
             shipmentId: shipment._id,
           });
         }
@@ -57,31 +82,10 @@ io.on("connection", (socket) => {
     }
 
     if (response.length > 0) {
-      io.emit("expireProduct", response);
+      socket.emit("expireProduct", response);
     }
   });
 
-  //thông báo cho admin và người dùng đã đăng nhập mua hàng thành công/ có đơn hàng mới
-  socket.on('purchase', async (data) => {
-    const socketData = JSON.parse(data);
-    // Gửi thông báo đến trang client nếu người dùng đăng nhập
-    if (socketData.userId) {
-      const notification = await addNotification({
-        userId: socketData.userId,
-        message: 'Mua hàng thành công',
-        link: '/my-order/' + socketData.orderId,
-      })
-      io.to(socketData.userId).emit('purchaseNotification', { data: notification })
-    }
-
-    const adminNotification = await addNotification({
-      message: 'Có đơn hàng mới',
-      link: '/admin/orders',
-      type: 'admin'
-    })
-    // Gửi thông báo đến trang admin
-    io.to('adminRoom').emit('purchaseNotification', { data: adminNotification });
-  });
 
   //thông báo cho người dùng trạng thái của order đã thay đổi và nếu "giao hàng thành công thì trả về order id để người dùng sang detail xác nhận đơn hàng thành công"
   socket.on('changeStatus', async (data) => {
@@ -89,23 +93,49 @@ io.on("connection", (socket) => {
 
     const notification = await addNotification({
       userId: socketData.userId,
+      title: 'Thông báo',
       message: 'Đơn hàng (#)' + socketData.invoiceId + '  của bạn đã ' + socketData.status,
       link: '/my-order/' + socketData.orderId,
     })
 
     io.to(socketData.userId).emit('statusNotification', { data: notification })
   })
+})
 
+io.on("connection", (socket) => {
+  //thông báo cho admin và người dùng đã đăng nhập mua hàng thành công/ có đơn hàng mới
+  socket.on('purchase', async (data) => {
+    const socketData = JSON.parse(data);
+    // Gửi thông báo đến trang client nếu người dùng đăng nhập
+    if (socketData.userId) {
+      const notification = await addNotification({
+        userId: socketData.userId,
+        title: 'Thông báo',
+        message: 'Mua hàng thành công',
+        link: '/my-order/' + socketData.orderId,
+      })
+      io.to(socketData.userId).emit('purchaseNotification', { data: notification })
+    }
+
+    const adminNotification = await addNotification({
+      title: 'Thông báo',
+      message: 'Có đơn hàng mới đang chờ xử lý',
+      link: '/admin/orders',
+      type: 'admin'
+    })
+    // Gửi thông báo đến trang admin
+    io.of('/admin').emit('purchaseNotification', { data: adminNotification });
+  });
 
   socket.on('joinClientRoom', (userId) => {
     // Thêm người dùng vào "room theo id người dùng" client khi truy cập trang client
     socket.join(userId);
   });
 
-  socket.on('joinAdminRoom', () => {
-    // Thêm người dùng vào "room" admin khi truy cập trang admin
-    socket.join('adminRoom');
-  });
+  // socket.on('joinAdminRoom', () => {
+  //   // Thêm người dùng vào "room" admin khi truy cập trang admin
+  //   socket.join('adminRoom');
+  // });
 });
 
 app.use(express.json());
