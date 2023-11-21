@@ -93,6 +93,7 @@ const sendMailer = async (email, data) => {
 //Tạo mới đơn hàng
 export const CreateOrder = async (req, res) => {
   try {
+
     const { products, paymentMethod } = req.body;
     const { error } = validateCheckout.validate(req.body, {
       abortEarly: false,
@@ -113,6 +114,7 @@ export const CreateOrder = async (req, res) => {
 
     const errors = [];
     for (let item of products) {
+
       const prd = await Product.findById(item.productId);
       if (!prd) {
         errors.push({
@@ -173,8 +175,21 @@ export const CreateOrder = async (req, res) => {
         body: { errors },
       });
     }
+    const totalPayment = products.reduce((accumulator, product) => {
+      return accumulator + product.price
+    }, 0)
+    if (req.body.totalPayment !== totalPayment) {
+      return res.status(400).json({
+        status: 400,
+        message: "Invalid totalPayment!",
+        true: totalPayment,
+        false: req.body.totalPayment
+      });
+    }
+
 
     for (let item of products) {
+
       const prd = await Product.findById(item.productId);
       let itemWeight = item.weight;
       if (itemWeight != 0 || currentTotalWeight != 0) {
@@ -271,9 +286,9 @@ export const CreateOrder = async (req, res) => {
     }
     sendMailer(req.body.email, data);
     return res.status(201).json({
-      body: { data },
       status: 201,
       message: "Order success",
+      body: { data },
     });
   } catch (error) {
     return res.status(500).json({

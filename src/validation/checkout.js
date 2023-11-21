@@ -34,9 +34,8 @@ export const validateCheckout = joi.object({
       images: joi.string().required().trim(),
       price: joi.number().required(),
       weight: joi.number().required(),
-      totalWeight: joi.number(),
     })
-  ),
+  ).required(),
   totalPayment: joi.number().required(),
   note: joi.string().trim(),
   pay: joi.boolean(),
