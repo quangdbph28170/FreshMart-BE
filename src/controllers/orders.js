@@ -25,6 +25,8 @@ const formatDateTime = (dateTime) => {
   const date = new Date(dateTime);
   const formattedDate = `${date.getDate()}/${date.getMonth() + 1
     }/${date.getFullYear()}`;
+  const formattedDate = `${date.getDate()}/${date.getMonth() + 1
+    }/${date.getFullYear()}`;
   const formattedTime = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
   return `${formattedDate} ${formattedTime}`;
 };
@@ -40,8 +42,12 @@ const sendMailer = async (email, data) => {
                   </a>
                   <p style="color:#2986cc;">Kính gửi Anh/chị: ${data.customerName
       } </p> 
+                  <p style="color:#2986cc;">Kính gửi Anh/chị: ${data.customerName
+      } </p> 
                   <p>Cảm ơn Anh/chị đã mua hàng tại FRESH MART. Chúng tôi cảm thấy may mắn khi được phục vụ Anh/chị. Sau đây là hóa đơn chi tiết về đơn hàng</p>
                   <p style="font-weight:bold">Hóa đơn được tạo lúc: ${formatDateTime(
+        data.createdAt
+      )}</p>
         data.createdAt
       )}</p>
                   <div style="border:1px solid #ccc;border-radius:10px; padding:10px 20px;width: max-content">
@@ -62,6 +68,8 @@ const sendMailer = async (email, data) => {
                     ${data.products
         .map(
           (product, index) => `
+        .map(
+          (product, index) => `
                       <tr style="border-bottom:1px solid #ccc">
                         <td style="padding: 10px;">${index + 1}</td>
                         <td style="padding: 10px;"><img alt="image" src="${product.images
@@ -79,6 +87,12 @@ const sendMailer = async (email, data) => {
                   </tbody>
                 </table>  
                   <p style="color: red;font-weight:bold;margin-top:20px">Tổng tiền thanh toán: ${data.totalPayment.toLocaleString(
+          "vi-VN"
+        )}VNĐ</p>
+                  <p>Thanh toán: ${data.pay == false
+        ? "Thanh toán khi nhận hàng"
+        : "Đã thanh toán online"
+      }</p>
           "vi-VN"
         )}VNĐ</p>
                   <p>Thanh toán: ${data.pay == false

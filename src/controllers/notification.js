@@ -19,7 +19,7 @@ export const getAdminNotification = async (req, res) => {
             status: 200,
             message: 'Get admin notification successfully',
             body: {
-                data: adminNotification || []
+                data: adminNotification.reverse() || []
             }
         })
     } catch (error) {
@@ -32,13 +32,22 @@ export const getAdminNotification = async (req, res) => {
 
 export const getClientNotification = async (req, res) => {
     try {
+        if(!req.params.id) {
+            return res.status(200).json({
+                status: 200,
+                body: {
+                    data: []
+                },
+                message: "chưa đăng nhập",
+            });
+        }
         const clientNotification = await Notification.find({ type: 'client', userId: req.params.id })
 
         return res.status(200).json({
             status: 200,
             message: 'Get client notification successfully',
             body: {
-                data: clientNotification || []
+                data: clientNotification.reverse() || []
             }
         })
     } catch (error) {

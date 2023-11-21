@@ -1,26 +1,26 @@
-import express from "express";
-import dotenv from "dotenv";
-import mongoose from "mongoose";
-import cors from "cors";
-import cookieParser from "cookie-parser";
-import categoryRouter from "./routers/categories";
-import productRouter from "./routers/products";
-import uploadRouter from "./routers/upload";
-import shipmentRouter from "./routers/shipment";
-import mailRouter from "./routers/mail";
-import originRouter from "./routers/origin";
-import orderRouter from "./routers/orders";
-import authRouter from "./routers/auth";
-import userRouter from "./routers/user";
-import notificationRouter from "./routers/notification";
-import momoRouter from "./routers/momo-pay";
-import { createServer } from "http";
-import { Server } from "socket.io";
-import cron from "node-cron";
-import product from "./models/products";
-import cartRouter from "./routers/carts";
-import { addNotification } from "./controllers/notification";
-import evaluationRouter from "./routers/evaluation";
+import express from 'express';
+import dotenv from 'dotenv';
+import mongoose from 'mongoose';
+import cors from 'cors';
+import cookieParser from 'cookie-parser';
+import categoryRouter from './routers/categories';
+import productRouter from './routers/products';
+import uploadRouter from './routers/upload';
+import shipmentRouter from './routers/shipment';
+import mailRouter from './routers/mail';
+import originRouter from './routers/origin';
+import orderRouter from './routers/orders';
+import authRouter from './routers/auth';
+import userRouter from './routers/user';
+import notificationRouter from './routers/notification';
+import momoRouter from './routers/momo-pay';
+import { createServer } from 'http';
+import { Server } from 'socket.io';
+import cron from 'node-cron';
+import product from './models/products';
+import cartRouter from './routers/carts';
+import { addNotification } from './controllers/notification';
+import evaluationRouter from './routers/evaluation';
 
 const app = express();
 const httpServer = createServer(app);
@@ -30,11 +30,10 @@ dotenv.config();
 const PORT = process.env.PORT;
 const MONGO_URL = process.env.MONGODB_LOCAL;
 
-const io = new Server(httpServer, { cors: "*" });
+const io = new Server(httpServer, { cors: '*' });
 
-
-io.of('/admin').on("connection", (socket) => {
-  cron.schedule("1-59 * * * *", async () => {
+io.of('/admin').on('connection', (socket) => {
+  cron.schedule('1-59 * * * *', async () => {
     const products = await product.find();
     const response = [];
     for (const product of products) {
@@ -51,8 +50,9 @@ io.of('/admin').on("connection", (socket) => {
           await addNotification({
             title: `Thông báo: Sản phẩm ${product.productName} đã hết Hạn`,
             message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
-            link: '/admin/products/' + product._id,
-          })
+            link: '/manage/products/' + product._id,
+            type: 'admin',
+          });
           response.push({
             productId: product._id,
             timeLeft: 0,
@@ -62,17 +62,19 @@ io.of('/admin').on("connection", (socket) => {
 
         // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 7 ngày không
         const isWithinSevenDays = targetDate - currentDate < sevenDaysInMillis;
-        
+
         if (isWithinSevenDays && targetDate - currentDate > 0) {
-          const totalMilliseconds = sevenDaysInMillis - (targetDate - currentDate);
+          const totalMilliseconds =
+            sevenDaysInMillis - (targetDate - currentDate);
           const totalSeconds = Math.floor(totalMilliseconds / 1000);
           const hours = Math.floor(totalSeconds / 3600);
-          
+
           await addNotification({
             title: `Thông báo: Sản phẩm ${product.productName} sắp Hết Hạn sau ${hours} tiếng nữa`,
             message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
-            link: '/admin/products/' + product._id,
-          })
+            link: '/manage/products/' + product._id,
+            type: 'admin',
+          });
 
           response.push({
             productId: product._id,
@@ -84,10 +86,9 @@ io.of('/admin').on("connection", (socket) => {
     }
 
     if (response.length > 0) {
-      socket.emit("expireProduct", response);
+      socket.emit('expireProduct', response);
     }
   });
-
 
   //thông báo cho người dùng trạng thái của order đã thay đổi và nếu "giao hàng thành công thì trả về order id để người dùng sang detail xác nhận đơn hàng thành công"
   socket.on('changeStatus', async (data) => {
@@ -96,15 +97,19 @@ io.of('/admin').on("connection", (socket) => {
     const notification = await addNotification({
       userId: socketData.userId,
       title: 'Thông báo',
-      message: 'Đơn hàng (#)' + socketData.invoiceId + '  của bạn đã ' + socketData.status,
+      message:
+        'Đơn hàng (#)' +
+        socketData.invoiceId +
+        '  của bạn đã ' +
+        socketData.status,
       link: '/my-order/' + socketData.orderId,
-    })
+    });
 
-    io.to(socketData.userId).emit('statusNotification', { data: notification })
-  })
-})
+    io.to(socketData.userId).emit('statusNotification', { data: notification });
+  });
+});
 
-io.on("connection", (socket) => {
+io.on('connection', (socket) => {
   //thông báo cho admin và người dùng đã đăng nhập mua hàng thành công/ có đơn hàng mới
   socket.on('purchase', async (data) => {
     const socketData = JSON.parse(data);
@@ -115,23 +120,26 @@ io.on("connection", (socket) => {
         title: 'Thông báo',
         message: 'Mua hàng thành công',
         link: '/my-order/' + socketData.orderId,
-      })
-      io.to(socketData.userId).emit('purchaseNotification', { data: notification })
+      });
+      io.to(socketData.userId).emit('purchaseNotification', {
+        data: notification,
+      });
     }
 
     const adminNotification = await addNotification({
       title: 'Thông báo',
       message: 'Có đơn hàng mới đang chờ xử lý',
-      link: '/admin/orders',
-      type: 'admin'
-    })
+      link: '/manage/orders',
+      type: 'admin',
+    });
     // Gửi thông báo đến trang admin
     io.of('/admin').emit('purchaseNotification', { data: adminNotification });
   });
 
   socket.on('joinClientRoom', (userId) => {
+    const id = JSON.parse(userId);
     // Thêm người dùng vào "room theo id người dùng" client khi truy cập trang client
-    socket.join(userId);
+    socket.join(id);
   });
 
   // socket.on('joinAdminRoom', () => {
@@ -144,22 +152,22 @@ app.use(express.json());
 app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
-app.use("/api", categoryRouter);
-app.use("/api", productRouter);
-app.use("/api", uploadRouter);
-app.use("/api", shipmentRouter);
-app.use("/api", mailRouter);
-app.use("/api", originRouter);
-app.use("/api", orderRouter);
-app.use("/api", authRouter);
-app.use("/api", userRouter);
-app.use("/api", momoRouter);
-app.use("/api", cartRouter);
-app.use("/api", notificationRouter);
-app.use("/api", evaluationRouter);
+app.use('/api', categoryRouter);
+app.use('/api', productRouter);
+app.use('/api', uploadRouter);
+app.use('/api', shipmentRouter);
+app.use('/api', mailRouter);
+app.use('/api', originRouter);
+app.use('/api', orderRouter);
+app.use('/api', authRouter);
+app.use('/api', userRouter);
+app.use('/api', momoRouter);
+app.use('/api', cartRouter);
+app.use('/api', notificationRouter);
+app.use('/api', evaluationRouter);
 mongoose
   .connect(MONGO_URL)
-  .then(() => console.log("connected to db"))
+  .then(() => console.log('connected to db'))
   .catch((err) => console.log(`error in connect db : ${err}`));
 httpServer.listen(PORT, () => {
   console.log(`listening success ${PORT}`);
