@@ -38,7 +38,8 @@ const checkWeight = async (productId, weight, userId) => {
 
 //Tính tổng tiền
 const calculateTotalPrice = async (data) => {
-    await data.populate("products.productId");
+    await data.populate("products.productId")
+    await data.populate("products.productId.originId")
     let totalPrice = 0;
     for (let item of data.products) {
         //Đảm bảo tính tổng tiền những sp còn tồn tại (.) kho
@@ -133,7 +134,7 @@ export const updateProductWeightInCart = async (req, res) => {
 
         //Tính tổng lại tiền
         totalPrice = await calculateTotalPrice(data)
-        
+
         return res.status(200).json({
             status: 200,
             message: "Update weight successfully",
