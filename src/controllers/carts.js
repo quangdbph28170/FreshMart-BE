@@ -1,6 +1,7 @@
 import Cart from "../models/carts"
 import Product from "../models/products"
 import Shipment from "../models/shipment"
+import { cartValid } from "../validation/cart"
 
 //Check cân nặng của sp (.) giỏ hàng khi add vào update 
 const checkWeight = async (productId, weight, userId) => {
@@ -207,7 +208,7 @@ export const getCart = async (req, res) => {
                         totalPrice
                     });
                 }
-                // TH3: nếu trong kho ko đủ số cân 
+                // TH3: nếu trong kho ko đủ số cân update lại bằng max cân có thể mua
                 if (item.weight > totalWeight) {
                     data = await Cart.findOneAndUpdate(
                         { userId: req.user._id, "products.productId": item.productId },
@@ -323,59 +324,62 @@ export const cartLocal = async (req, res) => {
     try {
         const errors = [];
         const products = req.body.products;
-
+        const { error } = cartValid.validate(req.body, { abortEarly: false })
+        if (error) {
+            return res.status(401).json({
+                status: 401,
+                message: error.details.map((error) => error.message),
+            });
+        }
         for (let item of products) {
-            const prd = await Product.findById(item._id);
-
+            const prd = await Product.findById(item.productId);
             if (!prd) {
                 errors.push({
-                    _id: item._id,
+                    productId: item.productId,
                     message: "Invalid data!",
                 });
-                continue;
+            } else {
+                if (item.price !== prd.price) {
+                    errors.push({
+                        productId: item.productId,
+                        price: item.price,
+                        message: `Invalid price for product ${prd.productName}!`,
+                    });
+                }
+
+                if (item.name !== prd.productName) {
+                    errors.push({
+                        productId: item.productId,
+                        name: item.name,
+                        message: "Invalid data!",
+                    });
+                }
+
+                if (item.images !== prd.images[0].url) {
+                    errors.push({
+                        productId: item.productId,
+                        image: item.images,
+                        message: "Invalid product image!",
+                    });
+                }
+
+                const currentTotalWeight = prd.shipments.reduce(
+                    (accumulator, shipment) => accumulator + shipment.weight, 0);
+                if (prd.shipments.length === 0) {
+                    errors.push({
+                        productId: item.productId,
+                        message: "The product is currently out of stock!",
+                    });
+                } else if (item.weight > currentTotalWeight) {
+                    errors.push({
+                        productId: item.productId,
+                        message: "Insufficient quantity of the product in stock!",
+                        maxWeight: currentTotalWeight,
+                    });
+                }
             }
 
-            if (item.price !== prd.price) {
-                errors.push({
-                    _id: item._id,
-                    price: item.price,
-                    message: `Invalid price for product ${prd.productName}!`,
-                });
-            }
 
-            if (item.name !== prd.productName) {
-                errors.push({
-                    _id: item._id,
-                    name: item.name,
-                    message: "Invalid data!",
-                });
-            }
-
-            if (item.images !== prd.images[0].url) {
-                errors.push({
-                    _id: item._id,
-                    image: item.images,
-                    message: "Invalid product image!",
-                });
-            }
-
-            const currentTotalWeight = prd.shipments.reduce(
-                (accumulator, shipment) => accumulator + shipment.weight,
-                0
-            );
-
-            if (prd.shipments.length === 0) {
-                errors.push({
-                    _id: item._id,
-                    message: "The product is currently out of stock!",
-                });
-            } else if (item.weight > currentTotalWeight) {
-                errors.push({
-                    _id: item._id,
-                    message: "Insufficient quantity of the product in stock!",
-                    maxWeight: currentTotalWeight,
-                });
-            }
         }
 
         if (errors.length > 0) {
