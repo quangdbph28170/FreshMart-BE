@@ -14,6 +14,7 @@ export const getProducts = async (req, res) => {
     _originId = "",
     _minPrice = "",
     _maxPrice = "",
+    _isSale,
 
   } = req.query;
   const options = {
@@ -33,6 +34,9 @@ export const getProducts = async (req, res) => {
 
   if (_categoryId) {
     query.categoryId = _categoryId;
+  }
+  if (_isSale) {
+    query.isSale = _isSale;
   }
 
   if (_minPrice && _maxPrice) {
@@ -299,23 +303,7 @@ export const liquidationProduct = async (req, res) => {
     });
    }
 
-    //Tạo sp THANH_LÝ  => isSale :true
-    // lấy toàn bộ dữ liệu sp CẦN_THANH_LÝ để tạo sp mới (sp THANH_LÝ) trừ _id,vầ cập nhật là shipments vs price
-    const data = await Products.create({
-      ...productExist.toObject(),
-      _id: undefined,
-      shipments: [
-        {
-          idShipment: shipmentExist.idShipment,
-          originWeight: shipmentExist.originWeight,
-          weight: shipmentExist.weight,
-          date: shipmentExist.date,
-          originPrice: shipmentExist.originPrice,
-        }
-      ],
-      price,
-      isSale: true
-    });
+    const data = await Products.create(req.body);
 
     // Xóa cái lô của sp CẦN_THANH_LÝ ở bảng products
     await Products.findByIdAndUpdate(_productId, {

@@ -20,6 +20,8 @@ import cron from "node-cron";
 import product from "./models/products";
 import cartRouter from "./routers/carts";
 import { addNotification } from "./controllers/notification";
+import evaluationRouter from "./routers/evaluation";
+
 const app = express();
 const httpServer = createServer(app);
 
@@ -124,6 +126,7 @@ app.use("/api", userRouter);
 app.use("/api", momoRouter);
 app.use("/api", cartRouter);
 app.use("/api", notificationRouter);
+app.use("/api", evaluationRouter);
 mongoose
   .connect(MONGO_URL)
   .then(() => console.log("connected to db"))
