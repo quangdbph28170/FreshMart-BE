@@ -139,7 +139,6 @@ export const getCart = async (req, res) => {
     try {
         let totalPrice = 0;
         let data = await Cart.findOne({ userId: req.user._id })
-
         for (let item of data.products) {
             //Check lại xem sp còn tồn tại trong products ko
             const productExist = await Product.findById(item.productId)

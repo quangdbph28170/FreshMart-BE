@@ -10,10 +10,6 @@ const shipmentSchema = new mongoose.Schema(
             ref: "Products",
             required: true,
           },
-          productName: {
-            type: String,
-            required: true,
-          },
           date: {
             type: String,
             required: true,
