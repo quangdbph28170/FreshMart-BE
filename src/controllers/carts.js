@@ -36,12 +36,22 @@ const checkWeight = async (productId, weight, userId) => {
 
 }
 
+//Tính tổng tiền
+const calculateTotalPrice = async (data) => {
+    await data.populate("products.productId");
+    let totalPrice = 0;
+    for (let item of data.products) {
+        totalPrice += item.productId.price * item.weight;
+    }
+    return totalPrice;
+}
+
 //Thêm sp vào giỏ hàng
 export const addToCart = async (req, res) => {
     try {
         const userId = req.user._id;
         const { productId, weight } = req.body;
-        let totalPrice = 0;
+
         const checkProduct = await Product.findById(productId);
         if (!checkProduct) {
             return res.status(404).json({
@@ -138,89 +148,101 @@ export const updateProductWeightInCart = async (req, res) => {
 export const getCart = async (req, res) => {
     try {
         let totalPrice = 0;
-        let data = await Cart.findOne({ userId: req.user._id })
+        let data = await Cart.findOne({ userId: req.user._id });
+        const errors = [];
 
         for (let item of data.products) {
-            //Check lại xem sp còn tồn tại trong products ko
-            const productExist = await Product.findById(item.productId)
-            //nếu ko còn
+            const productExist = await Product.findById(item.productId);
+            // TH1: Nếu sp trong giỏ hàng ko còn tồn tại
             if (!productExist) {
-                //truy vấn vào shipment để lấy dữ liệu 
-                const product = await Shipment.findOne({ "products.idProduct": item.productId })
-
-                // update lại cart: loại bỏ sp đó khỏi cart
-                data = await Cart.findOneAndUpdate({ userId: req.user._id, "products.productId": item.productId }, {
-                    $pull: {
-                        products: {
-                            productId: item.productId
-                        },
-                    }
-                }, { new: true })
-                await data.populate("products.productId")
-                for (let item of data.products) {
-                    totalPrice = item.productId.price * item.weight;
-                }
-                return res.status(201).json({
-                    status: 201,
-                    message: "Sản phẩm " + item.productId + " hiện ko còn trong kho!",
-                    body: { data, totalPrice }
-
+                const product = await Shipment.findOne({ "products.idProduct": item.productId });
+                // => Xóa nó khỏi cart
+                data = await Cart.findOneAndUpdate(
+                    { userId: req.user._id, "products.productId": item.productId },
+                    {
+                        $pull: {
+                            products: {
+                                productId: item.productId
+                            },
+                        }
+                    },
+                    { new: true }
+                );
+                //Tính lại tổng tiền
+                totalPrice += await calculateTotalPrice(data);
+                errors.push({
+                    productId: item.productId,
+                    message: "Product " + product.productName + " is no longer available!",
+                    data,
+                    totalPrice
                 });
-            }
-            let totalWeight = 0
-            //Nếu có trong kho thì Check xem sp đó trong kho hiện tại còn đủ số lượng ko
-            for (let item of productExist.shipments) {
-                totalWeight += item.weight
-            }
-            //nếu trong kho hết hàng totalWeight =0 => Xóa khỏi giỏ hàng
-            if (totalWeight == 0) {
-                data = await Cart.findOneAndUpdate({ userId: req.user._id, "products.productId": item.productId }, {
-                    $pull: {
-                        products: {
-                            productId: item.productId
+            } else {
+                let totalWeight = 0;
+                for (let shipment of productExist.shipments) {
+                    totalWeight += shipment.weight;
+                }
+                //TH2: nếu sp đã hết hàng
+                if (productExist.shipments.length == 0) {
+                    data = await Cart.findOneAndUpdate(
+                        { userId: req.user._id, "products.productId": item.productId },
+                        {
+                            $pull: {
+                                products: {
+                                    productId: item.productId
+                                },
+                            }
                         },
-                    }
-                }, { new: true })
-                await data.populate("products.productId")
-                for (let item of data.products) {
-                    totalPrice = item.productId.price * item.weight;
+                        { new: true }
+                    );
+                    //Tính lại tổng tiền
+                    totalPrice += await calculateTotalPrice(data);
+                    errors.push({
+                        productId: item.productId,
+                        message: "Product " + productExist.productName + " is currently out of stock!",
+                        data,
+                        totalPrice
+                    });
                 }
-                return res.status(201).json({
-                    status: 201,
-                    message: "Sản phẩm " + productExist.productName + " hiện đã hết hàng!",
-                    body: { data, totalPrice }
-                })
-            }
-            //nếu vượt quá số cân cho phép thì update = tổng cân trong kho
-            if (item.weight > totalWeight) {
-                data = await Cart.findOneAndUpdate({ userId: req.user._id, "products.productId": item.productId }, {
-                    $set: {
-                        "products.$.weight": totalWeight
-                    }
-                }, { new: true })
-                await data.populate("products.productId")
-                for (let item of data.products) {
-                    totalPrice = item.productId.price * item.weight;
+                // TH3: nếu trong kho ko đủ số cân 
+                if (item.weight > totalWeight) {
+                    data = await Cart.findOneAndUpdate(
+                        { userId: req.user._id, "products.productId": item.productId },
+                        {
+                            $set: {
+                                "products.$.weight": totalWeight
+                            }
+                        },
+                        { new: true }
+                    );
+                    //Tính lại tổng tiền
+                    totalPrice += await calculateTotalPrice(data);
+                    errors.push({
+                        productId: item.productId,
+                        message: "Product " + productExist.productName + " can be purchased up to " + totalWeight + "kg!",
+                        data,
+                        totalPrice
+                    });
                 }
-                return res.status(201).json({
-                    status: 201,
-                    message: "Sản phẩm " + productExist.productName + " hiện có thể mua là " + totalWeight + ("kg"),
-                    body: { data, totalPrice }
-                })
             }
-
         }
-        await data.populate("products.productId")
-        for (let item of data.products) {
-            totalPrice = item.productId.price * item.weight;
-        }
-        if (!data || data.products.length == 0) {
+        //Tính lại tổng tiền
+        totalPrice += await calculateTotalPrice(data);
+        if (!data || data.products.length === 0) {
             return res.status(201).json({
                 status: 201,
                 message: "Cart empty",
                 body: { data, totalPrice }
             });
         }
+
+        if (errors.length > 0) {
+            return res.status(201).json({
+                status: 201,
+                message: "Errors in the cart",
+                body: { errors, data, totalPrice }
+            });
+        }
+
         return res.status(200).json({
             status: 200,
             message: "Get cart successfully",
@@ -233,7 +255,6 @@ export const getCart = async (req, res) => {
         });
     }
 }
-
 //Xóa 1 sp (.) giỏ hàng
 export const removeOneProductInCart = async (req, res) => {
     try {
