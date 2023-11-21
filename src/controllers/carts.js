@@ -296,115 +296,80 @@ export const removeAllProductInCart = async (req, res) => {
 //Check cart local 
 export const cartLocal = async (req, res) => {
     try {
-        const err = [];
-        const products = req.body.products
+        const errors = [];
+        const products = req.body.products;
+
         for (let item of products) {
             const prd = await Product.findById(item._id);
+
             if (!prd) {
-                err.push({
+                errors.push({
                     _id: item._id,
+                    message: "Invalid data!",
+                });
+                continue;
+            }
+
+            if (item.price !== prd.price) {
+                errors.push({
+                    _id: item._id,
+                    price: item.price,
+                    message: `Invalid price for product ${prd.productName}!`,
                 });
             }
-        }
-        if (err.length > 0) {
-            return res.status(404).json({
-                body: {
-                    data: err,
-                },
-                message: "Product not exist",
-                status: 404,
-            });
-        }
-        const priceErr = [];
-        for (let item of products) {
-            const prd = await Product.findById(item._id);
-            if (item.price != prd.price) {
-                priceErr.push({
+
+            if (item.name !== prd.productName) {
+                errors.push({
                     _id: item._id,
-                    price: prd.price,
+                    name: item.name,
+                    message: "Invalid data!",
                 });
             }
-        }
-        if (priceErr.length > 0) {
-            return res.status(404).json({
-                body: {
-                    data: priceErr,
-                },
-                message: "Price is not valid",
-                status: 404,
-            });
-        }
-        const nameErr = [];
-        for (let item of products) {
-            const prd = await Product.findById(item._id);
-            if (item.name != prd.productName) {
-                nameErr.push({
+
+            if (item.images !== prd.images[0].url) {
+                errors.push({
                     _id: item._id,
-                    name: prd.productName,
+                    image: item.images,
+                    message: "Invalid product image!",
                 });
             }
-        }
-        if (nameErr.length > 0) {
-            return res.status(404).json({
-                body: {
-                    data: nameErr,
-                },
-                message: "Product name is not valid",
-                status: 404,
-            });
-        }
-        const imgErr = [];
-        for (let item of products) {
-            const prd = await Product.findById(item._id);
-            if (item.images != prd.images[0].url) {
-                imgErr.push({
-                    _id: item._id,
-                    image: prd.images[0].url,
-                });
-            }
-        }
-        if (imgErr.length > 0) {
-            return res.status(404).json({
-                body: {
-                    data: imgErr,
-                },
-                message: "Product image is not valid",
-                status: 404,
-            });
-        }
-        for (let item of products) {
-            const prd = await Product.findById(item._id);
-            //   console.log(prd.shipments);
+
             const currentTotalWeight = prd.shipments.reduce(
                 (accumulator, shipment) => accumulator + shipment.weight,
                 0
             );
 
             if (prd.shipments.length === 0) {
-                return res.status(404).json({
-                    status: 404,
+                errors.push({
                     _id: item._id,
-                    message: "Sản phẩm trong kho hiện tại đã hết hàng!",
+                    message: "The product is currently out of stock!",
+                });
+            } else if (item.weight > currentTotalWeight) {
+                errors.push({
+                    _id: item._id,
+                    message: "Insufficient quantity of the product in stock!",
+                    maxWeight: currentTotalWeight,
                 });
             }
-            if (item.weight > currentTotalWeight) {
-                return res.status(400).json({
-                    status: 400,
-                    message: "Sản phẩm trong kho hiện không đủ số lượng! ",
-                    body: { data: { maxWeight: currentTotalWeight } }
-                });
-            }
-
         }
+
+        if (errors.length > 0) {
+            return res.status(400).json({
+                status: 400,
+                message: "Error",
+                body: { error: errors },
+            });
+        }
+
         return res.status(200).json({
             status: 200,
             message: "Valid",
             body: { data: true },
-        })
+        });
     } catch (error) {
         return res.status(500).json({
             status: 500,
             message: error.message,
         });
     }
-}
+};
