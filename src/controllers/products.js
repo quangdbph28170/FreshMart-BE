@@ -270,13 +270,14 @@ export const liquidationProduct = async (req, res) => {
   try {
     const { _productId, _shipmentId } = req.query
     console.log(req.query);
-    const { price } = req.body
-    if (!price) {
+    const { error } = validateProduct.validate(req.body, { abortEarly: false });
+    if (error) {
       return res.status(401).json({
         status: 401,
-        message: "Vui lòng cung cấp giá để thanh lý!",
+        message: error.details.map((error) => error.message),
       });
     }
+
 
     // Kiểm tra id sp CẦN_THANH_LÝ
     const productExist = await Products.findById(_productId);
