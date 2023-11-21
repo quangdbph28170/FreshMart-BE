@@ -1,4 +1,4 @@
-import User from "../models/user";
+import Origin from "../models/origin";
 import mongoose from "mongoose";
 import Order from "../models/orders";
 import Product from "../models/products";
@@ -30,6 +30,9 @@ const formatDateTime = (dateTime) => {
   return `${formattedDate} ${formattedTime}`;
 };
 const sendMailer = async (email, data) => {
+
+
+
   // console.log(email,data);
   await transporter.sendMail({
     from: "namphpmailer@gmail.com",
@@ -59,20 +62,23 @@ const sendMailer = async (email, data) => {
                   </thead>
                   <tbody>
                     ${data.products
-        .map((product, index) => `
-                      <tr style="border-bottom:1px solid #ccc">
-                        <td style="padding: 10px;">${index + 1}</td>
-                        <td style="padding: 10px;"><img alt="image" src="${product.images
-          }" style="width: 90px; height: 90px;border-radius:5px">
-                        <p>${product.productName}</p>
-                        </td>
-                        <td style="padding: 10px;">${product.weight}kg</td>
-                        <td style="padding: 10px;">${product.price.toLocaleString(
-            "vi-VN"
-          )}VNĐ</td>
-                      </tr>
-                   `
+        .map((product, index) => 
+      `
+          <tr style="border-bottom:1px solid #ccc">
+            <td style="padding: 10px;">${index + 1}</td>
+            <td style="padding: 10px;"><img alt="image" src="${product.images
+            }" style="width: 90px; height: 90px;border-radius:5px">
+            <p>${product.productName}</p>
+            </td>
+            <td style="padding: 10px;">${product.weight}kg</td>
+            <td style="padding: 10px;">${product.price.toLocaleString(
+              "vi-VN"
+            )}VNĐ</td>
+          </tr>
+       `
+        
         )
+
         .join("")}
                   </tbody>
                 </table>  
@@ -176,7 +182,7 @@ export const CreateOrder = async (req, res) => {
       });
     }
     const totalPayment = products.reduce((accumulator, product) => {
-      return accumulator + product.price
+      return accumulator +(product.price * product.weight) 
     }, 0)
     if (req.body.totalPayment !== totalPayment) {
       return res.status(400).json({
@@ -284,7 +290,7 @@ export const CreateOrder = async (req, res) => {
         });
       return;
     }
-    sendMailer(req.body.email, data);
+    await sendMailer(req.body.email, data);
     return res.status(201).json({
       status: 201,
       message: "Order success",
