@@ -120,10 +120,10 @@ export const CreateOrder = async (req, res) => {
           message: "Invalid data!",
         });
       } else {
-        if (item.orderId != prd.originId) {
+        if (item.originId != prd.originId) {
           errors.push({
             productId: item.productId,
-            originId: item.orderId,
+            originId: item.originId,
             message: 'Invalid Product Origin!'
           });
         }
@@ -134,7 +134,14 @@ export const CreateOrder = async (req, res) => {
             message: 'Invalid Product Price!'
           });
         }
-        if (item.images != prd.images) {
+        if (item.productName != prd.productName) {
+          errors.push({
+            productId: item.productId,
+            productName: item.productName,
+            message: 'Invalid Product Name!'
+          });
+        }
+        if (item.images != prd.images[0].url) {
           errors.push({
             productId: item.productId,
             images: item.images,
@@ -167,62 +174,66 @@ export const CreateOrder = async (req, res) => {
       });
     }
 
-    for (let shipment of prd.shipments) {
-      if (itemWeight == 0) {
-        break;
-      }
-      //TH1: Nếu số lượng mua lớn hơn só lượng trong lô hàng hiện tại
-      if (shipment.weight - itemWeight <= 0) {
-        if (prd.isSale) {
-          await Product.findByIdAndDelete(prd._id)
-        } else {
-          // xóa lô hàng hiện tại trong record của sản phẩm hiện tại
-          await Product.findOneAndUpdate(
-            { _id: prd._id },
-            {
-              $pull: {
-                shipments: {
-                  idShipment: shipment.idShipment,
-                },
-              },
+    for (let item of products) {
+      const prd = await Product.findById(item.productId);
+      let itemWeight = item.weight;
+      if (itemWeight != 0 || currentTotalWeight != 0) {
+        for (let shipment of prd.shipments) {
+          if (itemWeight == 0) {
+            break;
+          }
+          //TH1: Nếu số lượng mua lớn hơn só lượng trong lô hàng hiện tại
+          if (shipment.weight - itemWeight <= 0) {
+            if (prd.isSale) {
+              await Product.findByIdAndDelete(prd._id)
+            } else {
+              // xóa lô hàng hiện tại trong record của sản phẩm hiện tại
+              await Product.findOneAndUpdate(
+                { _id: prd._id },
+                {
+                  $pull: {
+                    shipments: {
+                      idShipment: shipment.idShipment,
+                    },
+                  },
+                }
+              );
             }
-          );
+            // thay đổi số lượng của sản phẩm trong lô hàng về 0
+            await Shipment.findOneAndUpdate(
+              { _id: shipment.idShipment, "products.idProduct": prd._id },
+              {
+                $set: {
+                  "products.$.weight": 0,
+                },
+              }
+            );
+            itemWeight = -(shipment.weight - itemWeight);
+          } else {
+            //TH2 : số lượng mua bé hơn số lượng trong lô hàng hiện tại của sản phẩm
+            // thay đổi số lượng trong lô hàng của sản phẩm
+            await Product.findOneAndUpdate(
+              { _id: prd._id, "shipments.idShipment": shipment.idShipment },
+              {
+                $set: {
+                  "shipments.$.weight": shipment.weight - itemWeight,
+                },
+              }
+            );
+            // thay đổi số lượng sản phẩm trong lô hàng
+            await Shipment.findOneAndUpdate(
+              { _id: shipment.idShipment, "products.idProduct": prd._id },
+              {
+                $set: {
+                  "products.$.weight": shipment.weight - itemWeight,
+                },
+              }
+            );
+            itemWeight = 0;
+          }
         }
-        // thay đổi số lượng của sản phẩm trong lô hàng về 0
-        await Shipment.findOneAndUpdate(
-          { _id: shipment.idShipment, "products.idProduct": prd._id },
-          {
-            $set: {
-              "products.$.weight": 0,
-            },
-          }
-        );
-        itemWeight = -(shipment.weight - itemWeight);
-      } else {
-        //TH2 : số lượng mua bé hơn số lượng trong lô hàng hiện tại của sản phẩm
-        // thay đổi số lượng trong lô hàng của sản phẩm
-        await Product.findOneAndUpdate(
-          { _id: prd._id, "shipments.idShipment": shipment.idShipment },
-          {
-            $set: {
-              "shipments.$.weight": shipment.weight - itemWeight,
-            },
-          }
-        );
-        // thay đổi số lượng sản phẩm trong lô hàng
-        await Shipment.findOneAndUpdate(
-          { _id: shipment.idShipment, "products.idProduct": prd._id },
-          {
-            $set: {
-              "products.$.weight": shipment.weight - itemWeight,
-            },
-          }
-        );
-        itemWeight = 0;
       }
     }
-
-
 
 
     // console.log(req.user);
