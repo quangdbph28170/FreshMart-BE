@@ -23,9 +23,8 @@ const checkCancellationTime = (order) => {
 };
 const formatDateTime = (dateTime) => {
   const date = new Date(dateTime);
-  const formattedDate = `${date.getDate()}/${
-    date.getMonth() + 1
-  }/${date.getFullYear()}`;
+  const formattedDate = `${date.getDate()}/${date.getMonth() + 1
+    }/${date.getFullYear()}`;
   const formattedTime = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
   return `${formattedDate} ${formattedTime}`;
 };
@@ -39,13 +38,12 @@ const sendMailer = async (email, data) => {
                   <a target="_blank" href="http:localhost:5173">
                     <img src="https://spacingtech.com/html/tm/freozy/freezy-ltr/image/logo/logo.png" style="width:80px;color:#000"/>
                   </a>
-                  <p style="color:#2986cc;">Kính gửi Anh/chị: ${
-                    data.customerName
-                  } </p> 
+                  <p style="color:#2986cc;">Kính gửi Anh/chị: ${data.customerName
+      } </p> 
                   <p>Cảm ơn Anh/chị đã mua hàng tại FRESH MART. Chúng tôi cảm thấy may mắn khi được phục vụ Anh/chị. Sau đây là hóa đơn chi tiết về đơn hàng</p>
                   <p style="font-weight:bold">Hóa đơn được tạo lúc: ${formatDateTime(
-                    data.createdAt
-                  )}</p>
+        data.createdAt
+      )}</p>
                   <div style="border:1px solid #ccc;border-radius:10px; padding:10px 20px;width: max-content">
                   <p>Mã hóa đơn: ${data.invoiceId}</p>
                   <p>Khách hàng: ${data.customerName}</p>
@@ -62,33 +60,31 @@ const sendMailer = async (email, data) => {
                   </thead>
                   <tbody>
                     ${data.products
-                      .map(
-                        (product, index) => `
+        .map(
+          (product, index) => `
                       <tr style="border-bottom:1px solid #ccc">
                         <td style="padding: 10px;">${index + 1}</td>
-                        <td style="padding: 10px;"><img alt="image" src="${
-                          product.images
-                        }" style="width: 90px; height: 90px;border-radius:5px">
+                        <td style="padding: 10px;"><img alt="image" src="${product.images
+            }" style="width: 90px; height: 90px;border-radius:5px">
                         <p>${product.productName}</p>
                         </td>
                         <td style="padding: 10px;">${product.weight}kg</td>
                         <td style="padding: 10px;">${product.price.toLocaleString(
-                          "vi-VN"
-                        )}VNĐ</td>
+              "vi-VN"
+            )}VNĐ</td>
                       </tr>
                    `
-                      )
-                      .join("")}
+        )
+        .join("")}
                   </tbody>
                 </table>  
                   <p style="color: red;font-weight:bold;margin-top:20px">Tổng tiền thanh toán: ${data.totalPayment.toLocaleString(
-                    "vi-VN"
-                  )}VNĐ</p>
-                  <p>Thanh toán: ${
-                    data.pay == false
-                      ? "Thanh toán khi nhận hàng"
-                      : "Đã thanh toán online"
-                  }</p>
+          "vi-VN"
+        )}VNĐ</p>
+                  <p>Thanh toán: ${data.pay == false
+        ? "Thanh toán khi nhận hàng"
+        : "Đã thanh toán online"
+      }</p>
                   <p>Trạng thái đơn hàng: ${data.status}</p>
                   </div>
                    <p>Xin cảm ơn quý khách!</p>
@@ -183,17 +179,21 @@ export const CreateOrder = async (req, res) => {
           }
           //TH1: Nếu số lượng mua lớn hơn só lượng trong lô hàng hiện tại
           if (shipment.weight - itemWeight <= 0) {
-            // xóa lô hàng hiện tại trong record của sản phẩm hiện tại
-            await Product.findOneAndUpdate(
-              { _id: prd._id },
-              {
-                $pull: {
-                  shipments: {
-                    idShipment: shipment.idShipment,
+            if (prd.isSale) {
+              await Product.findByIdAndDelete(prd._id)
+            } else {
+              // xóa lô hàng hiện tại trong record của sản phẩm hiện tại
+              await Product.findOneAndUpdate(
+                { _id: prd._id },
+                {
+                  $pull: {
+                    shipments: {
+                      idShipment: shipment.idShipment,
+                    },
                   },
-                },
-              }
-            );
+                }
+              );
+            }
             // thay đổi số lượng của sản phẩm trong lô hàng về 0
             await Shipment.findOneAndUpdate(
               { _id: shipment.idShipment, "products.idProduct": prd._id },
