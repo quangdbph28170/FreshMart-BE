@@ -79,3 +79,18 @@ export const updateStatusNotification = async (req, res) => {
         });
     }
 }
+
+export const deleteNotification = async (req, res) => {
+    try {
+        await Notification.findByIdAndDelete(req.params.id)
+        return res.status(200).json({
+            status: 200,
+            message: 'delete succuess',
+        })
+    } catch (error) {
+        return res.status(400).json({
+            status: 400,
+            message: error.message,
+        });
+    }
+}
