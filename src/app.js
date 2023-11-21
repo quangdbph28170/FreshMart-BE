@@ -51,7 +51,7 @@ io.of('/admin').on("connection", (socket) => {
           await addNotification({
             title: `Thông báo: Sản phẩm ${product.productName} đã hết Hạn`,
             message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
-            link: '/admin/products/' + product._id,
+            link: '/manage/products/' + product._id,
           })
           response.push({
             productId: product._id,
@@ -71,7 +71,7 @@ io.of('/admin').on("connection", (socket) => {
           await addNotification({
             title: `Thông báo: Sản phẩm ${product.productName} sắp Hết Hạn sau ${hours} tiếng nữa`,
             message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
-            link: '/admin/products/' + product._id,
+            link: '/manage/products/' + product._id,
           })
 
           response.push({
@@ -122,7 +122,7 @@ io.on("connection", (socket) => {
     const adminNotification = await addNotification({
       title: 'Thông báo',
       message: 'Có đơn hàng mới đang chờ xử lý',
-      link: '/admin/orders',
+      link: '/manage/orders',
       type: 'admin'
     })
     // Gửi thông báo đến trang admin
@@ -130,8 +130,9 @@ io.on("connection", (socket) => {
   });
 
   socket.on('joinClientRoom', (userId) => {
+    const id = JSON.parse(userId)
     // Thêm người dùng vào "room theo id người dùng" client khi truy cập trang client
-    socket.join(userId);
+    socket.join(id);
   });
 
   // socket.on('joinAdminRoom', () => {

@@ -32,6 +32,15 @@ export const getAdminNotification = async (req, res) => {
 
 export const getClientNotification = async (req, res) => {
     try {
+        if(!req.params.id) {
+            return res.status(200).json({
+                status: 200,
+                body: {
+                    data: []
+                },
+                message: "chưa đăng nhập",
+            });
+        }
         const clientNotification = await Notification.find({ type: 'client', userId: req.params.id })
 
         return res.status(200).json({
