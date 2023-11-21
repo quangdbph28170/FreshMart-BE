@@ -19,7 +19,7 @@ export const getAdminNotification = async (req, res) => {
             status: 200,
             message: 'Get admin notification successfully',
             body: {
-                data: adminNotification || []
+                data: adminNotification.reverse() || []
             }
         })
     } catch (error) {
@@ -47,7 +47,7 @@ export const getClientNotification = async (req, res) => {
             status: 200,
             message: 'Get client notification successfully',
             body: {
-                data: clientNotification || []
+                data: clientNotification.reverse() || []
             }
         })
     } catch (error) {
