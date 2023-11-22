@@ -332,47 +332,54 @@ export const cartLocal = async (req, res) => {
             });
         }
         for (let item of products) {
-            const prd = await Product.findById(item.productId);
+            const prd = await Product.findById(item.productId._id);
             if (!prd) {
                 errors.push({
                     productId: item.productId,
                     message: "Invalid data!",
                 });
             } else {
-                if (item.price !== prd.price) {
+                if (item.productId.price !== prd.price) {
                     errors.push({
-                        productId: item.productId,
-                        price: item.price,
+                        productId: item.productId._id,
+                        price: item.productId.price,
                         message: `Invalid price for product ${prd.productName}!`,
                     });
                 }
 
-                if (item.name !== prd.productName) {
+                if (item.productId.productName !== prd.productName) {
                     errors.push({
-                        productId: item.productId,
-                        name: item.name,
+                        productId: item.productId._id,
+                        productName: item.productId.productName,
                         message: "Invalid data!",
                     });
                 }
 
-                if (item.images !== prd.images[0].url) {
+                if (item.productId.images !== prd.images[0].url) {
                     errors.push({
-                        productId: item.productId,
-                        image: item.images,
+                        productId: item.productId._id,
+                        image: item.productId.images,
                         message: "Invalid product image!",
                     });
                 }
 
+                if (item.weight <= 0) {
+                    errors.push({
+                        productId: item.productId._id,
+                        weight: item.weight,
+                        message: "Invalid product weight!",
+                    });
+                }
                 const currentTotalWeight = prd.shipments.reduce(
                     (accumulator, shipment) => accumulator + shipment.weight, 0);
                 if (prd.shipments.length === 0) {
                     errors.push({
-                        productId: item.productId,
+                        productId: item.productId._id,
                         message: "The product is currently out of stock!",
                     });
                 } else if (item.weight > currentTotalWeight) {
                     errors.push({
-                        productId: item.productId,
+                        productId: item.productId._id,
                         message: "Insufficient quantity of the product in stock!",
                         maxWeight: currentTotalWeight,
                     });
