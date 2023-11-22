@@ -69,7 +69,7 @@ const sendMailer = async (email, data) => {
                         <td style="padding: 10px;"><img alt="image" src="${
                           product.images
                         }" style="width: 90px; height: 90px;border-radius:5px">
-                        <p>${product.name}</p>
+                        <p>${product.productName}</p>
                         </td>
                         <td style="padding: 10px;">${product.weight}kg</td>
                         <td style="padding: 10px;">${product.price.toLocaleString(
@@ -119,7 +119,7 @@ export const CreateOrder = async (req, res) => {
 
     const err = [];
     for (let item of products) {
-      const prd = await Product.findById(item._id);
+      const prd = await Product.findById(item.productId);
       if (!prd) {
         err.push({
           _id: item._id,
@@ -137,7 +137,7 @@ export const CreateOrder = async (req, res) => {
     }
     const priceErr = [];
     for (let item of products) {
-      const prd = await Product.findById(item._id);
+      const prd = await Product.findById(item.productId);
       if (item.price != prd.price) {
         priceErr.push({
           _id: item._id,
@@ -156,7 +156,7 @@ export const CreateOrder = async (req, res) => {
     }
 
     for (let item of products) {
-      const prd = await Product.findById(item._id);
+      const prd = await Product.findById(item.productId);
       const currentTotalWeight = prd.shipments.reduce(
         (accumulator, shipment) => accumulator + shipment.weight,
         0

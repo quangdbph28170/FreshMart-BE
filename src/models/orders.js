@@ -2,9 +2,9 @@ import mongoose from "mongoose"
 import mongoosePaginate from "mongoose-paginate-v2"
 import shortMongoId from "short-mongo-id";
 const orderSchema = new mongoose.Schema({
-    invoiceId:{
-        type:String,
-        default:function(){
+    invoiceId: {
+        type: String,
+        default: function () {
             return shortMongoId(this._id)
         }
     },
@@ -14,12 +14,13 @@ const orderSchema = new mongoose.Schema({
     },
     products: [
         {
-            _id: {
+            productId: {
                 type: mongoose.Schema.Types.ObjectId,
                 ref: "Products",
                 required: true
             },
-            name: {
+
+            productName: {
                 type: String,
                 required: true
             },
@@ -27,7 +28,7 @@ const orderSchema = new mongoose.Schema({
                 type: String,
                 required: true
             },
-           
+
             weight: {
                 type: Number,
                 required: true
@@ -35,6 +36,10 @@ const orderSchema = new mongoose.Schema({
             price: {
                 type: Number,
                 required: true
+            },
+            evaluation: {
+                type: Boolean,
+                default: false
             },
         }
     ],
@@ -72,9 +77,10 @@ const orderSchema = new mongoose.Schema({
     },
     status: {
         type: String,
-        enum: ["chờ xác nhận", "đang giao hàng", "giao hàng thành công", "đã nhận được hàng","đã hủy đơn hàng"],
+        enum: ["chờ xác nhận", "đang giao hàng", "giao hàng thành công", "đã nhận được hàng", "đã hủy đơn hàng"],
         default: "chờ xác nhận"
     },
+
     // orderDate:{
     //     type:String,
     //     default:function(){
