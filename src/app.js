@@ -65,7 +65,7 @@ io.of('/admin').on('connection', (socket) => {
           response.push({
             productId: product._id,
             timeLeft: 0,
-            shipmentId: shipment._id,
+            shipmentId: shipment.idShipment,
           });
         }
 
@@ -96,7 +96,7 @@ io.of('/admin').on('connection', (socket) => {
           response.push({
             productId: product._id,
             timeLeft: hours,
-            shipmentId: shipment._id,
+            shipmentId: shipment.idShipment,
           });
         }
       }
