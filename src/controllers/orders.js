@@ -62,21 +62,21 @@ const sendMailer = async (email, data) => {
                   </thead>
                   <tbody>
                     ${data.products
-        .map((product, index) => 
-      `
+        .map((product, index) =>
+          `
           <tr style="border-bottom:1px solid #ccc">
             <td style="padding: 10px;">${index + 1}</td>
             <td style="padding: 10px;"><img alt="image" src="${product.images
-            }" style="width: 90px; height: 90px;border-radius:5px">
+          }" style="width: 90px; height: 90px;border-radius:5px">
             <p>${product.productName}</p>
             </td>
             <td style="padding: 10px;">${product.weight}kg</td>
             <td style="padding: 10px;">${product.price.toLocaleString(
-              "vi-VN"
-            )}VNĐ</td>
+            "vi-VN"
+          )}VNĐ</td>
           </tr>
        `
-        
+
         )
 
         .join("")}
@@ -120,7 +120,13 @@ export const CreateOrder = async (req, res) => {
 
     const errors = [];
     for (let item of products) {
-
+      if (item.weight <= 0) {
+        errors.push({
+          productId: item.productId,
+          weight: item.weight,
+          message: 'Invalid Product Weight!'
+        });
+      }
       const prd = await Product.findById(item.productId);
       if (!prd) {
         errors.push({
@@ -182,7 +188,7 @@ export const CreateOrder = async (req, res) => {
       });
     }
     const totalPayment = products.reduce((accumulator, product) => {
-      return accumulator +(product.price * product.weight) 
+      return accumulator + (product.price * product.weight)
     }, 0)
     if (req.body.totalPayment !== totalPayment) {
       return res.status(400).json({
