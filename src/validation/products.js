@@ -20,8 +20,7 @@ export const validateProduct = joi.object({
 });
 export const validateLiquidationProduct = joi.object({
   productName: joi.string().required().trim(),
-  _productId: joi.string().required().trim(),
-  _shipmentId: joi.string().required().trim(),
+  productId: joi.string().required().trim(),
+  shipmentId: joi.string().required().trim(),
   discount: joi.number().required(),
-
 });

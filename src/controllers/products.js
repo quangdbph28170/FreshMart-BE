@@ -268,7 +268,7 @@ export const removeProduct = async (req, res) => {
 };
 export const liquidationProduct = async (req, res) => {
   try {
-    const { _productId, _shipmentId, discount, productName } = req.body
+    const { productId, shipmentId, discount, productName } = req.body
 
     const { error } = validateLiquidationProduct.validate(req.body, { abortEarly: false });
     if (error) {
@@ -280,7 +280,7 @@ export const liquidationProduct = async (req, res) => {
 
 
     // Kiểm tra id sp CẦN_THANH_LÝ
-    const productExist = await Products.findById(_productId);
+    const productExist = await Products.findById(productId);
     if (!productExist) {
       return res.status(404).json({
         status: 404,
@@ -288,7 +288,7 @@ export const liquidationProduct = async (req, res) => {
       });
     }
     //Kiểm tra id shipment
-    const shipmentExist = productExist.shipments.find(item => item.idShipment == _shipmentId);
+    const shipmentExist = productExist.shipments.find(item => item.idShipment == shipmentId);
     if (!shipmentExist) {
       return res.status(404).json({
         status: 404,
@@ -297,7 +297,7 @@ export const liquidationProduct = async (req, res) => {
     }
 
     //Kiểm tra xem sp CẦN_THANH_LÝ còn trong lô hàng đó 
-    const checkShipmentId = productExist.shipments.find(item => item.idShipment == _shipmentId)
+    const checkShipmentId = productExist.shipments.find(item => item.idShipment == shipmentId)
     console.log(checkShipmentId)
     if (!checkShipmentId) {
       return res.status(404).json({
@@ -325,16 +325,16 @@ export const liquidationProduct = async (req, res) => {
     });
 
     // Xóa cái lô của sp CẦN_THANH_LÝ ở bảng products
-    await Products.findByIdAndUpdate(_productId, {
+    await Products.findByIdAndUpdate(productId, {
       $pull: {
         shipments: {
-          idShipment: _shipmentId,
+          idShipment: shipmentId,
         }
       }
     }, { new: true })
 
     //Cập nhật lại trong bảng shipment id sp CẦN_THANH_LÝ => is sp THANH_LÝ
-    await Shipment.findOneAndUpdate({ _id: _shipmentId, "products.idProduct": _productId }, {
+    await Shipment.findOneAndUpdate({ _id: shipmentId, "products.idProduct": productId }, {
       $set: {
         "products.$.idProduct": data._id
       }
