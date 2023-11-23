@@ -24,8 +24,7 @@ export const getProducts = async (req, res) => {
       [_sort]: _order === "desc" ? -1 : 1,
       "shipments.price": _order === "desc" ? -1 : 1,
     },
-    populate: "categoryId",
-    populate: "originId",
+    populate: ["originId", "categoryId"],
   };
   const query = {};
 
