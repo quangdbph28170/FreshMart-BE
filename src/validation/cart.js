@@ -16,7 +16,7 @@ export const cartValid = joi.object({
                     joi.object({
                         _id: joi.string().required().trim()
                     })
-                ).required().trim()
+                ).required()
             },
             weight: joi.number().required(),
             totalWeight: joi.number().allow(),
