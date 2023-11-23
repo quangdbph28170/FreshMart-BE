@@ -1,7 +1,7 @@
 import Products from "../models/products";
 import Shipment from "../models/shipment";
 import Categories from "../models/categories";
-import { validateProduct } from "../validation/products";
+import { validateProduct, validateLiquidationProduct } from "../validation/products";
 import mongoose from "mongoose";
 export const getProducts = async (req, res) => {
   const {
@@ -268,9 +268,9 @@ export const removeProduct = async (req, res) => {
 };
 export const liquidationProduct = async (req, res) => {
   try {
-    const { _productId, _shipmentId } = req.query
-    console.log(req.query);
-    const { error } = validateProduct.validate(req.body, { abortEarly: false });
+    const { productId, shipmentId, discount, productName } = req.body
+
+    const { error } = validateLiquidationProduct.validate(req.body, { abortEarly: false });
     if (error) {
       return res.status(401).json({
         status: 401,
@@ -280,7 +280,7 @@ export const liquidationProduct = async (req, res) => {
 
 
     // Kiểm tra id sp CẦN_THANH_LÝ
-    const productExist = await Products.findById(_productId);
+    const productExist = await Products.findById(productId);
     if (!productExist) {
       return res.status(404).json({
         status: 404,
@@ -288,7 +288,7 @@ export const liquidationProduct = async (req, res) => {
       });
     }
     //Kiểm tra id shipment
-    const shipmentExist = productExist.shipments.find(item => item.idShipment == _shipmentId);
+    const shipmentExist = productExist.shipments.find(item => item.idShipment == shipmentId);
     if (!shipmentExist) {
       return res.status(404).json({
         status: 404,
@@ -296,27 +296,45 @@ export const liquidationProduct = async (req, res) => {
       });
     }
 
-    //Kiểm tra xem sp CẦN_THANH_LÝ còn trong lô hàng đó ko
-   if(productExist.shipments.find(item=> item.idShipment != _shipmentId)){
-    return res.status(404).json({
-      status: 404,
-      message: "Sản phẩm đã không còn trong lô hàng này!",
-    });
-   }
+    //Kiểm tra xem sp CẦN_THANH_LÝ còn trong lô hàng đó 
+    const checkShipmentId = productExist.shipments.find(item => item.idShipment == shipmentId)
+    console.log(checkShipmentId)
+    if (!checkShipmentId) {
+      return res.status(404).json({
+        status: 404,
+        message: "Sản phẩm đã không còn trong lô hàng này!",
+      });
+    }
 
-    const data = await Products.create(req.body);
+    const data = await Products.create({
+      ...productExist.toObject(),
+      _id: undefined,
+      productName,
+      shipments: [
+        {
+          idShipment: shipmentExist.idShipment,
+          originWeight: shipmentExist.originWeight,
+          weight: shipmentExist.weight,
+          date: shipmentExist.date,
+          originPrice: shipmentExist.originPrice,
+        }
+      ],
+      price: parseInt(productExist.price) - parseInt(discount / 100 * productExist.price),
+      isSale: true,
+      sold:0
+    });
 
     // Xóa cái lô của sp CẦN_THANH_LÝ ở bảng products
-    await Products.findByIdAndUpdate(_productId, {
+    await Products.findByIdAndUpdate(productId, {
       $pull: {
         shipments: {
-          idShipment: _shipmentId,
+          idShipment: shipmentId,
         }
       }
     }, { new: true })
 
     //Cập nhật lại trong bảng shipment id sp CẦN_THANH_LÝ => is sp THANH_LÝ
-    await Shipment.findOneAndUpdate({ _id: _shipmentId, "products.idProduct": _productId }, {
+    await Shipment.findOneAndUpdate({ _id: shipmentId, "products.idProduct": productId }, {
       $set: {
         "products.$.idProduct": data._id
       }
@@ -325,7 +343,7 @@ export const liquidationProduct = async (req, res) => {
     return res.status(200).json({
       status: 200,
       message: "Đã thanh lý xong <3",
-      body:{data}
+      body: { data }
     });
   } catch (error) {
     return res.status(500).json({

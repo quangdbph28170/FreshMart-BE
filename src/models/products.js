@@ -52,6 +52,11 @@ const productSchema = new mongoose.Schema(
           weight: Number,
           date: String,        
           originPrice: Number,
+          willExpire: {
+            type: Number,
+            enum: [0, 1, 2],
+            default: 0,
+          }
         },
       ],
       default: [],
@@ -72,8 +77,7 @@ const productSchema = new mongoose.Schema(
     isSale:{
       type:Boolean,
       default: false,
-    }
-
+    },
   },
   { timestamps: true, versionKey: false }
 );
