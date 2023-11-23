@@ -354,8 +354,15 @@ export const cartLocal = async (req, res) => {
                         message: "Invalid data!",
                     });
                 }
+                if (item.productId.originId !== prd.originId) {
+                    errors.push({
+                        productId: item.productId._id,
+                        originId: item.productId.originId,
+                        message: "Invalid product origin!",
+                    });
+                }
 
-                if (item.productId.images !== prd.images[0].url) {
+                if (item.productId.images[0].url !== prd.images[0].url) {
                     errors.push({
                         productId: item.productId._id,
                         image: item.productId.images,
