@@ -33,7 +33,7 @@ const MONGO_URL = process.env.MONGODB_LOCAL;
 const io = new Server(httpServer, { cors: '*' });
 
 io.of('/admin').on('connection', (socket) => {
-  cron.schedule('1-59 * * * *', async () => {
+  cron.schedule('* */24 * * *', async () => {
     const response = []
     const products = await Product.find();
     for (const product of products) {
