@@ -32,48 +32,80 @@ const MONGO_URL = process.env.MONGODB_LOCAL;
 
 const io = new Server(httpServer, { cors: '*' });
 
-cron.schedule('1-59 * * * *', async () => {
-  console.log(1);
-  const products = await Product.find();
-  for (const product of products) {
-    for (const shipment of product.shipments) {
-      // Chuyển đổi chuỗi ngày từ MongoDB thành đối tượng Date
-      const targetDate = new Date(shipment.date);
-      // Lấy ngày hiện tại
-      const currentDate = new Date();
+io.of('/admin').on('connection', (socket) => {
+  cron.schedule('1-59 * * * *', async () => {
+    const response = []
+    const products = await Product.find();
+    for (const product of products) {
+      for (const shipment of product.shipments) {
+        // Chuyển đổi chuỗi ngày từ MongoDB thành đối tượng Date
+        const targetDate = new Date(shipment.date);
+        // Lấy ngày hiện tại
+        const currentDate = new Date();
 
-      // Số mili giây trong 7 ngày
-      const sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000;
+        // Số mili giây trong 3 ngày
+        const threeDaysInMillis = 3 * 24 * 60 * 60 * 1000;
 
-      if (targetDate - currentDate <= 0) {
-        await Product.findOneAndUpdate(
-          { _id: product._id, "shipments.idShipment": shipment.idShipment },
-          {
-            $set: {
-              "shipments.$.willExpire": 2,
-            },
-          }
-        );
-      }
+        //Kiểm tra xem sản phẩm trong lô đã hết hạn chưa
+        if (targetDate - currentDate <= 0) {
+          await Product.findOneAndUpdate(
+            { _id: product._id, "shipments.idShipment": shipment.idShipment },
+            {
+              $set: {
+                "shipments.$.willExpire": 2,
+              },
+            }
+          );
+          await addNotification({
+            title: `Thông báo: Sản phẩm ${product.productName} đã hết Hạn`,
+            message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
+            link: '/manage/products/' + product._id,
+            type: 'admin',
+          });
+          response.push({
+            productId: product._id,
+            timeLeft: 0,
+            shipmentId: shipment.idShipment,
+          });
+        }
 
-      // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 7 ngày không
-      const isWithinSevenDays = targetDate - currentDate < sevenDaysInMillis;
+        // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 3 ngày không
+        const isWithinThreeDays = targetDate - currentDate < threeDaysInMillis;
 
-      if (isWithinSevenDays && targetDate - currentDate > 0) {
-        await Product.findOneAndUpdate(
-          { _id: product._id, "shipments.idShipment": shipment.idShipment },
-          {
-            $set: {
-              "shipments.$.willExpire": 1,
-            },
-          }
-        );
+        if (isWithinThreeDays && targetDate - currentDate > 0) {
+          await Product.findOneAndUpdate(
+            { _id: product._id, "shipments.idShipment": shipment.idShipment },
+            {
+              $set: {
+                "shipments.$.willExpire": 1,
+              },
+            }
+          );
+          const totalMilliseconds =
+            threeDaysInMillis - (targetDate - currentDate);
+          const totalSeconds = Math.floor(totalMilliseconds / 1000);
+          const hours = Math.floor(totalSeconds / 3600);
+
+          await addNotification({
+            title: `Thông báo: Sản phẩm ${product.productName} sắp Hết Hạn sau ${hours} tiếng nữa`,
+            message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
+            link: '/manage/products/' + product._id,
+            type: 'admin',
+          });
+
+          response.push({
+            productId: product._id,
+            timeLeft: hours,
+            shipmentId: shipment.idShipment,
+          });
+        }
       }
     }
-  }
-});
 
-io.of('/admin').on('connection', (socket) => {
+    if (response.length > 0) {
+      socket.emit('expireProduct', response);
+    }
+  });
   //thông báo cho người dùng trạng thái của order đã thay đổi và nếu "giao hàng thành công thì trả về order id để người dùng sang detail xác nhận đơn hàng thành công"
   socket.on('changeStatus', async (data) => {
     const socketData = JSON.parse(data);
