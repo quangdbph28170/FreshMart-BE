@@ -25,6 +25,7 @@ export const getProducts = async (req, res) => {
       "shipments.price": _order === "desc" ? -1 : 1,
     },
     populate: "categoryId",
+    populate: "originId",
   };
   const query = {};
 
@@ -105,6 +106,7 @@ export const getRelatedProducts = async (req, res) => {
         },
       },
     ]);
+    await products.populate("originId")
     if (!products) {
       return res.status(404).json({
         status: 404,
