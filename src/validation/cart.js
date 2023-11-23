@@ -10,6 +10,7 @@ export const cartValid = joi.object({
                 price: joi.number().required(),
             },
             weight: joi.number().required(),
+            totalWeight: joi.number().allow(),
         })
     )
 })
