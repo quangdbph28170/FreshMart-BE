@@ -1,7 +1,7 @@
 import Cart from "../models/carts"
 import Product from "../models/products"
 import Shipment from "../models/shipment"
-import { cartValid } from "../validation/cart"
+import { cartDB, cartValid } from "../validation/cart"
 
 //Check cân nặng của sp (.) giỏ hàng khi add vào update 
 const checkWeight = async (productId, weight, userId) => {
@@ -55,7 +55,7 @@ const calculateTotalPrice = async (data) => {
 //Thêm sp vào giỏ hàng
 export const addToCart = async (req, res) => {
     try {
-        const { error } = validateProduct.validate(req.body, { abortEarly: false });
+        const { error } = cartDB.validate(req.body, { abortEarly: false });
         if (error) {
             return res.status(401).json({
                 status: 401,
