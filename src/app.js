@@ -1,27 +1,27 @@
-import express from 'express';
-import dotenv from 'dotenv';
-import mongoose from 'mongoose';
-import cors from 'cors';
-import cookieParser from 'cookie-parser';
-import categoryRouter from './routers/categories';
-import productRouter from './routers/products';
-import uploadRouter from './routers/upload';
-import shipmentRouter from './routers/shipment';
-import mailRouter from './routers/mail';
-import originRouter from './routers/origin';
-import orderRouter from './routers/orders';
-import authRouter from './routers/auth';
-import userRouter from './routers/user';
-import notificationRouter from './routers/notification';
-import momoRouter from './routers/momo-pay';
-import { createServer } from 'http';
-import { Server } from 'socket.io';
-import cron from 'node-cron';
-import Product from './models/products';
-import cartRouter from './routers/carts';
-import { addNotification } from './controllers/notification';
-import evaluationRouter from './routers/evaluation';
-import Orders from './models/orders';
+import express from "express";
+import dotenv from "dotenv";
+import mongoose from "mongoose";
+import cors from "cors";
+import cookieParser from "cookie-parser";
+import categoryRouter from "./routers/categories";
+import productRouter from "./routers/products";
+import uploadRouter from "./routers/upload";
+import shipmentRouter from "./routers/shipment";
+import mailRouter from "./routers/mail";
+import originRouter from "./routers/origin";
+import orderRouter from "./routers/orders";
+import authRouter from "./routers/auth";
+import userRouter from "./routers/user";
+import notificationRouter from "./routers/notification";
+import momoRouter from "./routers/momo-pay";
+import { createServer } from "http";
+import { Server } from "socket.io";
+import cron from "node-cron";
+import Product from "./models/products";
+import cartRouter from "./routers/carts";
+import { addNotification } from "./controllers/notification";
+import evaluationRouter from "./routers/evaluation";
+import Orders from "./models/orders";
 
 const app = express();
 const httpServer = createServer(app);
@@ -31,12 +31,12 @@ dotenv.config();
 const PORT = process.env.PORT;
 const MONGO_URL = process.env.MONGODB_LOCAL;
 
-const io = new Server(httpServer, { cors: '*' });
+const io = new Server(httpServer, { cors: "*" });
 
 //Chạy 24h 1 lần kiểm tra những đơn hàng đã giao hàng thành công sau 3 ngày tự động chuyển thành trạng thái thành công
-cron.schedule('* */24 * * *', async () => {
-  const orders = await Orders.find({ status: 'giao hành thành công' })
-  for(const order of orders) {
+cron.schedule("* */24 * * *", async () => {
+  const orders = await Orders.find({ status: "giao hành thành công" });
+  for (const order of orders) {
     // Chuyển đổi chuỗi ngày từ MongoDB thành đối tượng Date
     const targetDate = new Date(order.updatedAt);
     // Lấy ngày hiện tại
@@ -45,18 +45,18 @@ cron.schedule('* */24 * * *', async () => {
     const threeDaysInMillis = 3 * 24 * 60 * 60 * 1000;
     // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 3 ngày không
     const isRatherThreeDays = currentDate - targetDate >= threeDaysInMillis;
-    
-    if(isRatherThreeDays) {
+
+    if (isRatherThreeDays) {
       await Orders.findByIdAndUpdate(order._id, {
-        status: 'đã nhận được hàng'
-      })
+        status: "đơn hàng hoàn thành",
+      });
     }
   }
-})
+});
 
-io.of('/admin').on('connection', (socket) => {
-  cron.schedule('* */24 * * *', async () => {
-    const response = []
+io.of("/admin").on("connection", (socket) => {
+  cron.schedule("*/30 * * * *", async () => {
+    const response = [];
     const products = await Product.find();
     for (const product of products) {
       for (const shipment of product.shipments) {
@@ -81,8 +81,8 @@ io.of('/admin').on('connection', (socket) => {
           await addNotification({
             title: `Thông báo: Sản phẩm ${product.productName} đã hết Hạn`,
             message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
-            link: '/manage/products/' + product._id,
-            type: 'admin',
+            link: "/manage/products/" + product._id,
+            type: "admin",
           });
           response.push({
             productId: product._id,
@@ -111,8 +111,8 @@ io.of('/admin').on('connection', (socket) => {
           await addNotification({
             title: `Thông báo: Sản phẩm ${product.productName} sắp Hết Hạn sau ${hours} tiếng nữa`,
             message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
-            link: '/manage/products/' + product._id,
-            type: 'admin',
+            link: "/manage/products/" + product._id,
+            type: "admin",
           });
 
           response.push({
@@ -125,56 +125,61 @@ io.of('/admin').on('connection', (socket) => {
     }
 
     if (response.length > 0) {
-      socket.emit('expireProduct', response);
+      socket.emit("expireProduct", response);
     }
   });
   //thông báo cho người dùng trạng thái của order đã thay đổi và nếu "giao hàng thành công thì trả về order id để người dùng sang detail xác nhận đơn hàng thành công"
-  socket.on('changeStatus', async (data) => {
+  socket.on("changeStatus", async (data) => {
     const socketData = JSON.parse(data);
-
+    console.log(socketData.userId);
     const notification = await addNotification({
       userId: socketData.userId,
-      title: 'Thông báo',
+      title: "Thông báo",
       message:
-        'Đơn hàng (#)' +
+        "Đơn hàng (#)" +
         socketData.invoiceId +
-        '  của bạn đã ' +
+        "  của bạn đã " +
         socketData.status,
-      link: '/my-order/' + socketData.orderId,
+      link: "/my-order/" + socketData.orderId,
+      type: "client",
     });
 
-    io.to(socketData.userId).emit('statusNotification', { data: notification });
+    io.to(socketData.userId).emit("statusNotification", {
+      data: { ...notification, status: socketData.status },
+    });
   });
 });
 
-io.on('connection', (socket) => {
+io.on("connection", (socket) => {
   //thông báo cho admin và người dùng đã đăng nhập mua hàng thành công/ có đơn hàng mới
-  socket.on('purchase', async (data) => {
+  socket.on("purchase", async (data) => {
     const socketData = JSON.parse(data);
+    console.log(socketData.userId);
     // Gửi thông báo đến trang client nếu người dùng đăng nhập
     if (socketData.userId) {
       const notification = await addNotification({
         userId: socketData.userId,
-        title: 'Thông báo',
-        message: 'Mua hàng thành công',
-        link: '/my-order/' + socketData.orderId,
+        title: "Thông báo",
+        message: "Mua hàng thành công",
+        link: "/my-order/" + socketData.orderId,
+        type: "client",
       });
-      io.to(socketData.userId).emit('purchaseNotification', {
+      io.to(socketData.userId).emit("purchaseNotification", {
         data: notification,
       });
     }
 
     const adminNotification = await addNotification({
-      title: 'Thông báo',
-      message: 'Có đơn hàng mới đang chờ xử lý',
-      link: '/manage/orders',
-      type: 'admin',
+      title: "Thông báo",
+      message: "Có đơn hàng mới đang chờ xử lý",
+      link: "/manage/orders",
+      type: "admin",
     });
     // Gửi thông báo đến trang admin
-    io.of('/admin').emit('purchaseNotification', { data: adminNotification });
+    io.of("/admin").emit("purchaseNotification", { data: adminNotification });
   });
 
-  socket.on('joinClientRoom', (userId) => {
+  socket.on("joinClientRoom", (userId) => {
     const id = JSON.parse(userId);
     // Thêm người dùng vào "room theo id người dùng" client khi truy cập trang client
     socket.join(id);
@@ -190,22 +195,22 @@ app.use(express.json());
 app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
-app.use('/api', categoryRouter);
-app.use('/api', productRouter);
-app.use('/api', uploadRouter);
-app.use('/api', shipmentRouter);
-app.use('/api', mailRouter);
-app.use('/api', originRouter);
-app.use('/api', orderRouter);
-app.use('/api', authRouter);
-app.use('/api', userRouter);
-app.use('/api', momoRouter);
-app.use('/api', cartRouter);
-app.use('/api', notificationRouter);
-app.use('/api', evaluationRouter);
+app.use("/api", categoryRouter);
+app.use("/api", productRouter);
+app.use("/api", uploadRouter);
+app.use("/api", shipmentRouter);
+app.use("/api", mailRouter);
+app.use("/api", originRouter);
+app.use("/api", orderRouter);
+app.use("/api", authRouter);
+app.use("/api", userRouter);
+app.use("/api", momoRouter);
+app.use("/api", cartRouter);
+app.use("/api", notificationRouter);
+app.use("/api", evaluationRouter);
 mongoose
   .connect(MONGO_URL)
-  .then(() => console.log('connected to db'))
+  .then(() => console.log("connected to db"))
   .catch((err) => console.log(`error in connect db : ${err}`));
 httpServer.listen(PORT, () => {
   console.log(`listening success ${PORT}`);

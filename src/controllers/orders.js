@@ -32,7 +32,6 @@ const formatDateTime = (dateTime) => {
 const sendMailer = async (email, data) => {
 
 
-
   // console.log(email,data);
   await transporter.sendMail({
     from: "namphpmailer@gmail.com",
@@ -267,7 +266,7 @@ export const CreateOrder = async (req, res) => {
     if (req.user != null) {
       req.body["userId"] = req.user._id;
       await Carts.findOneAndUpdate({ userId: req.user._id }, {
-        prdoducts: []
+        products: []
       })
     }
     const data = await Order.create(req.body);

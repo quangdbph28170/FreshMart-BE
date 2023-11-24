@@ -2,6 +2,6 @@ export const statusOrder = [
   "chờ xác nhận",
   "đang giao hàng",
   "giao hàng thành công",
-  "đã nhận được hàng",
+  "đơn hàng hoàn thành",
   "đã hủy đơn hàng",
 ];
