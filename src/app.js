@@ -21,6 +21,7 @@ import Product from './models/products';
 import cartRouter from './routers/carts';
 import { addNotification } from './controllers/notification';
 import evaluationRouter from './routers/evaluation';
+import Orders from './models/orders';
 
 const app = express();
 const httpServer = createServer(app);
@@ -32,8 +33,29 @@ const MONGO_URL = process.env.MONGODB_LOCAL;
 
 const io = new Server(httpServer, { cors: '*' });
 
+//Chạy 24h 1 lần kiểm tra những đơn hàng đã giao hàng thành công sau 3 ngày tự động chuyển thành trạng thái thành công
+cron.schedule('* */24 * * *', async () => {
+  const orders = await Orders.find({ status: 'giao hành thành công' })
+  for(const order of orders) {
+    // Chuyển đổi chuỗi ngày từ MongoDB thành đối tượng Date
+    const targetDate = new Date(order.updatedAt);
+    // Lấy ngày hiện tại
+    const currentDate = new Date();
+    // Số mili giây trong 3 ngày
+    const threeDaysInMillis = 3 * 24 * 60 * 60 * 1000;
+    // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 3 ngày không
+    const isRatherThreeDays = currentDate - targetDate >= threeDaysInMillis;
+    
+    if(isRatherThreeDays) {
+      await Orders.findByIdAndUpdate(order._id, {
+        status: 'đã nhận được hàng'
+      })
+    }
+  }
+})
+
 io.of('/admin').on('connection', (socket) => {
-  cron.schedule('1-59 * * * *', async () => {
+  cron.schedule('* */24 * * *', async () => {
     const response = []
     const products = await Product.find();
     for (const product of products) {

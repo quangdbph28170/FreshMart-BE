@@ -14,6 +14,10 @@ const cartSchema = new mongoose.Schema({
                 ref: "Products",
                 required: true
             },
+            productName: {
+                type: String,
+                required: true
+            },
             weight: {
                 type: Number,
                 required: true

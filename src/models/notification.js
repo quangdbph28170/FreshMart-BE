@@ -22,7 +22,6 @@ const notificationSchema = new mongoose.Schema(
       type: {
         type: String,
         enum: ['client', 'admin'],
-        default: 'client',
         required: true,
       },
       isRead: {

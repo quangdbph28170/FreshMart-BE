@@ -22,3 +22,10 @@ export const cartValid = joi.object({
         })
     )
 })
+
+export const cartDB = joi.object({
+    productId: joi.string().required(),
+    weight: joi.number().required(),
+    productName: joi.string().required(),
+    
+})

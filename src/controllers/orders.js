@@ -1,4 +1,3 @@
-import Origin from "../models/origin";
 import mongoose from "mongoose";
 import Order from "../models/orders";
 import Product from "../models/products";
@@ -7,6 +6,7 @@ import { validateCheckout } from "../validation/checkout";
 import { transporter } from "../config/mail";
 import { handleTransaction } from "./momo-pay";
 import { statusOrder } from "../config/constants";
+import Carts from "../models/carts";
 const checkCancellationTime = (order) => {
   const checkTime = new Date(order.createdAt);
   const currentTime = new Date();
@@ -266,6 +266,9 @@ export const CreateOrder = async (req, res) => {
     // console.log(req.user);
     if (req.user != null) {
       req.body["userId"] = req.user._id;
+      await Carts.findOneAndUpdate({ userId: req.user._id }, {
+        products: []
+      })
     }
     const data = await Order.create(req.body);
 
