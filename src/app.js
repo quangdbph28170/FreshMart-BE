@@ -55,7 +55,7 @@ cron.schedule("* */24 * * *", async () => {
 });
 
 io.of("/admin").on("connection", (socket) => {
-  cron.schedule("*/30 * * * *", async () => {
+  cron.schedule("* */24 * * *", async () => {
     const response = [];
     const products = await Product.find();
     for (const product of products) {
@@ -69,7 +69,7 @@ io.of("/admin").on("connection", (socket) => {
         const threeDaysInMillis = 3 * 24 * 60 * 60 * 1000;
 
         //Kiểm tra xem sản phẩm trong lô đã hết hạn chưa
-        if (targetDate - currentDate <= 0) {
+        if (targetDate - currentDate <= 0 && shipment.willExpire != 2) {
           await Product.findOneAndUpdate(
             { _id: product._id, "shipments.idShipment": shipment.idShipment },
             {
@@ -94,7 +94,7 @@ io.of("/admin").on("connection", (socket) => {
         // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 3 ngày không
         const isWithinThreeDays = targetDate - currentDate < threeDaysInMillis;
 
-        if (isWithinThreeDays && targetDate - currentDate > 0) {
+        if (isWithinThreeDays && targetDate - currentDate > 0 && shipment.willExpire != 1) {
           await Product.findOneAndUpdate(
             { _id: product._id, "shipments.idShipment": shipment.idShipment },
             {
@@ -131,7 +131,8 @@ io.of("/admin").on("connection", (socket) => {
   //thông báo cho người dùng trạng thái của order đã thay đổi và nếu "giao hàng thành công thì trả về order id để người dùng sang detail xác nhận đơn hàng thành công"
   socket.on("changeStatus", async (data) => {
     const socketData = JSON.parse(data);
-    console.log(socketData.userId);
+
+    if (socketData.userId === null || !socketData.userId) return;
     const notification = await addNotification({
       userId: socketData.userId,
       title: "Thông báo",
@@ -145,7 +146,7 @@ io.of("/admin").on("connection", (socket) => {
     });
 
     io.to(socketData.userId).emit("statusNotification", {
-      data: { ...notification, status: socketData.status },
+      data: { ...notification._doc, status: socketData.status },
     });
   });
 });
@@ -177,6 +178,24 @@ io.on("connection", (socket) => {
     });
     // Gửi thông báo đến trang admin
     io.of("/admin").emit("purchaseNotification", { data: adminNotification });
+  });
+
+  socket.on("confirmOrder", async (data) => {
+    const socketData = JSON.parse(data);
+    const notification = await addNotification({
+      title: "Thông báo",
+      message:
+        "Đơn hàng (#)" +
+        socketData.invoiceId +
+        " đã được người dùng thay đổi trạng thái thành: " +
+        socketData.status,
+      link: "/manage/orders",
+      type: "admin",
+    });
+    
+    io.of('/admin').emit("adminStatusNotification", {
+      data: { ...notification._doc, status: socketData.status },
+    });
   });
 
   socket.on("joinClientRoom", (userId) => {
