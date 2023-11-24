@@ -39,12 +39,12 @@ const checkWeight = async (productId, weight, userId) => {
 
 //Tính tổng tiền
 const calculateTotalPrice = async (data) => {
-    await data.populate("products.productId")
-    await data.populate("products.productId.originId")
     let totalPrice = 0;
     for (let item of data.products) {
         //Đảm bảo tính tổng tiền những sp còn tồn tại (.) kho
         if (item.productId) {
+            await data.populate("products.productId")
+            await data.populate("products.productId.originId")
             totalPrice += item.productId.price * item.weight;
         }
 
@@ -55,6 +55,13 @@ const calculateTotalPrice = async (data) => {
 //Thêm sp vào giỏ hàng
 export const addToCart = async (req, res) => {
     try {
+        const { error } = validateProduct.validate(req.body, { abortEarly: false });
+        if (error) {
+            return res.status(401).json({
+                status: 401,
+                message: error.details.map((error) => error.message),
+            });
+        }
         const userId = req.user._id;
         const { productId, weight } = req.body;
         let totalPrice = 0;
@@ -160,7 +167,6 @@ export const getCart = async (req, res) => {
             const productExist = await Product.findById(item.productId);
             // TH1: Nếu sp trong giỏ hàng ko còn tồn tại
             if (!productExist) {
-                const product = await Shipment.findOne({ "products.idProduct": item.productId });
                 // => Xóa nó khỏi cart
                 data = await Cart.findOneAndUpdate(
                     { userId: req.user._id, "products.productId": item.productId },
@@ -176,10 +182,8 @@ export const getCart = async (req, res) => {
                 //Tính lại tổng tiền
                 totalPrice += await calculateTotalPrice(data);
                 errors.push({
-                    productId: item.productId,
-                    message: "Product " + product.productName + " is no longer available!",
-                    data,
-                    totalPrice
+                    productName: item.productName,
+                    message: "Product is no longer available!",
                 });
             } else {
                 let totalWeight = 0;
@@ -202,10 +206,8 @@ export const getCart = async (req, res) => {
                     //Tính lại tổng tiền
                     totalPrice += await calculateTotalPrice(data);
                     errors.push({
-                        productId: item.productId,
-                        message: "Product " + productExist.productName + " is currently out of stock!",
-                        data,
-                        totalPrice
+                        productName: item.productName,
+                        message: "Product is currently out of stock!",
                     });
                 }
                 // TH3: nếu trong kho ko đủ số cân update lại bằng max cân có thể mua
@@ -222,10 +224,8 @@ export const getCart = async (req, res) => {
                     //Tính lại tổng tiền
                     totalPrice += await calculateTotalPrice(data);
                     errors.push({
-                        productId: item.productId,
-                        message: "Product " + productExist.productName + " can be purchased up to " + totalWeight + "kg!",
-                        data,
-                        totalPrice
+                        productName: item.productName,
+                        message: "Product can be purchased up to " + totalWeight + "kg!",
                     });
                 }
             }
@@ -322,6 +322,7 @@ export const removeAllProductInCart = async (req, res) => {
 //Check cart local 
 export const cartLocal = async (req, res) => {
     try {
+        let totalPayment = 0;
         const errors = [];
         const products = req.body.products;
         const { error } = cartValid.validate(req.body, { abortEarly: false })
@@ -391,6 +392,8 @@ export const cartLocal = async (req, res) => {
                         maxWeight: currentTotalWeight,
                     });
                 }
+
+                totalPayment += prd.price;
             }
 
 
@@ -401,6 +404,15 @@ export const cartLocal = async (req, res) => {
                 status: 400,
                 message: "Error",
                 body: { error: errors },
+            });
+        }
+
+        if (req.body.totalPayment !== totalPayment) {
+            return res.status(400).json({
+                status: 400,
+                message: "Invalid totalPayment!",
+                true: totalPayment,
+                false: req.body.totalPayment
             });
         }
 
