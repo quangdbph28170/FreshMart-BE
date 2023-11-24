@@ -15,7 +15,7 @@ export const getProducts = async (req, res) => {
     _minPrice = "",
     _maxPrice = "",
     _isSale,
-
+    
   } = req.query;
   const options = {
     page: _page,
