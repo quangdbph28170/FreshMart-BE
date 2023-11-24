@@ -48,7 +48,7 @@ cron.schedule('* */24 * * *', async () => {
     
     if(isRatherThreeDays) {
       await Orders.findByIdAndUpdate(order._id, {
-        status: 'đã nhận được hàng'
+        status: 'đơn hàng hoàn thành'
       })
     }
   }
@@ -132,6 +132,7 @@ io.of('/admin').on('connection', (socket) => {
   socket.on('changeStatus', async (data) => {
     const socketData = JSON.parse(data);
 
+    if(socketData.userId === null || !socketData.userId) return;
     const notification = await addNotification({
       userId: socketData.userId,
       title: 'Thông báo',
@@ -141,9 +142,10 @@ io.of('/admin').on('connection', (socket) => {
         '  của bạn đã ' +
         socketData.status,
       link: '/my-order/' + socketData.orderId,
+      type: 'client'
     });
 
-    io.to(socketData.userId).emit('statusNotification', { data: notification });
+    io.to(socketData.userId).emit('statusNotification', { data: { ...notification, status: socketData.status } });
   });
 });
 
@@ -158,6 +160,7 @@ io.on('connection', (socket) => {
         title: 'Thông báo',
         message: 'Mua hàng thành công',
         link: '/my-order/' + socketData.orderId,
+        type: 'client'
       });
       io.to(socketData.userId).emit('purchaseNotification', {
         data: notification,
