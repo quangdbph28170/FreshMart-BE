@@ -18,9 +18,11 @@ const checkWeight = async (productId, weight, userId) => {
     }
     //Check cân gửi lên lớn hơn tổng cân trong kho
     if (weight > totalWeight) {
-        const error = new Error("The remaining quantity is not enough!");
-        error["totalWeight"] = totalWeight
-        throw error
+        const error = {
+            message: "The remaining quantity is not enough!",
+            totalWeight: totalWeight,
+        };
+        throw error;
     }
     if (cartExist) {
         const productExits = cartExist.products.find(item => item.productId == productId)
@@ -28,7 +30,11 @@ const checkWeight = async (productId, weight, userId) => {
         //Check xem cân sp gửi lên vs cân có trong giỏ hàng có lớn hơn tổng cân trong kho ko
         if (productExits) {
             if (weight + productExits.weight > totalWeight) {
-                throw new Error("The remaining quantity is not enough!" );
+                const error = {
+                    message: "The remaining quantity is not enough!",
+                    totalWeight: totalWeight,
+                };
+                throw error;
             }
         }
     }
@@ -54,7 +60,7 @@ const calculateTotalPrice = async (data) => {
             }
 
         }
-  }
+    }
     return totalPrice;
 }
 
@@ -78,9 +84,19 @@ export const addToCart = async (req, res) => {
                 message: "Product not found",
             });
         }
+        const err = {}
         // Check cân 
-        await checkWeight(productId, weight, userId);
-        console.log(productId, "new product")
+        await checkWeight(productId, weight, userId).catch((error) => {
+            err["message"] = error.message,
+                err["totalWeight"] = error.totalWeight
+
+        })
+        if (err) {
+            return res.status(401).json({
+                ...err
+            })
+        }
+
         // check xem người dùng đã có giỏ hàng chưa
         let cartExist = await Cart.findOne({ userId });
         let data = null;
@@ -139,7 +155,17 @@ export const updateProductWeightInCart = async (req, res) => {
     try {
         const { weight, productId } = req.body
         let totalPrice = 0;
-        await checkWeight(productId, weight)
+        await checkWeight(productId, weight, userId).catch((error) => {
+            err["message"] = error.message,
+                err["totalWeight"] = error.totalWeight
+
+        })
+        if (err) {
+            return res.status(401).json({
+                ...err
+            })
+        }
+
         const data = await Cart.findOneAndUpdate(
             { userId: req.user._id, "products.productId": productId },
             {
@@ -219,7 +245,7 @@ export const getCart = async (req, res) => {
                         });
                     }
                     // TH3: nếu trong kho ko đủ số cân update lại bằng max cân có thể mua
-                    if (productExist.shipments.length >0 && item.weight > totalWeight ) {
+                    if (productExist.shipments.length > 0 && item.weight > totalWeight) {
                         data = await Cart.findOneAndUpdate(
                             { userId: req.user._id, "products.productId": item.productId },
                             {
