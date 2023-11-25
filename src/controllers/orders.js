@@ -32,7 +32,6 @@ const formatDateTime = (dateTime) => {
 const sendMailer = async (email, data) => {
 
 
-
   // console.log(email,data);
   await transporter.sendMail({
     from: "namphpmailer@gmail.com",

@@ -1,88 +1,95 @@
-import mongoose from "mongoose"
-import mongoosePaginate from "mongoose-paginate-v2"
+import mongoose from "mongoose";
+import mongoosePaginate from "mongoose-paginate-v2";
 import shortMongoId from "short-mongo-id";
-const orderSchema = new mongoose.Schema({
+const orderSchema = new mongoose.Schema(
+  {
     invoiceId: {
-        type: String,
-        default: function () {
-            return shortMongoId(this._id)
-        }
+      type: String,
+      default: function () {
+        return shortMongoId(this._id);
+      },
     },
     userId: {
-        type: mongoose.Schema.Types.Mixed,
-        default: null
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
     },
     products: [
-        {
-            productId: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Products",
-                required: true
-            },
-            originId: {
-                type: mongoose.Schema.Types.ObjectId,
-                ref: "Origin",
-                required: true
-            },
-            productName: {
-                type: String,
-                required: true
-            },
-            images: {
-                type: String,
-                required: true
-            },
+      {
+        productId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Products",
+          required: true,
+        },
+        originId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Origin",
+          required: true,
+        },
+        productName: {
+          type: String,
+          required: true,
+        },
+        images: {
+          type: String,
+          required: true,
+        },
 
-            weight: {
-                type: Number,
-                required: true
-            },
-            price: {
-                type: Number,
-                required: true
-            },
-            evaluation: {
-                type: Boolean,
-                default: false
-            },
-        }
+        weight: {
+          type: Number,
+          required: true,
+        },
+        price: {
+          type: Number,
+          required: true,
+        },
+        evaluation: {
+          type: Boolean,
+          default: false,
+        },
+      },
     ],
     totalPayment: {
-        type: Number,
-        required: true
+      type: Number,
+      required: true,
     },
     customerName: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     phoneNumber: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     email: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     note: {
-        type: String,
-        default: null
+      type: String,
+      default: null,
     },
     shippingAddress: {
-        type: String,
-        required: true
+      type: String,
+      required: true,
     },
     receivedDate: {
-        type: String,
-        default: null
+      type: String,
+      default: null,
     },
     pay: {
-        type: Boolean,
-        default: false
+      type: Boolean,
+      default: false,
     },
     status: {
-        type: String,
-        enum: ["chờ xác nhận", "đang giao hàng", "giao hàng thành công", "đã nhận được hàng", "đã hủy đơn hàng"],
-        default: "chờ xác nhận"
+      type: String,
+      enum: [
+        "chờ xác nhận",
+        "đang giao hàng",
+        "giao hàng thành công",
+        "đơn hàng hoàn thành",
+        "đã hủy đơn hàng",
+      ],
+      default: "chờ xác nhận",
     },
 
     // orderDate:{
@@ -93,7 +100,8 @@ const orderSchema = new mongoose.Schema({
     //         return formattedDate;
     //     }
     // }
-
-}, { versionKey: false, timestamps: true })
-orderSchema.plugin(mongoosePaginate)
-export default mongoose.model('Orders', orderSchema)
+  },
+  { versionKey: false, timestamps: true }
+);
+orderSchema.plugin(mongoosePaginate);
+export default mongoose.model("Orders", orderSchema);
