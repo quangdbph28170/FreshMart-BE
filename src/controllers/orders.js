@@ -386,7 +386,7 @@ export const OrdersForMember = async (req, res) => {
   const { _status = "", _day } = req.query;
   try {
     const userId = req.user._id;
-    let data = await Order.find({ userId });
+    let data = await Order.find({ userId }).sort({createdAt:-1});
     if (data.length == 0) {
       return res.status(200).json({
         status: 200,
@@ -465,7 +465,7 @@ export const FilterOrdersForMember = async (req, res) => {
     const userId = req.user._id;
     const { _day, _status, invoiceId } = req.query;
     // console.log(req.query);
-    let data = await Order.find({ userId });
+    let data = await Order.find({ userId }).sort({createdAt:-1});
 
     //lọc theo trạng thái đơn hàng
     if (_status) {

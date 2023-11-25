@@ -59,6 +59,6 @@ router.get("/orders-member", authentication, OrdersForMember);
 router.get("/orders-member-filter", authentication, FilterOrdersForMember);
 router.get("/orders/:id", OrderDetail);
 router.put("/orders/:id", authentication, CanceledOrder);
-router.patch("/orders/:id", authentication, authorization, UpdateOrder);
+router.patch("/orders/:id", authentication, UpdateOrder);
 
 export default router;
