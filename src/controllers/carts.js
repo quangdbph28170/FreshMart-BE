@@ -164,36 +164,12 @@ export const getCart = async (req, res) => {
         let totalPrice = 0;
         let data = await Cart.findOne({ userId: req.user._id });
         const errors = [];
-
-        for (let item of data.products) {
-            const productExist = await Product.findById(item.productId);
-            // TH1: Nếu sp trong giỏ hàng ko còn tồn tại
-            if (!productExist) {
-                // => Xóa nó khỏi cart
-                data = await Cart.findOneAndUpdate(
-                    { userId: req.user._id, "products.productId": item.productId },
-                    {
-                        $pull: {
-                            products: {
-                                productId: item.productId
-                            },
-                        }
-                    },
-                    { new: true }
-                );
-                //Tính lại tổng tiền
-                totalPrice += await calculateTotalPrice(data);
-                errors.push({
-                    productName: item.productName,
-                    message: "Product is no longer available!",
-                });
-            } else {
-                let totalWeight = 0;
-                for (let shipment of productExist.shipments) {
-                    totalWeight += shipment.weight;
-                }
-                //TH2: nếu sp đã hết hàng
-                if (productExist.shipments.length == 0) {
+        if (data || data.products.length > 0) {
+            for (let item of data.products) {
+                const productExist = await Product.findById(item.productId);
+                // TH1: Nếu sp trong giỏ hàng ko còn tồn tại
+                if (!productExist) {
+                    // => Xóa nó khỏi cart
                     data = await Cart.findOneAndUpdate(
                         { userId: req.user._id, "products.productId": item.productId },
                         {
@@ -209,36 +185,60 @@ export const getCart = async (req, res) => {
                     totalPrice += await calculateTotalPrice(data);
                     errors.push({
                         productName: item.productName,
-                        message: "Product is currently out of stock!",
+                        message: "Product is no longer available!",
                     });
-                }
-                // TH3: nếu trong kho ko đủ số cân update lại bằng max cân có thể mua
-                if (item.weight > totalWeight) {
-                    data = await Cart.findOneAndUpdate(
-                        { userId: req.user._id, "products.productId": item.productId },
-                        {
-                            $set: {
-                                "products.$.weight": totalWeight
-                            }
-                        },
-                        { new: true }
-                    );
-                    //Tính lại tổng tiền
-                    totalPrice += await calculateTotalPrice(data);
-                    errors.push({
-                        productName: item.productName,
-                        message: "Product can be purchased up to " + totalWeight + "kg!",
-                    });
+                } else {
+                    let totalWeight = 0;
+                    for (let shipment of productExist.shipments) {
+                        totalWeight += shipment.weight;
+                    }
+                    //TH2: nếu sp đã hết hàng
+                    if (productExist.shipments.length == 0) {
+                        data = await Cart.findOneAndUpdate(
+                            { userId: req.user._id, "products.productId": item.productId },
+                            {
+                                $pull: {
+                                    products: {
+                                        productId: item.productId
+                                    },
+                                }
+                            },
+                            { new: true }
+                        );
+                        //Tính lại tổng tiền
+                        totalPrice += await calculateTotalPrice(data);
+                        errors.push({
+                            productName: item.productName,
+                            message: "Product is currently out of stock!",
+                        });
+                    }
+                    // TH3: nếu trong kho ko đủ số cân update lại bằng max cân có thể mua
+                    if (item.weight > totalWeight) {
+                        data = await Cart.findOneAndUpdate(
+                            { userId: req.user._id, "products.productId": item.productId },
+                            {
+                                $set: {
+                                    "products.$.weight": totalWeight
+                                }
+                            },
+                            { new: true }
+                        );
+                        //Tính lại tổng tiền
+                        totalPrice += await calculateTotalPrice(data);
+                        errors.push({
+                            productName: item.productName,
+                            message: "Product can be purchased up to " + totalWeight + "kg!",
+                        });
+                    }
                 }
             }
-        }
-        //Tính lại tổng tiền
-        totalPrice += await calculateTotalPrice(data);
-        if (!data || data.products.length === 0) {
+            //Tính lại tổng tiền
+            totalPrice += await calculateTotalPrice(data);
+        } else {
             return res.status(201).json({
                 status: 201,
                 message: "Cart empty",
-                body: { data, totalPrice }
+                body: { data: [], totalPrice: 0 }
             });
         }
 
@@ -339,28 +339,31 @@ export const cartLocal = async (req, res) => {
             if (!prd) {
                 errors.push({
                     productId: item.productId,
-                    message: "Invalid data!",
+                    productName: item.productId.productName,
+                    message: "Product is not exsit!",
                 });
             } else {
                 if (item.productId.price !== prd.price) {
                     errors.push({
                         productId: item.productId._id,
-                        price: item.productId.price,
-                        message: `Invalid price for product ${prd.productName}!`,
+                        price: prd.price,
+                        productName: prd.productName,
+                        message: `Invalid price for product!`,
                     });
                 }
 
                 if (item.productId.productName !== prd.productName) {
                     errors.push({
                         productId: item.productId._id,
-                        productName: item.productId.productName,
-                        message: "Invalid data!",
+                        productName: prd.productName,
+                        message: "Invalid product name!",
                     });
                 }
-                if (item.productId.originId !== prd.originId) {
+                if (item.productId.originId._id !== prd.originId) {
                     errors.push({
                         productId: item.productId._id,
                         originId: item.productId.originId,
+                        productName: prd.productName,
                         message: "Invalid product origin!",
                     });
                 }
@@ -369,6 +372,7 @@ export const cartLocal = async (req, res) => {
                     errors.push({
                         productId: item.productId._id,
                         image: item.productId.images,
+                        productName: prd.productName,
                         message: "Invalid product image!",
                     });
                 }
@@ -377,6 +381,7 @@ export const cartLocal = async (req, res) => {
                     errors.push({
                         productId: item.productId._id,
                         weight: item.weight,
+                        productName: prd.productName,
                         message: "Invalid product weight!",
                     });
                 }
@@ -385,11 +390,13 @@ export const cartLocal = async (req, res) => {
                 if (prd.shipments.length === 0) {
                     errors.push({
                         productId: item.productId._id,
+                        productName: prd.productName,
                         message: "The product is currently out of stock!",
                     });
                 } else if (item.weight > currentTotalWeight) {
                     errors.push({
                         productId: item.productId._id,
+                        productName: prd.productName,
                         message: "Insufficient quantity of the product in stock!",
                         maxWeight: currentTotalWeight,
                     });

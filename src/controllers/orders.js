@@ -272,31 +272,8 @@ export const CreateOrder = async (req, res) => {
     const data = await Order.create(req.body);
 
     // kiểm tra phương thức thanh toán là momo
-    if (paymentMethod === "momo") {
-      let dataFromMomo = {};
-      handleTransaction({
-        amount: data.totalPayment,
-        orderId: data._id,
-        orderInfo: data.customerName,
-        extraData: `email=${req.body.email}`,
-      })
-        .then((dataMomo) => {
-          dataFromMomo = dataMomo;
-          return res.status(dataFromMomo.statusCode || 400).json({
-            body: { data: dataFromMomo },
-            status: dataFromMomo.statusCode || 400,
-            message: "",
-          });
-        })
-        .catch((error) => {
-          dataFromMomo = error;
-          return res.status(400).json({
-            body: { data: dataFromMomo },
-            status: 400,
-            message: "Do transaction fail",
-          });
-        });
-      return;
+    if (paymentMethod === "vnpay") {
+
     }
     await sendMailer(req.body.email, data);
     return res.status(201).json({
