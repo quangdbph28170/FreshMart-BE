@@ -409,21 +409,18 @@ export const cartLocal = async (req, res) => {
 
 
         }
-
+        if (req.body.totalPayment != totalPayment) {
+            errors.push({
+                message: "Invalid totalPayment!",
+                true: totalPayment,
+                false: req.body.totalPayment
+            });
+        }
         if (errors.length > 0) {
             return res.status(400).json({
                 status: 400,
                 message: "Error",
                 body: { error: errors },
-            });
-        }
-
-        if (req.body.totalPayment != totalPayment) {
-            return res.status(400).json({
-                status: 400,
-                message: "Invalid totalPayment!",
-                true: totalPayment,
-                false: req.body.totalPayment
             });
         }
 
