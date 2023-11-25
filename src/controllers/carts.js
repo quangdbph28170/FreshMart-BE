@@ -139,11 +139,12 @@ export const addToCart = async (req, res) => {
 export const updateProductWeightInCart = async (req, res) => {
     try {
         const { weight, productId } = req.body
+        const userId = req.user._id
         let totalPrice = 0;
         await checkWeight(productId, weight, userId)
 
         const data = await Cart.findOneAndUpdate(
-            { userId: req.user._id, "products.productId": productId },
+            { userId, "products.productId": productId },
             {
                 $set: {
                     "products.$.weight": weight
