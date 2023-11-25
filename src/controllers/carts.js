@@ -7,6 +7,13 @@ import { cartDB, cartValid } from "../validation/cart"
 //Check cân nặng của sp (.) giỏ hàng khi add vào update 
 const checkWeight = async (productId, weight, userId) => {
     let totalWeight = 0
+    //Check cân phải lớn hơn 0
+    if (weight <= 0) {
+        const error = {
+            message: "Please check the weight again!", 
+        };
+        throw error;
+    }
     const checkProduct = await Product.findById(productId)
     const cartExist = await Cart.findOne({ userId })
     for (let item of checkProduct.shipments) {
@@ -39,10 +46,7 @@ const checkWeight = async (productId, weight, userId) => {
         }
     }
 
-    //Check cân phải lớn hơn 0
-    if (weight <= 0) {
-        throw new Error("Please check the weight again!");
-    }
+   
 
 }
 
