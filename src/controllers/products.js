@@ -15,7 +15,7 @@ export const getProducts = async (req, res) => {
     _minPrice = "",
     _maxPrice = "",
     _isSale,
-    
+
   } = req.query;
   const options = {
     page: _page,
@@ -104,8 +104,26 @@ export const getRelatedProducts = async (req, res) => {
           as: "shipment",
         },
       },
+      {
+        $unwind: "$shipment" // Unwind the shipment array to access its fields
+      },
+      {
+        $lookup: {
+          from: "origins", // Change "origins" to your actual collection name
+          localField: "shipment.originId",
+          foreignField: "_id",
+          as: "shipment.origin",
+        },
+      },
+      {
+        $group: {
+          _id: "$_id",
+          // Group back the products and push the shipments with populated originId back into the shipment array
+          shipment: { $push: "$shipment" },
+          // Add other fields you may want to keep
+        },
+      },
     ]);
-    await products.populate("originId")
     if (!products) {
       return res.status(404).json({
         status: 404,
@@ -324,7 +342,7 @@ export const liquidationProduct = async (req, res) => {
       ],
       price: parseInt(productExist.price) - parseInt(discount / 100 * productExist.price),
       isSale: true,
-      sold:0
+      sold: 0
     });
 
     // Xóa cái lô của sp CẦN_THANH_LÝ ở bảng products

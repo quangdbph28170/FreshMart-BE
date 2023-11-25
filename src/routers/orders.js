@@ -10,6 +10,7 @@ import {
   OrderDetail,
   OrdersForMember,
   OrdersForGuest,
+  ConfirmOrder,
 
 } from "../controllers/orders";
 import authentication from "../middleware/authentication";
@@ -59,6 +60,7 @@ router.get("/orders-member", authentication, OrdersForMember);
 router.get("/orders-member-filter", authentication, FilterOrdersForMember);
 router.get("/orders/:id", OrderDetail);
 router.put("/orders/:id", authentication, CanceledOrder);
-router.patch("/orders/:id", authentication, UpdateOrder);
+router.put("/orders-cofirm/:id", authentication, ConfirmOrder);
+router.patch("/orders/:id", authentication, authorization, UpdateOrder);
 
 export default router;
