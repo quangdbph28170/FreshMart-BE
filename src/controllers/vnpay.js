@@ -10,10 +10,10 @@ export const vnpayCreate = (req, res) => {
     var dateFormat = require('dateformat');
 
 
-    var tmnCode = config.get('vnp_TmnCode');
-    var secretKey = config.get('vnp_HashSecret');
-    var vnpUrl = config.get('vnp_Url');
-    var returnUrl = config.get('vnp_ReturnUrl');
+    var tmnCode = "X5NX5EN5";
+    var secretKey = "RNRIQQQUPZTWBTBBTAXZEHQFRYMKOVII";
+    var vnpUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
+    var returnUrl = "http://localhost:5173/vnpay_return";
 
     var date = new Date();
 
@@ -99,8 +99,8 @@ export const vnpayReturn = (req, res) => {
     vnp_Params = sortObject(vnp_Params);
 
     var config = require('config');
-    var tmnCode = config.get('vnp_TmnCode');
-    var secretKey = config.get('vnp_HashSecret');
+    var tmnCode = 'X5NX5EN5';
+    var secretKey = 'RNRIQQQUPZTWBTBBTAXZEHQFRYMKOVII';
 
     var querystring = require('qs');
     var signData = querystring.stringify(vnp_Params, { encode: false });
