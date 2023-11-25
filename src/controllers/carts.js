@@ -228,7 +228,8 @@ export const getCart = async (req, res) => {
                         totalPrice += await calculateTotalPrice(data);
                         errors.push({
                             productName: item.productName,
-                            message: "Product can be purchased up to " + totalWeight + "kg!",
+                            totalWeight: totalWeight,
+                            message: "The remaining quantity is not enough!",
                         });
                     }
                 }
