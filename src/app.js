@@ -47,6 +47,16 @@ cron.schedule("* */24 * * *", async () => {
     const isRatherThreeDays = currentDate - targetDate >= threeDaysInMillis;
 
     if (isRatherThreeDays) {
+      await addNotification({
+        userId: order.userId,
+        title: "Thông báo",
+        message:
+          "Đơn hàng (#)" +
+          order.invoiceId +
+          "  của bạn đã hoàn thành",
+        link: "/my-order/" + order._id,
+        type: "client",
+      });
       await Orders.findByIdAndUpdate(order._id, {
         status: "đơn hàng hoàn thành",
       });
@@ -55,7 +65,7 @@ cron.schedule("* */24 * * *", async () => {
 });
 
 io.of("/admin").on("connection", (socket) => {
-  cron.schedule("* */24 * * *", async () => {
+  cron.schedule("* 0,12 * * *", async () => {
     const response = [];
     const products = await Product.find();
     for (const product of products) {
