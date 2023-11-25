@@ -63,7 +63,7 @@ export const addToCart = async (req, res) => {
             });
         }
         const userId = req.user._id;
-        const { productId, weight } = req.body;
+        const { productId, productName, weight } = req.body;
         let totalPrice = 0;
         const checkProduct = await Product.findById(productId);
         if (!checkProduct) {
@@ -86,6 +86,7 @@ export const addToCart = async (req, res) => {
                 products: [
                     {
                         productId,
+                        productName,
                         weight,
                     },
                 ],
@@ -101,6 +102,7 @@ export const addToCart = async (req, res) => {
                 // nếu chưa thì add sp đó vào giỏ hàng
                 cartExist.products.push({
                     productId,
+                    productName,
                     weight,
                 });
             } else {
