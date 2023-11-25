@@ -1,3 +1,4 @@
+import mongoose from "mongoose"
 import Cart from "../models/carts"
 import Product from "../models/products"
 import Shipment from "../models/shipment"
@@ -359,7 +360,7 @@ export const cartLocal = async (req, res) => {
                         message: "Invalid product name!",
                     });
                 }
-                if (item.productId.originId._id !== prd.originId) {
+                if (new mongoose.Types.ObjectId(item.productId.originId._id) !== prd.originId) {
                     errors.push({
                         productId: item.productId._id,
                         originId: item.productId.originId,
