@@ -18,7 +18,9 @@ const checkWeight = async (productId, weight, userId) => {
     }
     //Check cân gửi lên lớn hơn tổng cân trong kho
     if (weight > totalWeight) {
-        throw new Error("Số cân còn lại trong kho không đủ!");
+        const error = new Error("The remaining quantity is not enough!");
+        error["totalWeight"] = totalWeight
+        throw error
     }
     if (cartExist) {
         const productExits = cartExist.products.find(item => item.productId == productId)
@@ -26,30 +28,33 @@ const checkWeight = async (productId, weight, userId) => {
         //Check xem cân sp gửi lên vs cân có trong giỏ hàng có lớn hơn tổng cân trong kho ko
         if (productExits) {
             if (weight + productExits.weight > totalWeight) {
-                throw new Error("Số cân còn lại trong kho không đủ!");
+                throw new Error("The remaining quantity is not enough!" );
             }
         }
     }
 
     //Check cân phải lớn hơn 0
     if (weight <= 0) {
-        throw new Error("Vui lòng kiểm tra lại số cân!");
+        throw new Error("Please check the weight again!");
     }
 
 }
 
 //Tính tổng tiền
 const calculateTotalPrice = async (data) => {
+    console.log(data);
     let totalPrice = 0;
-    for (let item of data.products) {
-        //Đảm bảo tính tổng tiền những sp còn tồn tại (.) kho
-        if (item.productId) {
-            await data.populate("products.productId")
-            await data.populate("products.productId.originId")
-            totalPrice += item.productId.price * item.weight;
-        }
+    if (data) {
+        for (let item of data.products) {
+            //Đảm bảo tính tổng tiền những sp còn tồn tại (.) kho
+            if (item.productId) {
+                await data.populate("products.productId")
+                await data.populate("products.productId.originId")
+                totalPrice += item.productId.price * item.weight;
+            }
 
-    }
+        }
+  }
     return totalPrice;
 }
 
@@ -165,7 +170,7 @@ export const getCart = async (req, res) => {
         let totalPrice = 0;
         let data = await Cart.findOne({ userId: req.user._id });
         const errors = [];
-        if (data || data.products.length > 0) {
+        if (data && data.products.length > 0) {
             for (let item of data.products) {
                 const productExist = await Product.findById(item.productId);
                 // TH1: Nếu sp trong giỏ hàng ko còn tồn tại
@@ -214,7 +219,7 @@ export const getCart = async (req, res) => {
                         });
                     }
                     // TH3: nếu trong kho ko đủ số cân update lại bằng max cân có thể mua
-                    if (item.weight > totalWeight) {
+                    if (productExist.shipments.length >0 && item.weight > totalWeight ) {
                         data = await Cart.findOneAndUpdate(
                             { userId: req.user._id, "products.productId": item.productId },
                             {
