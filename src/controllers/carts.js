@@ -354,7 +354,7 @@ export const cartLocal = async (req, res) => {
                 }
 
                 if (item.productId.productName !== prd.productName) {
-                    errors.push({
+                    errors.unshift({
                         productId: prd._id,
                         productName: prd.productName,
                         message: "Invalid product name!",
