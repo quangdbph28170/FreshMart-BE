@@ -129,7 +129,9 @@ export const getRelatedProducts = async (req, res) => {
 };
 export const getProductSold = async (req, res) => {
   try {
-    const products = await Products.find()
+    const products = await Products.find().populate(
+      "categoryId"
+    ).populate("originId")
     const data = products.sort((a, b) => b.sold - a.sold).slice(0, 10)
     if (!products) {
       return res.status(404).json({
