@@ -357,13 +357,14 @@ export const cartLocal = async (req, res) => {
                     errors.unshift({
                         productId: prd._id,
                         productName: prd.productName,
-                        message: "Invalid product name!",
+                        invalid: item.productId.productName,
+                        message: "Invalid product name!"
                     });
                 }
                 if (!new mongoose.Types.ObjectId(item.productId.originId._id).equals(prd.originId)) {
                     errors.push({
                         productId: prd._id,
-                        originId: item.productId.originId._id,
+                        originId: prd.originId,
                         productName: prd.productName,
                         message: "Invalid product origin!",
                     });
@@ -372,7 +373,7 @@ export const cartLocal = async (req, res) => {
                 if (item.productId.images[0].url !== prd.images[0].url) {
                     errors.push({
                         productId: prd._id,
-                        image: item.productId.images,
+                        image: prd.images[0].url,
                         productName: prd.productName,
                         message: "Invalid product image!",
                     });
