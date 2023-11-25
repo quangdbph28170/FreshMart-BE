@@ -133,7 +133,7 @@ export const CreateOrder = async (req, res) => {
           message: "Invalid data!",
         });
       } else {
-        if (!new mongoose.Types.ObjectId(item.originId._id).equals(prd.originId)) {
+        if (!new mongoose.Types.ObjectId(item.productId.originId._id).equals(prd.originId)) {
           errors.push({
             productId: item.productId,
             originId: item.originId,
@@ -564,6 +564,34 @@ export const CanceledOrder = async (req, res) => {
     return res.status(402).json({
       status: 402,
       message: "Can not cancel this order",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
+};
+
+// Khách hàng chấp nhận đặt hàng
+export const ConfirmOrder = async (req, res) => {
+  try {
+    const orderId = req.params.id;
+    const data = await Order.findByIdAndUpdate(
+      orderId,
+      { status: "đơn hàng hoàn thành" },
+      { new: true }
+    );
+    if (!data) {
+      return res.status(400).json({
+        status: 400,
+        message: "cofirm failed",
+      });
+    }
+    return res.status(201).json({
+      body: { data },
+      status: 201,
+      message: "cofirm successfully",
     });
   } catch (error) {
     return res.status(500).json({
