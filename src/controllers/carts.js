@@ -360,7 +360,7 @@ export const cartLocal = async (req, res) => {
                         message: "Invalid product name!",
                     });
                 }
-                if (new mongoose.Types.ObjectId(item.productId.originId._id) !== prd.originId) {
+                if (!new mongoose.Types.ObjectId(item.originId._id).equals(prd.originId)) {
                     errors.push({
                         productId: item.productId._id,
                         originId: item.productId.originId,
@@ -403,7 +403,7 @@ export const cartLocal = async (req, res) => {
                     });
                 }
 
-                totalPayment += prd.price;
+                totalPayment += prd.price * item.weight;
             }
 
 
@@ -417,7 +417,7 @@ export const cartLocal = async (req, res) => {
             });
         }
 
-        if (req.body.totalPayment !== totalPayment) {
+        if (req.body.totalPayment != totalPayment) {
             return res.status(400).json({
                 status: 400,
                 message: "Invalid totalPayment!",
