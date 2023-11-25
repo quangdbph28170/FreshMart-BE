@@ -316,6 +316,15 @@ export const GetAllOrders = async (req, res) => {
     const data = await Order.paginate(query, options);
     if (_invoiceId) {
       const data = await Order.findOne({ invoiceId: _invoiceId });
+      if (!data) {
+        return res.status(404).json({
+          body: {
+            data: {},
+          },
+          status: 404,
+          message: "Order not found!",
+        });
+      }
       return res.status(201).json({
         body: {
           data: data,
