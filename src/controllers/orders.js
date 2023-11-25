@@ -133,7 +133,7 @@ export const CreateOrder = async (req, res) => {
           message: "Invalid data!",
         });
       } else {
-        if (item.originId != prd.originId) {
+        if (!new mongoose.Types.ObjectId(item.originId._id).equals(prd.originId)) {
           errors.push({
             productId: item.productId,
             originId: item.originId,
