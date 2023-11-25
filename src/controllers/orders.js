@@ -133,7 +133,7 @@ export const CreateOrder = async (req, res) => {
           message: "Invalid data!",
         });
       } else {
-        if (!new mongoose.Types.ObjectId(item.productId.originId._id).equals(prd.originId)) {
+        if (!new mongoose.Types.ObjectId(item.originId._id).equals(prd.originId)) {
           errors.push({
             productId: item.productId,
             originId: item.originId,
@@ -148,7 +148,7 @@ export const CreateOrder = async (req, res) => {
           });
         }
         if (item.productName != prd.productName) {
-          errors.push({
+          errors.unshift({
             productId: item.productId,
             productName: item.productName,
             message: 'Invalid Product Name!'
