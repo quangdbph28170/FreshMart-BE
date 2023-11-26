@@ -280,7 +280,12 @@ export const CreateOrder = async (req, res) => {
     let url = "";
     // kiểm tra phương thức thanh toán là momo
     if (paymentMethod === "vnpay") {
-      url = await vnpayCreate(req, res);
+      const vnpay = {
+        totalPayment: req.body.totalPayment,
+        note: req.body.note,
+        orderId: data._id
+      }
+      url = await vnpayCreate(vnpay)
     }
 
     await sendMailer(req.body.email, data);

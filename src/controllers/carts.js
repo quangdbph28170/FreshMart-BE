@@ -440,7 +440,7 @@ export const cartLocal = async (req, res) => {
                     });
                 }
 
-                totalPayment += item.productId.price * item.weight;
+                totalPayment += prd.price - prd.price * prd.discount/100 * item.weight;
             }
 
         }
