@@ -3,5 +3,5 @@ export const statusOrder = [
   "đang giao hàng",
   "giao hàng thành công",
   "đơn hàng hoàn thành",
-  "đã hủy",
+  "đã hủy đơn hàng",
 ];
