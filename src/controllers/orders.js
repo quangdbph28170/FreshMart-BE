@@ -187,6 +187,7 @@ export const CreateOrder = async (req, res) => {
         body: { errors },
       });
     }
+    const prd = await Product.findById(item.productId);
     const totalPayment = products.reduce((accumulator, product) => {
       return accumulator + (prd.price - (prd.price * prd.discount/100)  - product.weight)
     }, 0)
