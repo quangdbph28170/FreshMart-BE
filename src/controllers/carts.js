@@ -440,18 +440,12 @@ export const cartLocal = async (req, res) => {
                     });
                 }
 
-                totalPayment += (prd.price - (prd.price * prd.discount/100) )* item.weight;
+               
             }
 
 
         }
-        if (req.body.totalPayment != totalPayment) {
-          return res.status(401).json({
-                message: "Invalid totalPayment!",
-                true: totalPayment,
-             
-            });
-        }
+      
         if (errors.length > 0) {
             return res.status(400).json({
                 status: 400,
