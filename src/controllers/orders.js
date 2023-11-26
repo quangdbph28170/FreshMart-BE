@@ -133,13 +133,13 @@ export const CreateOrder = async (req, res) => {
           message: "Invalid data!",
         });
       } else {
-        if (!new mongoose.Types.ObjectId(item.originId._id).equals(prd.originId)) {
-          errors.push({
-            productId: item.productId,
-            originId: item.originId,
-            message: 'Invalid Product Origin!'
-          });
-        }
+        // if (!new mongoose.Types.ObjectId(item.originId._id).equals(prd.originId)) {
+        //   errors.push({
+        //     productId: item.productId,
+        //     originId: item.originId,
+        //     message: 'Invalid Product Origin!'
+        //   });
+        
         if (item.price != prd.price) {
           errors.push({
             productId: item.productId,
@@ -647,6 +647,8 @@ export const UpdateOrder = async (req, res) => {
         new: true,
       }
     );
+
+    sendMailer(data.email,data)
     return res.status(201).json({
       body: { data },
       status: 201,

@@ -7,5 +7,6 @@ export const categorySchema = joi.object({
     public_id: joi.string(),
   }),
   type: joi.string(),
+  isSale: joi.boolean(),
   products: joi.array(),
 });
