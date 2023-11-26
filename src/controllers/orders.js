@@ -555,11 +555,17 @@ export const CanceledOrder = async (req, res) => {
   try {
     const orderId = req.params.id;
     const order = await Order.findById(orderId);
+    if (order.status == "đã hủy đơn hàng") {
+      return res.status(401).json({
+        status: 401,
+        message: "The previous order has been cancelled",
+      });
+    }
     const { canCancel } = checkCancellationTime(order);
     if (canCancel) {
       const data = await Order.findByIdAndUpdate(
         orderId,
-        { status: "đã hủy" },
+        { status: "đã hủy đơn hàng" },
         { new: true }
       );
       if (!data) {
@@ -567,6 +573,27 @@ export const CanceledOrder = async (req, res) => {
           status: 400,
           message: "Cancel failed",
         });
+      }
+
+      for (let item of order.products) {
+
+        const product = await Product.findById(item.productId)
+        for (let shipment of product.shipments) {
+          // Trả lại cân ở bảng products
+          await Product.findOneAndUpdate({ _id: product._id, "shipments.idShipment": shipment.idShipment }, {
+            $set: {
+              "shipments.$.weight": shipment.weight + item.weight
+            }
+          }, { new: true })
+
+          //Bảng shipment
+          await Shipment.findOneAndUpdate({ _id: shipment.idShipment, "products.idProduct": product._id }, {
+            $set: {
+              "products.$.weight": shipment.weight + item.weight
+            }
+          }, { new: true })
+
+        }
       }
       return res.status(201).json({
         body: { data },
