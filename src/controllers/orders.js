@@ -141,7 +141,7 @@ export const CreateOrder = async (req, res) => {
         //     message: 'Invalid Product Origin!'
         //   });
 
-        if (item.price != prd.price - prd.price * prd.discount/100) {
+        if (item.price != prd.price - prd.price * prd.discount / 100) {
           errors.push({
             productId: item.productId,
             price: item.price,
@@ -187,16 +187,21 @@ export const CreateOrder = async (req, res) => {
         body: { errors },
       });
     }
-    const prd = await Product.findById(item.productId);
-    const totalPayment = products.reduce((accumulator, product) => {
-      return accumulator + (prd.price - (prd.price * prd.discount/100)  - product.weight)
-    }, 0)
+    const totalPayment = null
+    for (let item of products) {
+      const prd = await Product.findById(item.productId);
+      totalPayment = products.reduce((accumulator, product) => {
+        return accumulator + (prd.price - (prd.price * prd.discount / 100) - product.weight)
+      }, 0)
+    }
+
+
 
     // kiểm tra phương thức thanh toán là momo
     if (paymentMethod === "vnpay") {
       await vnpayCreate(req, res)
     }
-    
+
     if (req.body.totalPayment !== totalPayment) {
       return res.status(400).json({
         status: 400,
