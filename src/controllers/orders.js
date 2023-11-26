@@ -188,7 +188,7 @@ export const CreateOrder = async (req, res) => {
       });
     }
     const totalPayment = products.reduce((accumulator, product) => {
-      return accumulator + (product.price  - product.weight)
+      return accumulator + (prd.price - (prd.price * prd.discount/100)  - product.weight)
     }, 0)
 
     // kiểm tra phương thức thanh toán là momo
