@@ -12,6 +12,7 @@ import originRouter from "./routers/origin";
 import orderRouter from "./routers/orders";
 import authRouter from "./routers/auth";
 import userRouter from "./routers/user";
+import vnpayRouter from "./routers/vnpay";
 import notificationRouter from "./routers/notification";
 import momoRouter from "./routers/momo-pay";
 import { createServer } from "http";
@@ -22,6 +23,8 @@ import cartRouter from "./routers/carts";
 import { addNotification } from "./controllers/notification";
 import evaluationRouter from "./routers/evaluation";
 import Orders from "./models/orders";
+import session from 'express-session';
+import { connectToGoogle } from "./config/googleOAuth";
 
 const app = express();
 const httpServer = createServer(app);
@@ -31,9 +34,20 @@ dotenv.config();
 const PORT = process.env.PORT;
 const MONGO_URL = process.env.MONGODB_LOCAL;
 app.use(express.json());
-app.use(cors({ origin: "http://localhost:5173", credentials: true }));
+app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
+
+app.use(
+  session({
+     resave: false,
+     saveUninitialized: true,
+     secret: 'SECRET',
+  }),
+);
+
+connectToGoogle()
+
 app.use("/api", categoryRouter);
 app.use("/api", productRouter);
 app.use("/api", uploadRouter);
@@ -45,6 +59,7 @@ app.use("/api", authRouter);
 app.use("/api", userRouter);
 app.use("/api", momoRouter);
 app.use("/api", cartRouter);
+app.use("/api", vnpayRouter);
 app.use("/api", notificationRouter);
 app.use("/api", evaluationRouter);
 const io = new Server(httpServer, { cors: "*" });

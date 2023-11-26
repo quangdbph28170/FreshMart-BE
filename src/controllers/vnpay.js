@@ -1,14 +1,16 @@
-
+import config from 'config';
+import dateFormat from 'dateformat';
+import querystring from 'qs';
+import crypto from "crypto";
 
 export const vnpayCreate = (req, res) => {
+    //Gửi req body gồm ammount dữ liệu là string, bankCode là "" (chuỗi rỗng), orderDescription cứ lấy từ trường note khi tạo order  
+    process.env.TZ = 'Asia/Ho_Chi_Minh';
+
     var ipAddr = req.headers['x-forwarded-for'] ||
         req.connection.remoteAddress ||
         req.socket.remoteAddress ||
         req.connection.socket.remoteAddress;
-
-    var config = require('config');
-    var dateFormat = require('dateformat');
-
 
     var tmnCode = "X5NX5EN5";
     var secretKey = "RNRIQQQUPZTWBTBBTAXZEHQFRYMKOVII";
@@ -18,12 +20,12 @@ export const vnpayCreate = (req, res) => {
     var date = new Date();
 
     var createDate = dateFormat(date, 'yyyymmddHHmmss');
-    var orderId = dateFormat(date, 'HHmmss');
+    var orderId = dateFormat(date, 'DDHHmmss');
     var amount = req.body.amount;
     var bankCode = req.body.bankCode;
 
     var orderInfo = req.body.orderDescription;
-    var orderType = req.body.orderType;
+    var orderType = 'other';
     var locale = req.body.language;
     if (locale === null || locale === '') {
         locale = 'vn';
@@ -34,7 +36,7 @@ export const vnpayCreate = (req, res) => {
     vnp_Params['vnp_Command'] = 'pay';
     vnp_Params['vnp_TmnCode'] = tmnCode;
     // vnp_Params['vnp_Merchant'] = ''
-    vnp_Params['vnp_Locale'] = locale;
+    vnp_Params['vnp_Locale'] = 'vn';
     vnp_Params['vnp_CurrCode'] = currCode;
     vnp_Params['vnp_TxnRef'] = orderId;
     vnp_Params['vnp_OrderInfo'] = orderInfo;
@@ -49,15 +51,13 @@ export const vnpayCreate = (req, res) => {
 
     vnp_Params = sortObject(vnp_Params);
 
-    var querystring = require('qs');
     var signData = querystring.stringify(vnp_Params, { encode: false });
-    var crypto = require("crypto");
     var hmac = crypto.createHmac("sha512", secretKey);
     var signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex");
     vnp_Params['vnp_SecureHash'] = signed;
     vnpUrl += '?' + querystring.stringify(vnp_Params, { encode: false });
 
-    res.redirect(vnpUrl)
+    res.json({ vnpUrl: vnpUrl });
 }
 
 export const vnpayIpn = (req, res) => {
@@ -68,23 +68,22 @@ export const vnpayIpn = (req, res) => {
     delete vnp_Params['vnp_SecureHashType'];
 
     vnp_Params = sortObject(vnp_Params);
-    var config = require('config');
-    var secretKey = config.get('vnp_HashSecret');
+    var secretKey = "RNRIQQQUPZTWBTBBTAXZEHQFRYMKOVII";
     var querystring = require('qs');
     var signData = querystring.stringify(vnp_Params, { encode: false });
-    var crypto = require("crypto");     
+    var crypto = require("crypto");
     var hmac = crypto.createHmac("sha512", secretKey);
-    var signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex");     
-     
+    var signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex");
 
-    if(secureHash === signed){
+
+    if (secureHash === signed) {
         var orderId = vnp_Params['vnp_TxnRef'];
         var rspCode = vnp_Params['vnp_ResponseCode'];
         //Kiem tra du lieu co hop le khong, cap nhat trang thai don hang va gui ket qua cho VNPAY theo dinh dang duoi
-        res.status(200).json({RspCode: '00', Message: 'success'})
+        res.status(200).json({ RspCode: '00', Message: 'success' })
     }
     else {
-        res.status(200).json({RspCode: '97', Message: 'Fail checksum'})
+        res.status(200).json({ RspCode: '97', Message: 'Fail checksum' })
     }
 }
 
@@ -98,21 +97,36 @@ export const vnpayReturn = (req, res) => {
 
     vnp_Params = sortObject(vnp_Params);
 
-    var config = require('config');
     var tmnCode = 'X5NX5EN5';
     var secretKey = 'RNRIQQQUPZTWBTBBTAXZEHQFRYMKOVII';
 
     var querystring = require('qs');
     var signData = querystring.stringify(vnp_Params, { encode: false });
-    var crypto = require("crypto");     
+    var crypto = require("crypto");
     var hmac = crypto.createHmac("sha512", secretKey);
-    var signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex");     
+    var signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex");
 
-    if(secureHash === signed){
+    if (secureHash === signed) {
         //Kiem tra xem du lieu trong db co hop le hay khong va thong bao ket qua
 
-        res.render('success', {code: vnp_Params['vnp_ResponseCode']})
-    } else{
-        res.render('success', {code: '97'})
+        res.render('success', { code: vnp_Params['vnp_ResponseCode'] })
+    } else {
+        res.render('success', { code: '97' })
     }
+}
+
+function sortObject(obj) {
+    let sorted = {};
+    let str = [];
+    let key;
+    for (key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            str.push(encodeURIComponent(key));
+        }
+    }
+    str.sort();
+    for (key = 0; key < str.length; key++) {
+        sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, "+");
+    }
+    return sorted;
 }

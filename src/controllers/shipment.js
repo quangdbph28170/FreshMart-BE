@@ -55,8 +55,8 @@ export const findAll = async (req, res) => {
   try {
     const {
       _page = 1,
-      _order = "asc",
-      _limit = 10,
+      _order = "desc",
+      _limit = 10000,
       _sort = "createdAt",
       _q = "",
     } = req.query;
