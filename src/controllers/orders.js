@@ -139,7 +139,7 @@ export const CreateOrder = async (req, res) => {
         //     originId: item.originId,
         //     message: 'Invalid Product Origin!'
         //   });
-        
+
         if (item.price != prd.price) {
           errors.push({
             productId: item.productId,
@@ -395,7 +395,7 @@ export const OrdersForMember = async (req, res) => {
   const { _status = "", _day } = req.query;
   try {
     const userId = req.user._id;
-    let data = await Order.find({ userId }).sort({createdAt:-1});
+    let data = await Order.find({ userId }).sort({ createdAt: -1 });
     if (data.length == 0) {
       return res.status(200).json({
         status: 200,
@@ -474,7 +474,7 @@ export const FilterOrdersForMember = async (req, res) => {
     const userId = req.user._id;
     const { _day, _status, invoiceId } = req.query;
     // console.log(req.query);
-    let data = await Order.find({ userId }).sort({createdAt:-1});
+    let data = await Order.find({ userId }).sort({ createdAt: -1 });
 
     //lọc theo trạng thái đơn hàng
     if (_status) {
@@ -551,11 +551,17 @@ export const CanceledOrder = async (req, res) => {
   try {
     const orderId = req.params.id;
     const order = await Order.findById(orderId);
+    if (order.status == "đã hủy đơn hàng") {
+      return res.status(401).json({
+        status: 401,
+        message: "The previous order has been cancelled",
+      });
+    }
     const { canCancel } = checkCancellationTime(order);
     if (canCancel) {
       const data = await Order.findByIdAndUpdate(
         orderId,
-        { status: "đã hủy" },
+        { status: "đã hủy đơn hàng" },
         { new: true }
       );
       if (!data) {
@@ -563,6 +569,27 @@ export const CanceledOrder = async (req, res) => {
           status: 400,
           message: "Cancel failed",
         });
+      }
+
+      for (let item of order.products) {
+
+        const product = await Product.findById(item.productId)
+        for (let shipment of product.shipments) {
+          // Trả lại cân ở bảng products
+          await Product.findOneAndUpdate({ _id: product._id, "shipments.idShipment": shipment.idShipment }, {
+            $set: {
+              "shipments.$.weight": shipment.weight + item.weight
+            }
+          }, { new: true })
+
+          //Bảng shipment
+          await Shipment.findOneAndUpdate({ _id: shipment.idShipment, "products.idProduct": product._id }, {
+            $set: {
+              "products.$.weight": shipment.weight + item.weight
+            }
+          }, { new: true })
+
+        }
       }
       return res.status(201).json({
         body: { data },
@@ -648,7 +675,7 @@ export const UpdateOrder = async (req, res) => {
       }
     );
 
-    sendMailer(data.email,data)
+    sendMailer(data.email, data)
     return res.status(201).json({
       body: { data },
       status: 201,
