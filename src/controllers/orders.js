@@ -144,7 +144,7 @@ export const CreateOrder = async (req, res) => {
         if (item.price != prd.price - (prd.price * prd.discount / 100)) {
           errors.push({
             productId: item.productId,
-            price: item.price,
+            price: prd.price - (prd.price * prd.discount / 100),
             message: 'Invalid Product Price!'
           });
         }
