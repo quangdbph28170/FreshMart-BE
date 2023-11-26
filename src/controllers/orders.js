@@ -191,11 +191,8 @@ export const CreateOrder = async (req, res) => {
       return accumulator + (product.price * product.weight)
     }, 0)
 
-    // kiểm tra phương thức thanh toán là momo
-    if (paymentMethod === "vnpay") {
-      await vnpayCreate(req, res)
-    }
-    
+
+
     if (req.body.totalPayment !== totalPayment) {
       return res.status(400).json({
         status: 400,
@@ -205,7 +202,11 @@ export const CreateOrder = async (req, res) => {
       });
     }
 
-
+    // kiểm tra phương thức thanh toán là momo
+    if (paymentMethod === "vnpay") {
+      await vnpayCreate(req, res)
+    }
+    
     for (let item of products) {
 
       const prd = await Product.findById(item.productId);
