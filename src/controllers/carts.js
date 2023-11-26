@@ -149,7 +149,7 @@ export const updateProductWeightInCart = async (req, res) => {
             })
         }
         const checkProduct = await Product.findById(productId)
-        const cartExist = await Cart.findOne({ userId })
+        
         for (let item of checkProduct.shipments) {
             totalWeight += item.weight
         }
@@ -321,7 +321,8 @@ export const removeOneProductInCart = async (req, res) => {
             });
         }
         for (let item of data.products) {
-            totalPrice += item.productId.price * item.weight;
+            const product = await Product.findById(item.productId._id)
+            totalPrice += product.price - product.price * product.discount /100 * item.weight;
         }
         return res.status(200).json({
             status: 200,
@@ -439,7 +440,7 @@ export const cartLocal = async (req, res) => {
                     });
                 }
 
-                totalPayment += prd.price * item.weight;
+                totalPayment += item.productId.price * item.weight;
             }
 
         }
