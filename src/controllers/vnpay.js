@@ -2,6 +2,7 @@ import config from 'config';
 import dateFormat from 'dateformat';
 import querystring from 'qs';
 import crypto from "crypto";
+import Orders from '../models/orders';
 
 export const vnpayCreate = async (req) => {
     //Gửi req body gồm ammount dữ liệu là string, bankCode là "" (chuỗi rỗng), orderDescription cứ lấy từ trường note khi tạo order  
@@ -60,7 +61,7 @@ export const vnpayCreate = async (req) => {
     return { vnpUrl: vnpUrl };
 }
 
-export const vnpayIpn = (req, res) => {
+export const vnpayIpn = async (req, res) => {
     var vnp_Params = req.query;
     var secureHash = vnp_Params['vnp_SecureHash'];
 
@@ -77,6 +78,9 @@ export const vnpayIpn = (req, res) => {
     if (secureHash === signed) {
         var orderId = vnp_Params['vnp_TxnRef'];
         var rspCode = vnp_Params['vnp_ResponseCode'];
+        await Orders.findByIdAndUpdate(orderId, {
+            pay: true
+        })
         //Kiem tra du lieu co hop le khong, cap nhat trang thai don hang va gui ket qua cho VNPAY theo dinh dang duoi
         res.status(200).json({ RspCode: '00', Message: 'success' })
     }
