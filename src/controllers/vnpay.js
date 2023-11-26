@@ -3,7 +3,7 @@ import dateFormat from 'dateformat';
 import querystring from 'qs';
 import crypto from "crypto";
 
-export const vnpayCreate = async (req, res) => {
+export const vnpayCreate = async (req) => {
     //Gửi req body gồm ammount dữ liệu là string, bankCode là "" (chuỗi rỗng), orderDescription cứ lấy từ trường note khi tạo order  
     process.env.TZ = 'Asia/Ho_Chi_Minh';
 
@@ -20,11 +20,11 @@ export const vnpayCreate = async (req, res) => {
     var date = new Date();
 
     var createDate = dateFormat(date, 'yyyymmddHHmmss');
-    var orderId = dateFormat(date, 'DDHHmmss');
-    var amount = req.body.totalPayment;
+    var orderId = req.orderId;
+    var amount = req.totalPayment;
     var bankCode = '';
 
-    var orderInfo = req.body.note;
+    var orderInfo = req.note;
     var orderType = 'other';
     var locale = 'vn';
     if (locale === null || locale === '') {
