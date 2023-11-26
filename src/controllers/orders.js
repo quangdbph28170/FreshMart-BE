@@ -7,6 +7,7 @@ import { transporter } from "../config/mail";
 import { handleTransaction } from "./momo-pay";
 import { statusOrder } from "../config/constants";
 import Carts from "../models/carts";
+import { vnpayCreate } from "./vnpay";
 const checkCancellationTime = (order) => {
   const checkTime = new Date(order.createdAt);
   const currentTime = new Date();
@@ -139,7 +140,7 @@ export const CreateOrder = async (req, res) => {
         //     originId: item.originId,
         //     message: 'Invalid Product Origin!'
         //   });
-        
+
         if (item.price != prd.price) {
           errors.push({
             productId: item.productId,
@@ -189,6 +190,12 @@ export const CreateOrder = async (req, res) => {
     const totalPayment = products.reduce((accumulator, product) => {
       return accumulator + (product.price * product.weight)
     }, 0)
+
+    // kiểm tra phương thức thanh toán là momo
+    if (paymentMethod === "vnpay") {
+      await vnpayCreate(req, res)
+    }
+    
     if (req.body.totalPayment !== totalPayment) {
       return res.status(400).json({
         status: 400,
@@ -271,10 +278,6 @@ export const CreateOrder = async (req, res) => {
     }
     const data = await Order.create(req.body);
 
-    // kiểm tra phương thức thanh toán là momo
-    if (paymentMethod === "vnpay") {
-
-    }
     await sendMailer(req.body.email, data);
     return res.status(201).json({
       status: 201,
@@ -395,7 +398,7 @@ export const OrdersForMember = async (req, res) => {
   const { _status = "", _day } = req.query;
   try {
     const userId = req.user._id;
-    let data = await Order.find({ userId }).sort({createdAt:-1});
+    let data = await Order.find({ userId }).sort({ createdAt: -1 });
     if (data.length == 0) {
       return res.status(200).json({
         status: 200,
@@ -474,7 +477,7 @@ export const FilterOrdersForMember = async (req, res) => {
     const userId = req.user._id;
     const { _day, _status, invoiceId } = req.query;
     // console.log(req.query);
-    let data = await Order.find({ userId }).sort({createdAt:-1});
+    let data = await Order.find({ userId }).sort({ createdAt: -1 });
 
     //lọc theo trạng thái đơn hàng
     if (_status) {
@@ -648,7 +651,7 @@ export const UpdateOrder = async (req, res) => {
       }
     );
 
-    sendMailer(data.email,data)
+    sendMailer(data.email, data)
     return res.status(201).json({
       body: { data },
       status: 201,
