@@ -326,9 +326,12 @@ export const liquidationProduct = async (req, res) => {
         message: "Sản phẩm đã không còn trong lô hàng này!",
       });
     }
-
+    // Tìm danh mục thanh lý
+    const cateIsSale = await Categories.findOne({ isSale: true })
+    console.log(cateIsSale)
     const data = await Products.create({
       ...productExist.toObject(),
+      categoryId: cateIsSale._id,
       _id: undefined,
       productName,
       shipments: [
@@ -356,6 +359,13 @@ export const liquidationProduct = async (req, res) => {
 
     //Cập nhật lại trong bảng shipment id sp CẦN_THANH_LÝ => is sp THANH_LÝ
     await Shipment.findOneAndUpdate({ _id: shipmentId, "products.idProduct": productId }, {
+      $set: {
+        "products.$.idProduct": data._id
+      }
+    }, { new: true })
+
+    //Cập nhật lại trong bảng categories => id sp THANH_LÝ  
+    await Categories.findByIdAndUpdate(cateIsSale._id,{ "products.idProduct": productId }, {
       $set: {
         "products.$.idProduct": data._id
       }
