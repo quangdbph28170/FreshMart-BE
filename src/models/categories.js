@@ -31,6 +31,10 @@ const categorySchema = new mongoose.Schema(
       enum: ["normal", "default"],
       default: "normal",
     },
+    isSale: {
+      type: Boolean,
+      default : false
+    }
   },
   { timestamps: true, versionKey: false }
 );
