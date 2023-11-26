@@ -4,7 +4,7 @@ import querystring from 'qs';
 import crypto from "crypto";
 import Orders from '../models/orders';
 
-export const vnpayCreate = async (req) => {
+export const vnpayCreate = async (req, orderId) => {
     //Gửi req body gồm ammount dữ liệu là string, bankCode là "" (chuỗi rỗng), orderDescription cứ lấy từ trường note khi tạo order  
     process.env.TZ = 'Asia/Ho_Chi_Minh';
 
@@ -21,11 +21,10 @@ export const vnpayCreate = async (req) => {
     var date = new Date();
 
     var createDate = dateFormat(date, 'yyyymmddHHmmss');
-    var orderId = req.orderId;
-    var amount = req.totalPayment;
+    var amount = req.body.totalPayment;
     var bankCode = '';
 
-    var orderInfo = req.note;
+    var orderInfo = req.body.note;
     var orderType = 'other';
     var locale = 'vn';
     if (locale === null || locale === '') {
@@ -58,7 +57,7 @@ export const vnpayCreate = async (req) => {
     vnp_Params['vnp_SecureHash'] = signed;
     vnpUrl += '?' + querystring.stringify(vnp_Params, { encode: false });
 
-    return { vnpUrl: vnpUrl };
+    return vnpUrl;
 }
 
 export const vnpayIpn = async (req, res) => {
