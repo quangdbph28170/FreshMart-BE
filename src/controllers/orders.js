@@ -202,11 +202,6 @@ export const CreateOrder = async (req, res) => {
       });
     }
 
-    // kiểm tra phương thức thanh toán là momo
-    if (paymentMethod === "vnpay") {
-      await vnpayCreate(req, res)
-    }
-    
     for (let item of products) {
 
       const prd = await Product.findById(item.productId);
@@ -279,11 +274,17 @@ export const CreateOrder = async (req, res) => {
     }
     const data = await Order.create(req.body);
 
+    let url = ''
+    // kiểm tra phương thức thanh toán là momo
+    if (paymentMethod === "vnpay") {
+      url = await vnpayCreate(req, res)
+    }
+
     await sendMailer(req.body.email, data);
     return res.status(201).json({
       status: 201,
       message: "Order success",
-      body: { data },
+      body: { data: {...data, url} },
     });
   } catch (error) {
     return res.status(500).json({
