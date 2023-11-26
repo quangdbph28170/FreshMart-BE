@@ -69,9 +69,7 @@ export const vnpayIpn = (req, res) => {
 
     vnp_Params = sortObject(vnp_Params);
     var secretKey = "RNRIQQQUPZTWBTBBTAXZEHQFRYMKOVII";
-    var querystring = require('qs');
     var signData = querystring.stringify(vnp_Params, { encode: false });
-    var crypto = require("crypto");
     var hmac = crypto.createHmac("sha512", secretKey);
     var signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex");
 
@@ -100,9 +98,7 @@ export const vnpayReturn = (req, res) => {
     var tmnCode = 'X5NX5EN5';
     var secretKey = 'RNRIQQQUPZTWBTBBTAXZEHQFRYMKOVII';
 
-    var querystring = require('qs');
     var signData = querystring.stringify(vnp_Params, { encode: false });
-    var crypto = require("crypto");
     var hmac = crypto.createHmac("sha512", secretKey);
     var signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex");
 
