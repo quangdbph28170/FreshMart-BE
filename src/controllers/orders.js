@@ -141,7 +141,7 @@ export const CreateOrder = async (req, res) => {
         //     message: 'Invalid Product Origin!'
         //   });
 
-        if (item.price != prd.price) {
+        if (item.price != prd.price - prd.price * prd.discount) {
           errors.push({
             productId: item.productId,
             price: item.price,
