@@ -78,6 +78,12 @@ const productSchema = new mongoose.Schema(
       type:Boolean,
       default: false,
     },
+    evaluated: [{
+        evaluatedId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref:"Evaluation"
+      }
+    }]
   },
   { timestamps: true, versionKey: false }
 );
