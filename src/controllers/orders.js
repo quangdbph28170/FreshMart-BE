@@ -141,7 +141,7 @@ export const CreateOrder = async (req, res) => {
         //     message: 'Invalid Product Origin!'
         //   });
 
-        if (item.price != prd.price - prd.price * prd.discount) {
+        if (item.price != prd.price - prd.price * prd.discount/100) {
           errors.push({
             productId: item.productId,
             price: item.price,
@@ -188,7 +188,7 @@ export const CreateOrder = async (req, res) => {
       });
     }
     const totalPayment = products.reduce((accumulator, product) => {
-      return accumulator + (product.price * product.weight)
+      return accumulator + (product.price  - product.weight)
     }, 0)
 
 
