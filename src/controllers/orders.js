@@ -7,6 +7,7 @@ import { transporter } from "../config/mail";
 import { handleTransaction } from "./momo-pay";
 import { statusOrder } from "../config/constants";
 import Carts from "../models/carts";
+import { vnpayCreate } from "./vnpay";
 const checkCancellationTime = (order) => {
   const checkTime = new Date(order.createdAt);
   const currentTime = new Date();
@@ -189,6 +190,12 @@ export const CreateOrder = async (req, res) => {
     const totalPayment = products.reduce((accumulator, product) => {
       return accumulator + (product.price * product.weight)
     }, 0)
+
+    // kiểm tra phương thức thanh toán là momo
+    if (paymentMethod === "vnpay") {
+      await vnpayCreate(req, res)
+    }
+    
     if (req.body.totalPayment !== totalPayment) {
       return res.status(400).json({
         status: 400,
@@ -271,10 +278,6 @@ export const CreateOrder = async (req, res) => {
     }
     const data = await Order.create(req.body);
 
-    // kiểm tra phương thức thanh toán là momo
-    if (paymentMethod === "vnpay") {
-
-    }
     await sendMailer(req.body.email, data);
     return res.status(201).json({
       status: 201,
