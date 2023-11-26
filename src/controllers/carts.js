@@ -74,7 +74,7 @@ export const addToCart = async (req, res) => {
             // console.log(productExits.weight,totalWeight);
             //Check xem cân sp gửi lên vs cân có trong giỏ hàng có lớn hơn tổng cân trong kho ko
             if (productExits) {
-                if (weight + item.totalWeight > totalWeight) {
+                if (weight + productExits.weight > totalWeight) {
                     return res.status(401).json({
                         message: "The remaining quantity is not enough!",
                         totalWeight: totalWeight
