@@ -31,7 +31,7 @@ export const createEvaluation = async (req, res) => {
         const data = await Evaluation.create(req.body)
         // Check xem sp này trong đơn hàng đấy đã được đánh giá chưa 
         const isRated = orderExist.products.find(item => item.productId == productId)
-    
+
         if (isRated.evaluation) {
             return res.status(200).json({
                 status: 200,
@@ -114,20 +114,37 @@ export const getIsRatedDetail = async (req, res) => {
 //Admin Lấy toàn bộ đánh giá
 export const getAllRating = async (req, res) => {
     try {
-        const data = await Evaluation.find().populate("userId").populate("productId")
+        const data = await Evaluation.find()
+        // const highestRatedProduct = await Evaluation.aggregate([
+        //     { $group: { _id: "$productId", averageRating: { $avg: "$rate" } } },
+        //     { $sort: { averageRating: -1 } },
+        //     { $limit: 1 },
+        //     { $project: { _id: 0, productId: "$_id" } }
+        // ]);
+
+        // const lowestRatedProduct = await Evaluation.aggregate([
+        //     { $group: { _id: "$productId", averageRating: { $avg: "$rate" } } },
+        //     { $sort: { averageRating: 1 } },
+        //     { $limit: 1 },
+        //     { $project: { _id: 0, productId: "$_id" } }
+        // ]);
 
         return res.status(200).json({
             status: 200,
             message: "success",
-            body: { data }
-        })
+            body: {
+                data,
+                // highestRatedProductId: highestRatedProduct[0].productId,
+                // lowestRatedProductId: lowestRatedProduct[0].productId
+            }
+        });
     } catch (error) {
         return res.status(500).json({
             status: 500,
             message: error.message,
         });
     }
-}
+};
 //Admin ẩn đánh giá
 export const isReviewVisible = async (req, res) => {
     try {
