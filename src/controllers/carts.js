@@ -14,7 +14,7 @@ const calculateTotalPrice = async (data) => {
             if (item.productId) {
                 await data.populate("products.productId")
                 await data.populate("products.productId.originId")
-                totalPrice += item.productId.price * item.weight;
+                totalPrice += (item.productId.price - item.productId.price * item.productId.discount) * item.weight;
             }
 
         }
@@ -379,10 +379,10 @@ export const cartLocal = async (req, res) => {
                     message: "Product is not exsit!",
                 });
             } else {
-                if (item.productId.price !== prd.price) {
+                if (item.productId.price !== prd.price - prd.price * prd.discount) {
                     errors.push({
                         productId: prd._id,
-                        price: prd.price,
+                        price: prd.price - prd.price * prd.discount,
                         productName: prd.productName,
                         message: `Invalid price for product!`,
                     });
@@ -445,10 +445,10 @@ export const cartLocal = async (req, res) => {
 
         }
         if (req.body.totalPayment != totalPayment) {
-            errors.push({
+          return res.status(401).json({
                 message: "Invalid totalPayment!",
                 true: totalPayment,
-                false: req.body.totalPayment
+             
             });
         }
         if (errors.length > 0) {
