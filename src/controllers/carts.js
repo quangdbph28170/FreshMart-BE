@@ -14,7 +14,7 @@ const calculateTotalPrice = async (data) => {
             if (item.productId) {
                 await data.populate("products.productId")
                 await data.populate("products.productId.originId")
-                totalPrice += item.productId.price * item.weight;
+                totalPrice += (item.productId.price - item.productId.price * item.productId.discount) * item.weight;
             }
 
         }
@@ -149,7 +149,7 @@ export const updateProductWeightInCart = async (req, res) => {
             })
         }
         const checkProduct = await Product.findById(productId)
-        const cartExist = await Cart.findOne({ userId })
+        
         for (let item of checkProduct.shipments) {
             totalWeight += item.weight
         }
@@ -321,7 +321,8 @@ export const removeOneProductInCart = async (req, res) => {
             });
         }
         for (let item of data.products) {
-            totalPrice += item.productId.price * item.weight;
+            const product = await Product.findById(item.productId._id)
+            totalPrice += product.price - product.price * product.discount /100 * item.weight;
         }
         return res.status(200).json({
             status: 200,
@@ -379,10 +380,10 @@ export const cartLocal = async (req, res) => {
                     message: "Product is not exsit!",
                 });
             } else {
-                if (item.productId.price !== prd.price) {
+                if (item.productId.price !== prd.price - prd.price * prd.discount/100) {
                     errors.push({
                         productId: prd._id,
-                        price: prd.price,
+                        price: prd.price - prd.price * prd.discount / 100,
                         productName: prd.productName,
                         message: `Invalid price for product!`,
                     });
@@ -439,16 +440,16 @@ export const cartLocal = async (req, res) => {
                     });
                 }
 
-                totalPayment += prd.price * item.weight;
+                totalPayment += item.productId.price * item.weight;
             }
 
 
         }
         if (req.body.totalPayment != totalPayment) {
-            errors.push({
+          return res.status(401).json({
                 message: "Invalid totalPayment!",
                 true: totalPayment,
-                false: req.body.totalPayment
+             
             });
         }
         if (errors.length > 0) {
