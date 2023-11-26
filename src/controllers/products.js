@@ -40,11 +40,11 @@ export const getProducts = async (req, res) => {
   }
 
   if (_minPrice && _maxPrice) {
-    query["shipments.price"] = { $gte: _minPrice, $lte: _maxPrice };
+    query.price = { $gte: _minPrice, $lte: _maxPrice };
   } else if (_minPrice) {
-    query["shipments.price"] = { $gte: _minPrice };
+    query.price = { $gte: _minPrice };
   } else if (_maxPrice) {
-    query["shipments.price"] = { $lte: _maxPrice };
+    query.price= { $lte: _maxPrice };
   }
 
   if (_originId) {
