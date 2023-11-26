@@ -7,6 +7,7 @@ import { transporter } from "../config/mail";
 import { handleTransaction } from "./momo-pay";
 import { statusOrder } from "../config/constants";
 import Carts from "../models/carts";
+import { vnpayCreate } from "./vnpay";
 const checkCancellationTime = (order) => {
   const checkTime = new Date(order.createdAt);
   const currentTime = new Date();
@@ -133,14 +134,14 @@ export const CreateOrder = async (req, res) => {
           message: "Invalid data!",
         });
       } else {
-        if (!new mongoose.Types.ObjectId(item.originId._id).equals(prd.originId)) {
-          errors.push({
-            productId: item.productId,
-            originId: item.originId,
-            message: 'Invalid Product Origin!'
-          });
-        }
-        if (item.price != prd.price) {
+        // if (!new mongoose.Types.ObjectId(item.originId._id).equals(prd.originId)) {
+        //   errors.push({
+        //     productId: item.productId,
+        //     originId: item.originId,
+        //     message: 'Invalid Product Origin!'
+        //   });
+
+        if (item.price != prd.price - prd.price * prd.discount/100) {
           errors.push({
             productId: item.productId,
             price: item.price,
@@ -187,8 +188,11 @@ export const CreateOrder = async (req, res) => {
       });
     }
     const totalPayment = products.reduce((accumulator, product) => {
-      return accumulator + (product.price * product.weight)
+      return accumulator + (product.price  - product.weight)
     }, 0)
+
+
+
     if (req.body.totalPayment !== totalPayment) {
       return res.status(400).json({
         status: 400,
@@ -197,7 +201,6 @@ export const CreateOrder = async (req, res) => {
         false: req.body.totalPayment
       });
     }
-
 
     for (let item of products) {
 
@@ -271,15 +274,17 @@ export const CreateOrder = async (req, res) => {
     }
     const data = await Order.create(req.body);
 
+    let url = ''
     // kiểm tra phương thức thanh toán là momo
     if (paymentMethod === "vnpay") {
-
+      url = await vnpayCreate(req, res)
     }
+
     await sendMailer(req.body.email, data);
     return res.status(201).json({
       status: 201,
       message: "Order success",
-      body: { data },
+      body: { data: {...data, url} },
     });
   } catch (error) {
     return res.status(500).json({
@@ -395,7 +400,7 @@ export const OrdersForMember = async (req, res) => {
   const { _status = "", _day } = req.query;
   try {
     const userId = req.user._id;
-    let data = await Order.find({ userId }).sort({createdAt:-1});
+    let data = await Order.find({ userId }).sort({ createdAt: -1 });
     if (data.length == 0) {
       return res.status(200).json({
         status: 200,
@@ -474,7 +479,7 @@ export const FilterOrdersForMember = async (req, res) => {
     const userId = req.user._id;
     const { _day, _status, invoiceId } = req.query;
     // console.log(req.query);
-    let data = await Order.find({ userId }).sort({createdAt:-1});
+    let data = await Order.find({ userId }).sort({ createdAt: -1 });
 
     //lọc theo trạng thái đơn hàng
     if (_status) {
@@ -551,11 +556,17 @@ export const CanceledOrder = async (req, res) => {
   try {
     const orderId = req.params.id;
     const order = await Order.findById(orderId);
+    if (order.status == "đã hủy đơn hàng") {
+      return res.status(401).json({
+        status: 401,
+        message: "The previous order has been cancelled",
+      });
+    }
     const { canCancel } = checkCancellationTime(order);
     if (canCancel) {
       const data = await Order.findByIdAndUpdate(
         orderId,
-        { status: "đã hủy" },
+        { status: "đã hủy đơn hàng" },
         { new: true }
       );
       if (!data) {
@@ -563,6 +574,27 @@ export const CanceledOrder = async (req, res) => {
           status: 400,
           message: "Cancel failed",
         });
+      }
+
+      for (let item of order.products) {
+
+        const product = await Product.findById(item.productId)
+        for (let shipment of product.shipments) {
+          // Trả lại cân ở bảng products
+          await Product.findOneAndUpdate({ _id: product._id, "shipments.idShipment": shipment.idShipment }, {
+            $set: {
+              "shipments.$.weight": shipment.weight + item.weight
+            }
+          }, { new: true })
+
+          //Bảng shipment
+          await Shipment.findOneAndUpdate({ _id: shipment.idShipment, "products.idProduct": product._id }, {
+            $set: {
+              "products.$.weight": shipment.weight + item.weight
+            }
+          }, { new: true })
+
+        }
       }
       return res.status(201).json({
         body: { data },
@@ -647,6 +679,8 @@ export const UpdateOrder = async (req, res) => {
         new: true,
       }
     );
+
+    sendMailer(data.email, data)
     return res.status(201).json({
       body: { data },
       status: 201,

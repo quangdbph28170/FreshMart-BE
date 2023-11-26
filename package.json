@@ -14,9 +14,11 @@
     "@joi/date": "^2.1.0",
     "bcrypt": "^5.1.1",
     "cloudinary": "^1.41.0",
+    "config": "^3.3.9",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
     "date-fns": "^2.30.0",
+    "dateformat": "^5.0.3",
     "dotenv": "^16.3.1",
     "email-verify": "^0.2.1",
     "express": "^4.18.2",
@@ -34,7 +36,7 @@
     "passport-facebook": "^3.0.0",
     "passport-google-oauth": "^2.0.0",
     "short-mongo-id": "^0.1.1",
-    "uuid": "^9.0.1",
-    "socket.io": "^4.7.2"
+    "socket.io": "^4.7.2",
+    "uuid": "^9.0.1"
   }
 }
