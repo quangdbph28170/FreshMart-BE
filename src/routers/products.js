@@ -12,12 +12,12 @@ import {
 import { authorization } from "../middleware/authorization";
 
 const router = express.Router();
-router.post("/products", authorization,createProduct);
+router.post("/products",createProduct);
 router.patch("/products/:id", authorization,updateProduct);
 router.get("/products", getProducts);
 router.get("/products-sold", getProductSold);
 router.get("/products/related/:cate_id/:product_id", getRelatedProducts);
 router.get("/products/:id", getOneProduct);
-router.delete("/products/:id", authorization,removeProduct);
+router.delete("/products/:id",removeProduct);
 router.post("/products-process/", authorization,liquidationProduct);
 export default router;
