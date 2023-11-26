@@ -190,9 +190,7 @@ export const CreateOrder = async (req, res) => {
     const totalPayment = null
     for (let item of products) {
       const prd = await Product.findById(item.productId);
-      totalPayment = products.reduce((accumulator, product) => {
-        return accumulator + (prd.price - (prd.price * prd.discount / 100) - product.weight)
-      }, 0)
+      totalPayment += prd.price - (prd.price * prd.discount / 100) - item.weight
     }
 
 
