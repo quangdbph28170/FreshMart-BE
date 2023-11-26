@@ -151,14 +151,14 @@ export const CreateOrder = async (req, res) => {
         if (item.productName != prd.productName) {
           errors.unshift({
             productId: item.productId,
-            productName: item.productName,
+            productName: prd.productName,
             message: 'Invalid Product Name!'
           });
         }
         if (item.images != prd.images[0].url) {
           errors.push({
             productId: item.productId,
-            images: item.images,
+            images: prd.images[0].url,
             message: 'Invalid Product Image!'
           });
         }
@@ -172,7 +172,6 @@ export const CreateOrder = async (req, res) => {
         } else if (item.weight > currentTotalWeight) {
           errors.push({
             productId: item.productId,
-            weight: item.weight,
             message: "Insufficient quantity of the product in stock!",
             maxWeight: currentTotalWeight,
           });
