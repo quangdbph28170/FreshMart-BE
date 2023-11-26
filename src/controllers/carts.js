@@ -379,10 +379,10 @@ export const cartLocal = async (req, res) => {
                     message: "Product is not exsit!",
                 });
             } else {
-                if (item.productId.price !== prd.price - prd.price * prd.discount) {
+                if (item.productId.price !== prd.price - prd.price * prd.discount/100) {
                     errors.push({
                         productId: prd._id,
-                        price: prd.price - prd.price * prd.discount,
+                        price: prd.price - prd.price * prd.discount / 100,
                         productName: prd.productName,
                         message: `Invalid price for product!`,
                     });
