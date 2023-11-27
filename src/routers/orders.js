@@ -59,8 +59,8 @@ router.post("/orders-guest", OrdersForGuest);
 router.get("/orders-member", authentication, OrdersForMember);
 router.get("/orders-member-filter", authentication, FilterOrdersForMember);
 router.get("/orders/:id", OrderDetail);
-router.put("/orders/:id", authentication, CanceledOrder);
-router.put("/orders-cofirm/:id", authentication, ConfirmOrder);
+router.put("/orders/:id", CanceledOrder);
+router.put("/orders-cofirm/:id", ConfirmOrder);
 router.patch("/orders/:id", authentication, authorization, UpdateOrder);
 
 export default router;
