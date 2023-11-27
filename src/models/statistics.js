@@ -61,9 +61,9 @@ const statisticsSchema = new mongoose.Schema(
         /**
          Tổng số khách hàng đăng ký và số lượt khách truy cập giao dịch(mua hàng)
         */
-        totalCustomerAndVisitorsTransactions: [
+         totalCustomerAndTransactions: [
             {
-                visitors: {
+                customers: {
                     type: Number,
                     required: true,
                 },
@@ -71,8 +71,12 @@ const statisticsSchema = new mongoose.Schema(
                     type: Number,
                     required: true,
                 },
-                date: {
-                    type: Date,
+                month: {
+                    type: Number,
+                    required: true,
+                },
+                year: {
+                    type: Number,
                     required: true,
                 }
             }
@@ -90,12 +94,33 @@ const statisticsSchema = new mongoose.Schema(
                     type: Number,
                     required: true,
                 },
-                date: {
-                    type: Date,
+                month: {
+                    type: Number,
+                    required: true,
+                },
+                year: {
+                    type: Number,
                     required: true,
                 }
             }
         ],
+        // Thống kế doanh thu theo ngày
+        salesRevenueByDay: [
+            {
+                date: {
+                    type: Date,
+                    required: true,
+                },
+                ms: {
+                    type: Number,
+                    required: true,
+                },
+                price: {
+                    type: Number,
+                    required: true,
+                }
+            }
+        ]
         // .... Còn nữa 
     },
     { timestamps: true, versionKey: false },

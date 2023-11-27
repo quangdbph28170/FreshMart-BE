@@ -52,6 +52,11 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       required: true,
     },
+    paymentMethod: {
+      type: String,
+      enum: ["cod", "momo", "vnpay"],
+      default: "cod"
+    },
     customerName: {
       type: String,
       required: true,
