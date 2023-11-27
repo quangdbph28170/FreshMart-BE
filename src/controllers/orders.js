@@ -144,21 +144,21 @@ export const CreateOrder = async (req, res) => {
         if (item.price != prd.price - (prd.price * prd.discount / 100)) {
           errors.push({
             productId: item.productId,
-            price: item.price,
+            price: prd.price - (prd.price * prd.discount / 100),
             message: 'Invalid Product Price!'
           });
         }
         if (item.productName != prd.productName) {
           errors.unshift({
             productId: item.productId,
-            productName: item.productName,
+            productName: prd.productName,
             message: 'Invalid Product Name!'
           });
         }
         if (item.images != prd.images[0].url) {
           errors.push({
             productId: item.productId,
-            images: item.images,
+            images: prd.images[0].url,
             message: 'Invalid Product Image!'
           });
         }
@@ -172,7 +172,6 @@ export const CreateOrder = async (req, res) => {
         } else if (item.weight > currentTotalWeight) {
           errors.push({
             productId: item.productId,
-            weight: item.weight,
             message: "Insufficient quantity of the product in stock!",
             maxWeight: currentTotalWeight,
           });
@@ -194,12 +193,6 @@ export const CreateOrder = async (req, res) => {
     }
 
 
-
-    // kiểm tra phương thức thanh toán là momo
-    if (paymentMethod === "vnpay") {
-      await vnpayCreate(req, res)
-    }
-
     if (req.body.totalPayment !== totalPayment) {
       return res.status(400).json({
         status: 400,
@@ -213,6 +206,12 @@ export const CreateOrder = async (req, res) => {
     for (let item of products) {
 
       const prd = await Product.findById(item.productId);
+      // Update sold +
+      await Product.findByIdAndUpdate(item.productId, {
+        $set: {
+          sold: prd.sold + 1
+        }
+      })
       let itemWeight = item.weight;
       if (itemWeight != 0 || currentTotalWeight != 0) {
         for (let shipment of prd.shipments) {
@@ -282,11 +281,17 @@ export const CreateOrder = async (req, res) => {
     }
     const data = await Order.create(req.body);
 
+    let url = ''
+    // kiểm tra phương thức thanh toán là momo
+    if (paymentMethod === "vnpay") {
+      url = await vnpayCreate(req, data._id)
+    }
+
     await sendMailer(req.body.email, data);
     return res.status(201).json({
       status: 201,
       message: "Order success",
-      body: { data },
+      body: { data: { ...data, url } },
     });
   } catch (error) {
     return res.status(500).json({
@@ -558,7 +563,7 @@ export const CanceledOrder = async (req, res) => {
   try {
     const orderId = req.params.id;
     const order = await Order.findById(orderId);
-    if (order.status == "đã hủy đơn hàng") {
+    if (order.status == "đã hủy") {
       return res.status(401).json({
         status: 401,
         message: "The previous order has been cancelled",
@@ -568,7 +573,7 @@ export const CanceledOrder = async (req, res) => {
     if (canCancel) {
       const data = await Order.findByIdAndUpdate(
         orderId,
-        { status: "đã hủy đơn hàng" },
+        { status: "đã hủy" },
         { new: true }
       );
       if (!data) {
@@ -581,6 +586,12 @@ export const CanceledOrder = async (req, res) => {
       for (let item of order.products) {
 
         const product = await Product.findById(item.productId)
+        // update lại sold
+        await Product.findByIdAndUpdate(item.productId, {
+          $set: {
+            sold: product.sold - 1
+          }
+        })
         for (let shipment of product.shipments) {
           // Trả lại cân ở bảng products
           await Product.findOneAndUpdate({ _id: product._id, "shipments.idShipment": shipment.idShipment }, {
