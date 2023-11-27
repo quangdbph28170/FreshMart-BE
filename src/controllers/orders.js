@@ -291,7 +291,7 @@ export const CreateOrder = async (req, res) => {
     return res.status(201).json({
       status: 201,
       message: "Order success",
-      body: { data: { ...data, url } },
+      body: { data: { ...data._doc, url } },
     });
   } catch (error) {
     return res.status(500).json({
@@ -633,9 +633,22 @@ export const ConfirmOrder = async (req, res) => {
     const orderId = req.params.id;
     const data = await Order.findByIdAndUpdate(
       orderId,
-      { status: "đơn hàng hoàn thành" },
+      {
+        status: "đơn hàng hoàn thành",
+        pay: true
+      },
       { new: true }
     );
+    for (let item of data.products) {
+      const prd = await Product.findById(item.productId);
+      // Update sold +
+      await Product.findByIdAndUpdate(item.productId, {
+        $set: {
+          sold: prd.sold + 1
+        }
+      })
+    }
+
     if (!data) {
       return res.status(400).json({
         status: 400,

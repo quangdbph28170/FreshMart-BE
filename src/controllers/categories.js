@@ -108,7 +108,9 @@ export const removeCategories = async (req, res, next) => {
 };
 export const getAllCategory = async (req, res, next) => {
    try {
-      const category = await Category.find();
+      const category = await Category.find({
+         cateName: { $regex: req.query['_q'] || '', $options: "i" }
+      });
       if (category.length === 0) {
          req[RESPONSE_MESSAGE] = `Not found any categories`;
          req[RESPONSE_OBJ] = category;

@@ -22,17 +22,14 @@ const voucherSchema = new mongoose.Schema(
             type: Number,
             required: true,
         },
-        date_start: {
-            type: Date,
-            required: true,
-        },
         date_end: {
             type: Date,
             required: true,
         },
         status: {
-            type: String,
-            enum: ["đang hoạt động", "đã sử dụng", "hết hạn"]
+            type: Boolean,
+            default:true
+            
         },
     },
     { timestamps: true, versionKey: false },

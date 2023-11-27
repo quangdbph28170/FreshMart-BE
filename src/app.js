@@ -23,8 +23,7 @@ import cartRouter from "./routers/carts";
 import { addNotification } from "./controllers/notification";
 import evaluationRouter from "./routers/evaluation";
 import Orders from "./models/orders";
-import session from 'express-session';
-import { connectToGoogle } from "./config/googleOAuth";
+import voucherRouter from "./routers/vouchers";
 
 const app = express();
 const httpServer = createServer(app);
@@ -33,35 +32,7 @@ dotenv.config();
 
 const PORT = process.env.PORT;
 const MONGO_URL = process.env.MONGODB_LOCAL;
-app.use(express.json());
-app.use(cors({ origin: true, credentials: true }));
-app.use(cookieParser());
-app.use(express.urlencoded({ extended: true }));
 
-app.use(
-  session({
-     resave: false,
-     saveUninitialized: true,
-     secret: 'SECRET',
-  }),
-);
-
-connectToGoogle()
-
-app.use("/api", categoryRouter);
-app.use("/api", productRouter);
-app.use("/api", uploadRouter);
-app.use("/api", shipmentRouter);
-app.use("/api", mailRouter);
-app.use("/api", originRouter);
-app.use("/api", orderRouter);
-app.use("/api", authRouter);
-app.use("/api", userRouter);
-app.use("/api", momoRouter);
-app.use("/api", cartRouter);
-app.use("/api", vnpayRouter);
-app.use("/api", notificationRouter);
-app.use("/api", evaluationRouter);
 const io = new Server(httpServer, { cors: "*" });
 
 //Chạy 24h 1 lần kiểm tra những đơn hàng đã giao hàng thành công sau 3 ngày tự động chuyển thành trạng thái thành công
@@ -81,7 +52,10 @@ cron.schedule("* */24 * * *", async () => {
       await addNotification({
         userId: order.userId,
         title: "Thông báo",
-        message: "Đơn hàng (#)" + order.invoiceId + "  của bạn đã hoàn thành",
+        message:
+          "Đơn hàng (#)" +
+          order.invoiceId +
+          "  của bạn đã hoàn thành",
         link: "/my-order/" + order._id,
         type: "client",
       });
@@ -132,11 +106,7 @@ io.of("/admin").on("connection", (socket) => {
         // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 3 ngày không
         const isWithinThreeDays = targetDate - currentDate < threeDaysInMillis;
 
-        if (
-          isWithinThreeDays &&
-          targetDate - currentDate > 0 &&
-          shipment.willExpire != 1
-        ) {
+        if (isWithinThreeDays && targetDate - currentDate > 0 && shipment.willExpire != 1) {
           await Product.findOneAndUpdate(
             { _id: product._id, "shipments.idShipment": shipment.idShipment },
             {
@@ -181,7 +151,7 @@ io.of("/admin").on("connection", (socket) => {
       message:
         "Đơn hàng (#)" +
         socketData.invoiceId +
-        "đã cập nhật trạng thái:" +
+        "  của bạn đã " +
         socketData.status,
       link: "/my-order/" + socketData.orderId,
       type: "client",
@@ -197,6 +167,7 @@ io.on("connection", (socket) => {
   //thông báo cho admin và người dùng đã đăng nhập mua hàng thành công/ có đơn hàng mới
   socket.on("purchase", async (data) => {
     const socketData = JSON.parse(data);
+    console.log(socketData.userId);
     // Gửi thông báo đến trang client nếu người dùng đăng nhập
     if (socketData.userId) {
       const notification = await addNotification({
@@ -223,19 +194,18 @@ io.on("connection", (socket) => {
 
   socket.on("confirmOrder", async (data) => {
     const socketData = JSON.parse(data);
-    console.log(socketData.invoiceId, socketData.status);
     const notification = await addNotification({
       title: "Thông báo",
       message:
         "Đơn hàng (#)" +
         socketData.invoiceId +
-        " đã được người dùng xác nhận trạng thái thành: " +
+        " đã được người dùng thay đổi trạng thái thành: " +
         socketData.status,
       link: "/manage/orders",
       type: "admin",
     });
 
-    io.of("/admin").emit("adminStatusNotification", {
+    io.of('/admin').emit("adminStatusNotification", {
       data: { ...notification._doc, status: socketData.status },
     });
   });
@@ -252,6 +222,25 @@ io.on("connection", (socket) => {
   // });
 });
 
+app.use(express.json());
+app.use(cors({ origin: true, credentials: true }));
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
+app.use("/api", categoryRouter);
+app.use("/api", productRouter);
+app.use("/api", uploadRouter);
+app.use("/api", shipmentRouter);
+app.use("/api", mailRouter);
+app.use("/api", originRouter);
+app.use("/api", orderRouter);
+app.use("/api", authRouter);
+app.use("/api", userRouter);
+app.use("/api", momoRouter);
+app.use("/api", cartRouter);
+app.use("/api", vnpayRouter);
+app.use("/api", notificationRouter);
+app.use("/api", evaluationRouter);
+app.use("/api", voucherRouter);
 mongoose
   .connect(MONGO_URL)
   .then(() => console.log("connected to db"))
