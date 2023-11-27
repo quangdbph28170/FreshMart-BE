@@ -3,8 +3,8 @@ import mongoose from "mongoose";
 const evaluationSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Types.ObjectId,
-        required: true,
-        ref: "User"
+        ref: 'User',
+        default: null,
     },
     productId: {
         type: mongoose.Types.ObjectId,
@@ -15,11 +15,15 @@ const evaluationSchema = new mongoose.Schema({
         type: String,
         default: null
     },
-    imgUrl: {
+    userName: {
         type: String,
         default: null
     },
-    star: {
+    phoneNumber: {
+        type: String,
+        default: null
+    },
+    rate: {
         type: Number,
         required: true
     },

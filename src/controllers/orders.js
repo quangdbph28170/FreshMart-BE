@@ -206,6 +206,12 @@ export const CreateOrder = async (req, res) => {
     for (let item of products) {
 
       const prd = await Product.findById(item.productId);
+      // Update sold +
+      await Product.findByIdAndUpdate(item.productId, {
+        $set: {
+          sold: prd.sold + 1
+        }
+      })
       let itemWeight = item.weight;
       if (itemWeight != 0 || currentTotalWeight != 0) {
         for (let shipment of prd.shipments) {
@@ -285,7 +291,7 @@ export const CreateOrder = async (req, res) => {
     return res.status(201).json({
       status: 201,
       message: "Order success",
-      body: { data: {...data, url} },
+      body: { data: { ...data._doc, url } },
     });
   } catch (error) {
     return res.status(500).json({
@@ -557,7 +563,7 @@ export const CanceledOrder = async (req, res) => {
   try {
     const orderId = req.params.id;
     const order = await Order.findById(orderId);
-    if (order.status == "đã hủy đơn hàng") {
+    if (order.status == "đã hủy") {
       return res.status(401).json({
         status: 401,
         message: "The previous order has been cancelled",
@@ -567,7 +573,7 @@ export const CanceledOrder = async (req, res) => {
     if (canCancel) {
       const data = await Order.findByIdAndUpdate(
         orderId,
-        { status: "đã hủy đơn hàng" },
+        { status: "đã hủy" },
         { new: true }
       );
       if (!data) {
@@ -580,6 +586,12 @@ export const CanceledOrder = async (req, res) => {
       for (let item of order.products) {
 
         const product = await Product.findById(item.productId)
+        // update lại sold
+        await Product.findByIdAndUpdate(item.productId, {
+          $set: {
+            sold: product.sold - 1
+          }
+        })
         for (let shipment of product.shipments) {
           // Trả lại cân ở bảng products
           await Product.findOneAndUpdate({ _id: product._id, "shipments.idShipment": shipment.idShipment }, {
@@ -621,9 +633,22 @@ export const ConfirmOrder = async (req, res) => {
     const orderId = req.params.id;
     const data = await Order.findByIdAndUpdate(
       orderId,
-      { status: "đơn hàng hoàn thành" },
+      {
+        status: "đơn hàng hoàn thành",
+        pay: true
+      },
       { new: true }
     );
+    for (let item of data.products) {
+      const prd = await Product.findById(item.productId);
+      // Update sold +
+      await Product.findByIdAndUpdate(item.productId, {
+        $set: {
+          sold: prd.sold + 1
+        }
+      })
+    }
+
     if (!data) {
       return res.status(400).json({
         status: 400,
