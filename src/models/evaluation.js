@@ -15,7 +15,11 @@ const evaluationSchema = new mongoose.Schema({
         type: String,
         default: null
     },
-    imgUrl: {
+    userName: {
+        type: String,
+        default: null
+    },
+    phoneNumber: {
         type: String,
         default: null
     },
