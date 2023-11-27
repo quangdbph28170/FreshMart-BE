@@ -2,9 +2,8 @@ import mongoose from "mongoose";
 
 const evaluationSchema = new mongoose.Schema({
     userId: {
-        type: mongoose.Types.ObjectId,
-        required: true,
-        ref: "User"
+        type: mongoose.Schema.Types.Mixed,
+        default: null,
     },
     productId: {
         type: mongoose.Types.ObjectId,
