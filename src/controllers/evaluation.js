@@ -22,7 +22,7 @@ export const createEvaluation = async (req, res) => {
                 message: error.details.map((error) => error.message),
             });
         }
-        const { userName, phoneNumber } =req.body
+        const { userName, phoneNumber } = req.body
         if (!req.body.userId) {
             const { error } = validRate.validate({ userName, phoneNumber }, { abortEarly: false })
             if (error) {
@@ -31,7 +31,7 @@ export const createEvaluation = async (req, res) => {
                     message: error.details.map((error) => error.message),
                 });
             }
-        } 
+        }
 
         const orderExist = await Order.findById(orderId)
         if (!orderExist) {
@@ -88,7 +88,10 @@ export const createEvaluation = async (req, res) => {
 // lấy danh sách đánh giá theo sản phẩm
 export const getIsRatedByProductId = async (req, res) => {
     try {
-        const data = await Evaluation.find({ productId: req.params.id }).populate("userId")
+        const data = await Evaluation.find({ productId: req.params.id })
+        if (data.userId != null) {
+            data.populate("userId")
+        }
         if (!data) {
             return res.status(404).json({
                 status: 404,
