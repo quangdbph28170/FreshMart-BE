@@ -13,7 +13,6 @@ export const createEvaluation = async (req, res) => {
                 message: error.details.map((error) => error.message),
             });
         }
-        req.body["userId"] = req.user._id
         const orderExist = await Order.findById(orderId)
         if (!orderExist) {
             return res.status(404).json({
