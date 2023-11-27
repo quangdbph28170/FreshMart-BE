@@ -5,7 +5,7 @@ import { authorization } from '../middleware/authorization';
 
 
 const router = express.Router();
-router.post('/evaluation', authentication, createEvaluation);
+router.post('/evaluation', createEvaluation);
 router.get('/evaluationByProductId/:id', getIsRatedByProductId);
 router.get('/evaluation/:id', getIsRatedDetail);
 router.patch('/evaluation/:id', authorization,isReviewVisible);
