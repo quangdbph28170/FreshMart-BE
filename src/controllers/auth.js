@@ -67,12 +67,14 @@ export const signUp = async (req, res, next) => {
       res.cookie('accessToken', accessToken, {
          expires: new Date(Date.now() + 5 * 60 * 1000),
          httpOnly: true,
-         domain: '.localhost'
+         sameSite: 'None',
+         secure: true
       });
       res.cookie('refreshToken', refreshToken, {
          expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
          httpOnly: true,
-         domain: '.localhost'
+         sameSite: 'None',
+         secure: true
       });
 
       user.password = undefined;
@@ -135,12 +137,14 @@ export const signIn = async (req, res, next) => {
       res.cookie('accessToken', accessToken, {
          expires: new Date(Date.now() + 5 * 60 * 1000),
          httpOnly: true,
-         domain: '.localhost'
+         sameSite: 'None',
+         secure: true
       });
       res.cookie('refreshToken', refreshToken, {
          expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
          httpOnly: true,
-         domain: '.localhost'
+         sameSite: 'None',
+         secure: true
       });
 
       user.password = undefined;
@@ -199,7 +203,8 @@ export const refresh = async (req, res, next) => {
             res.cookie('accessToken', accessToken, {
                expires: new Date(Date.now() + 5 * 60 * 1000),
                httpOnly: true,
-               domain: '.localhost'
+               sameSite: 'None',
+               secure: true
             });
             req[RESPONSE_OBJ] = {
                accessToken,
@@ -225,8 +230,14 @@ export const clearToken = async (req, res, next) => {
          return next();
       }
 
-      res.clearCookie('refreshToken');
-      res.clearCookie('accessToken');
+      res.clearCookie('refreshToken', {
+         sameSite: 'None',
+         secure: true
+      });
+      res.clearCookie('accessToken',{
+         sameSite: 'None',
+         secure: true
+      });
 
       req[RESPONSE_MESSAGE] = `Token has been cleared`;
       return next();

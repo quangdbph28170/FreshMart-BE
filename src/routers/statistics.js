@@ -27,7 +27,7 @@ const statisticsSchema = new mongoose.Schema(
             required: true,
         },
         /**
-           Top 5 tổng tiền thu được theo sản phẩm bán đã bán
+           Top 5 sản phẩm có số lượng bán ra nhiều nhất
         */
         topFiveProductsSold: [
             {
