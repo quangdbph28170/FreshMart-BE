@@ -142,6 +142,7 @@ cron.schedule("* */24 * * *", async () => {
       });
       await Orders.findByIdAndUpdate(order._id, {
         status: "đơn hàng hoàn thành",
+        pay: true,
       });
     }
   }
