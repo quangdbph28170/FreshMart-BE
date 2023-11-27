@@ -52,8 +52,8 @@ export const createEvaluation = async (req, res) => {
         const isRated = orderExist.products.find(item => item.productId == productId)
 
         if (isRated.evaluation) {
-            return res.status(200).json({
-                status: 200,
+            return res.status(400).json({
+                status: 400,
                 message: "Sản phẩm này đã được đánh giá trong đơn hàng !",
             })
         }
