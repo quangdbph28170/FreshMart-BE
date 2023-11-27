@@ -12,7 +12,6 @@ import originRouter from "./routers/origin";
 import orderRouter from "./routers/orders";
 import authRouter from "./routers/auth";
 import userRouter from "./routers/user";
-import vnpayRouter from "./routers/vnpay";
 import notificationRouter from "./routers/notification";
 import momoRouter from "./routers/momo-pay";
 import { createServer } from "http";
@@ -23,9 +22,7 @@ import cartRouter from "./routers/carts";
 import { addNotification } from "./controllers/notification";
 import evaluationRouter from "./routers/evaluation";
 import Orders from "./models/orders";
-import User from "./models/user";
-import session from 'express-session';
-import { connectToGoogle } from "./config/googleOAuth";
+import voucherRouter from "./routers/vouchers";
 
 const app = express();
 const httpServer = createServer(app);
@@ -34,90 +31,8 @@ dotenv.config();
 
 const PORT = process.env.PORT;
 const MONGO_URL = process.env.MONGODB_LOCAL;
-app.use(express.json());
-app.use(cors({ origin: true, credentials: true }));
-app.use(cookieParser());
-app.use(express.urlencoded({ extended: true }));
 
-app.use(
-  session({
-    resave: false,
-    saveUninitialized: true,
-    secret: 'SECRET',
-  }),
-);
-
-connectToGoogle()
-
-app.use("/api", categoryRouter);
-app.use("/api", productRouter);
-app.use("/api", uploadRouter);
-app.use("/api", shipmentRouter);
-app.use("/api", mailRouter);
-app.use("/api", originRouter);
-app.use("/api", orderRouter);
-app.use("/api", authRouter);
-app.use("/api", userRouter);
-app.use("/api", momoRouter);
-app.use("/api", cartRouter);
-app.use("/api", vnpayRouter);
-app.use("/api", notificationRouter);
-app.use("/api", evaluationRouter);
 const io = new Server(httpServer, { cors: "*" });
-
-//Thống kê lại dữ liệu sau mỗi 30 phút 
-cron.schedule("1-59 * * * *", async () => {
-  console.log(1);
-  try {
-    //Lấy ra tất cả sản phẩm (ko lấy sp thanh lý/thất thoát)
-    const products = await Product.find({ isSale: false });
-
-    //lấy ra tất cả đơn hàng đã hoàn thành
-    const orders = await Orders.find({ status: 'đơn hàng hoàn thành' }).populate('products.productId');
-
-    //lấy ra tất cả tài khoản của người dùng (not admin)
-    const users = await User.find({ role: 'member' })
-
-    /*==================*/
-
-    // Tính tổng doanh thu theo đơn hàng đã hoàn thành
-    const salesRevenue = orders ? orders.reduce((accumulator, order) => accumulator + order.totalPayment, 0) : 0;
-
-    // Tổng khách hàng đã đăng ký tài khoản
-    const customers = users ? users?.length : 0
-
-    // Tính trung bình tổng số tiền đã thanh toán
-    const averageTransactionPrice = salesRevenue > 0 && (orders && orders.length > 0) ? (salesRevenue / orders.length) : 0;
-
-    // Lấy ra top 5 tổng tiền thu được theo sản phẩm bán đã bán
-    let topFiveProductsSold = []
-    if (products && orders) {
-      for (const product of products) {
-        let totalPrice = 0
-        for (const order of orders) {
-          for (const productOfOrder of order.products) {
-            if (product._id === productOfOrder.productId._id) {
-              totalPrice += productOfOrder.price * productOfOrder.weight
-            }
-          }
-        }
-        topFiveProductsSold.push({
-          productId: product._id,
-          totalPrice
-        })
-      }
-    }
-    topFiveProductsSold = topFiveProductsSold?.sort((a, b) => a?.totalPrice - b?.totalPrice).slice(0, 4) || [],
-
-    //
-    /*==================*/
-
-    console.log(salesRevenue, customers, averageTransactionPrice, topFiveProductsSold);
-
-  } catch (error) {
-    console.log(error.message);
-  }
-})
 
 //Chạy 24h 1 lần kiểm tra những đơn hàng đã giao hàng thành công sau 3 ngày tự động chuyển thành trạng thái thành công
 cron.schedule("* */24 * * *", async () => {
@@ -136,13 +51,15 @@ cron.schedule("* */24 * * *", async () => {
       await addNotification({
         userId: order.userId,
         title: "Thông báo",
-        message: "Đơn hàng (#)" + order.invoiceId + "  của bạn đã hoàn thành",
+        message:
+          "Đơn hàng (#)" +
+          order.invoiceId +
+          "  của bạn đã hoàn thành",
         link: "/my-order/" + order._id,
         type: "client",
       });
       await Orders.findByIdAndUpdate(order._id, {
         status: "đơn hàng hoàn thành",
-        pay: true,
       });
     }
   }
@@ -153,73 +70,67 @@ io.of("/admin").on("connection", (socket) => {
     const response = [];
     const products = await Product.find();
     for (const product of products) {
-      if (!product.isSale) {
-        for (const shipment of product.shipments) {
-          // Chuyển đổi chuỗi ngày từ MongoDB thành đối tượng Date
-          const targetDate = new Date(shipment.date);
-          // Lấy ngày hiện tại
-          const currentDate = new Date();
+      for (const shipment of product.shipments) {
+        // Chuyển đổi chuỗi ngày từ MongoDB thành đối tượng Date
+        const targetDate = new Date(shipment.date);
+        // Lấy ngày hiện tại
+        const currentDate = new Date();
 
-          // Số mili giây trong 3 ngày
-          const threeDaysInMillis = 3 * 24 * 60 * 60 * 1000;
+        // Số mili giây trong 3 ngày
+        const threeDaysInMillis = 3 * 24 * 60 * 60 * 1000;
 
-          //Kiểm tra xem sản phẩm trong lô đã hết hạn chưa
-          if (targetDate - currentDate <= 0 && shipment.willExpire != 2) {
-            await Product.findOneAndUpdate(
-              { _id: product._id, "shipments.idShipment": shipment.idShipment },
-              {
-                $set: {
-                  "shipments.$.willExpire": 2,
-                },
-              }
-            );
-            await addNotification({
-              title: `Thông báo: Sản phẩm ${product.productName} đã hết Hạn`,
-              message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
-              link: "/manage/products/" + product._id,
-              type: "admin",
-            });
-            response.push({
-              productId: product._id,
-              timeLeft: 0,
-              shipmentId: shipment.idShipment,
-            });
-          }
+        //Kiểm tra xem sản phẩm trong lô đã hết hạn chưa
+        if (targetDate - currentDate <= 0 && shipment.willExpire != 2) {
+          await Product.findOneAndUpdate(
+            { _id: product._id, "shipments.idShipment": shipment.idShipment },
+            {
+              $set: {
+                "shipments.$.willExpire": 2,
+              },
+            }
+          );
+          await addNotification({
+            title: `Thông báo: Sản phẩm ${product.productName} đã hết Hạn`,
+            message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
+            link: "/manage/products/" + product._id,
+            type: "admin",
+          });
+          response.push({
+            productId: product._id,
+            timeLeft: 0,
+            shipmentId: shipment.idShipment,
+          });
+        }
 
-          // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 3 ngày không
-          const isWithinThreeDays = targetDate - currentDate < threeDaysInMillis;
+        // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 3 ngày không
+        const isWithinThreeDays = targetDate - currentDate < threeDaysInMillis;
 
-          if (
-            isWithinThreeDays &&
-            targetDate - currentDate > 0 &&
-            shipment.willExpire != 1
-          ) {
-            await Product.findOneAndUpdate(
-              { _id: product._id, "shipments.idShipment": shipment.idShipment },
-              {
-                $set: {
-                  "shipments.$.willExpire": 1,
-                },
-              }
-            );
-            const totalMilliseconds =
-              threeDaysInMillis - (targetDate - currentDate);
-            const totalSeconds = Math.floor(totalMilliseconds / 1000);
-            const hours = Math.floor(totalSeconds / 3600);
+        if (isWithinThreeDays && targetDate - currentDate > 0 && shipment.willExpire != 1) {
+          await Product.findOneAndUpdate(
+            { _id: product._id, "shipments.idShipment": shipment.idShipment },
+            {
+              $set: {
+                "shipments.$.willExpire": 1,
+              },
+            }
+          );
+          const totalMilliseconds =
+            threeDaysInMillis - (targetDate - currentDate);
+          const totalSeconds = Math.floor(totalMilliseconds / 1000);
+          const hours = Math.floor(totalSeconds / 3600);
 
-            await addNotification({
-              title: `Thông báo: Sản phẩm ${product.productName} sắp Hết Hạn sau ${hours} tiếng nữa`,
-              message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
-              link: "/manage/products/" + product._id,
-              type: "admin",
-            });
+          await addNotification({
+            title: `Thông báo: Sản phẩm ${product.productName} sắp Hết Hạn sau ${hours} tiếng nữa`,
+            message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
+            link: "/manage/products/" + product._id,
+            type: "admin",
+          });
 
-            response.push({
-              productId: product._id,
-              timeLeft: hours,
-              shipmentId: shipment.idShipment,
-            });
-          }
+          response.push({
+            productId: product._id,
+            timeLeft: hours,
+            shipmentId: shipment.idShipment,
+          });
         }
       }
     }
@@ -239,7 +150,7 @@ io.of("/admin").on("connection", (socket) => {
       message:
         "Đơn hàng (#)" +
         socketData.invoiceId +
-        "đã cập nhật trạng thái:" +
+        "  của bạn đã " +
         socketData.status,
       link: "/my-order/" + socketData.orderId,
       type: "client",
@@ -255,6 +166,7 @@ io.on("connection", (socket) => {
   //thông báo cho admin và người dùng đã đăng nhập mua hàng thành công/ có đơn hàng mới
   socket.on("purchase", async (data) => {
     const socketData = JSON.parse(data);
+    console.log(socketData.userId);
     // Gửi thông báo đến trang client nếu người dùng đăng nhập
     if (socketData.userId) {
       const notification = await addNotification({
@@ -281,19 +193,18 @@ io.on("connection", (socket) => {
 
   socket.on("confirmOrder", async (data) => {
     const socketData = JSON.parse(data);
-    console.log(socketData.invoiceId, socketData.status);
     const notification = await addNotification({
       title: "Thông báo",
       message:
         "Đơn hàng (#)" +
         socketData.invoiceId +
-        " đã được người dùng xác nhận trạng thái thành: " +
+        " đã được người dùng thay đổi trạng thái thành: " +
         socketData.status,
       link: "/manage/orders",
       type: "admin",
     });
 
-    io.of("/admin").emit("adminStatusNotification", {
+    io.of('/admin').emit("adminStatusNotification", {
       data: { ...notification._doc, status: socketData.status },
     });
   });
@@ -310,6 +221,24 @@ io.on("connection", (socket) => {
   // });
 });
 
+app.use(express.json());
+app.use(cors({ origin: true, credentials: true }));
+app.use(cookieParser());
+app.use(express.urlencoded({ extended: true }));
+app.use("/api", categoryRouter);
+app.use("/api", productRouter);
+app.use("/api", uploadRouter);
+app.use("/api", shipmentRouter);
+app.use("/api", mailRouter);
+app.use("/api", originRouter);
+app.use("/api", orderRouter);
+app.use("/api", authRouter);
+app.use("/api", userRouter);
+app.use("/api", momoRouter);
+app.use("/api", cartRouter);
+app.use("/api", notificationRouter);
+app.use("/api", evaluationRouter);
+app.use("/api", voucherRouter);
 mongoose
   .connect(MONGO_URL)
   .then(() => console.log("connected to db"))
