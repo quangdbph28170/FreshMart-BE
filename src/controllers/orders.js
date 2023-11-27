@@ -636,6 +636,16 @@ export const ConfirmOrder = async (req, res) => {
       { status: "đơn hàng hoàn thành" },
       { new: true }
     );
+    for (let item of data.products) {
+      const prd = await Product.findById(item.productId);
+      // Update sold +
+      await Product.findByIdAndUpdate(item.productId, {
+        $set: {
+          sold: prd.sold + 1
+        }
+      })
+    }
+
     if (!data) {
       return res.status(400).json({
         status: 400,
