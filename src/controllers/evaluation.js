@@ -91,12 +91,15 @@ export const getIsRatedByProductId = async (req, res) => {
 // chi tiết đánh giá
 export const getIsRatedDetail = async (req, res) => {
     try {
-        const data = await Evaluation.findById(req.params.id).populate("userId").populate("productId")
+        const data = await Evaluation.findById(req.params.id).populate("productId")
         if (!data) {
             return res.status(404).json({
                 status: 404,
                 message: "Failed",
             })
+        }
+        if (data.userId != null) {
+            await data.populate("userId")
         }
         return res.status(200).json({
             status: 200,
@@ -150,7 +153,7 @@ export const isReviewVisible = async (req, res) => {
     try {
         const data = await Evaluation.findByIdAndUpdate(req.params.id, {
             isReviewVisible: false
-        }, { new: true }).populate("userId").populate("productId")
+        }, { new: true })
         if (!data) {
             return res.status(404).json({
                 status: 404,
