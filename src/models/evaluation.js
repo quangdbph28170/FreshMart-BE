@@ -19,7 +19,7 @@ const evaluationSchema = new mongoose.Schema({
         type: String,
         default: null
     },
-    star: {
+    rate: {
         type: Number,
         required: true
     },
