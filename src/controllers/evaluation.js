@@ -47,16 +47,16 @@ export const createEvaluation = async (req, res) => {
                 message: "Product not found in order!",
             });
         }
-        const data = await Evaluation.create(req.body)
         // Check xem sp này trong đơn hàng đấy đã được đánh giá chưa 
         const isRated = orderExist.products.find(item => item.productId == productId)
-
+        
         if (isRated.evaluation) {
             return res.status(400).json({
                 status: 400,
                 message: "Sản phẩm này đã được đánh giá trong đơn hàng !",
             })
         }
+        const data = await Evaluation.create(req.body)
         //Update lại sp đã được đánh gái trong đơn hàng evaluation => true
         await Order.findOneAndUpdate({ _id: orderId, "products.productId": productId }, {
             $set: {
