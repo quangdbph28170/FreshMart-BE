@@ -7,5 +7,5 @@ export const validateEvaluation = joi.object({
     phoneNumber: joi.string().allow(),
     productId: joi.string().required().trim(),
     orderId: joi.string().required().trim(),
-
+    userId: joi.string(),
 })
