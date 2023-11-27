@@ -88,7 +88,7 @@ export const createEvaluation = async (req, res) => {
 // lấy danh sách đánh giá theo sản phẩm
 export const getIsRatedByProductId = async (req, res) => {
     try {
-        const data = await Evaluation.find({ productId: req.params.id })
+        const data = await Evaluation.find({ productId: req.params.id }).populate('userId')
         if (data.userId != null) {
             data.populate("userId")
         }
