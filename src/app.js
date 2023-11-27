@@ -23,6 +23,7 @@ import cartRouter from "./routers/carts";
 import { addNotification } from "./controllers/notification";
 import evaluationRouter from "./routers/evaluation";
 import Orders from "./models/orders";
+import User from "./models/user";
 import voucherRouter from "./routers/vouchers";
 
 const app = express();
@@ -34,6 +35,62 @@ const PORT = process.env.PORT;
 const MONGO_URL = process.env.MONGODB_LOCAL;
 
 const io = new Server(httpServer, { cors: "*" });
+
+//Thống kê lại dữ liệu sau mỗi 30 phút 
+cron.schedule("1-59 * * * *", async () => {
+  try {
+    //Lấy ra tất cả sản phẩm (ko lấy sp thanh lý/thất thoát)
+    const products = await Product.find({ isSale: false });
+
+    //lấy ra tất cả đơn hàng đã hoàn thành
+    const orders = await Orders.find({ status: 'đơn hàng hoàn thành' }).populate('products.productId');
+
+    //lấy ra tất cả tài khoản của người dùng (not admin)
+    const users = await User.find({ role: 'member' })
+
+    /*console.log('data: ', products, orders, users)*/
+
+    /*==================*/
+
+    // Tính tổng doanh thu theo đơn hàng đã hoàn thành
+    const salesRevenue = orders ? orders.reduce((accumulator, order) => accumulator + order.totalPayment, 0) : 0;
+
+    // Tổng khách hàng đã đăng ký tài khoản
+    const customers = users ? users?.length : 0
+
+    // Tính trung bình tổng số tiền đã thanh toán
+    const averageTransactionPrice = salesRevenue > 0 && (orders && orders.length > 0) ? Number((salesRevenue / orders.length).toFixed(2)) : 0;
+
+    // Lấy ra top 5 tổng tiền thu được theo sản phẩm bán đã bán
+    let topFiveProductsSold = []
+    if (products.length > 0 && orders.length > 0) {
+      for (const product of products) {
+        let totalPrice = 0
+        for (const order of orders) {
+          for (const productOfOrder of order.products) {
+            if (product._id.equals(productOfOrder.productId._id)) {
+              totalPrice += productOfOrder.price * productOfOrder.weight
+            }
+          }
+        }
+        topFiveProductsSold.push({
+          productId: product._id,
+          totalPrice: totalPrice,
+        })
+      }
+    }
+    topFiveProductsSold = topFiveProductsSold?.sort((a, b) => b?.totalPrice - a?.totalPrice).slice(0, 5) || [],
+
+      //
+      /*==================*/
+
+      console.log({ salesRevenue, customers, averageTransactionPrice, topFiveProductsSold });
+
+  } catch (error) {
+    console.log(error.message);
+  }
+})
+
 
 //Chạy 24h 1 lần kiểm tra những đơn hàng đã giao hàng thành công sau 3 ngày tự động chuyển thành trạng thái thành công
 cron.schedule("* */24 * * *", async () => {
@@ -61,6 +118,7 @@ cron.schedule("* */24 * * *", async () => {
       });
       await Orders.findByIdAndUpdate(order._id, {
         status: "đơn hàng hoàn thành",
+        pay: true,
       });
     }
   }
