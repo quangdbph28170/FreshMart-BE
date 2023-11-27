@@ -2,7 +2,16 @@ import Evaluation from "../models/evaluation"
 import Product from "../models/products"
 import Order from "../models/orders"
 import { validateEvaluation } from "../validation/evaluation"
-
+import Joi from "joi"
+import User from "../models/user"
+const formatPhoneNumber = /^0+[0-9]{9}$/;
+const validRate = Joi.object({
+    userName: Joi.string().required(),
+    phoneNumber: Joi.string().pattern(formatPhoneNumber).trim().messages({
+        "string.pattern.base": "Please enter a valid phone number!",
+        "string.empty": "Phone number is not empty!",
+    }).required(),
+})
 export const createEvaluation = async (req, res) => {
     try {
         const { orderId, productId } = req.body
@@ -13,9 +22,17 @@ export const createEvaluation = async (req, res) => {
                 message: error.details.map((error) => error.message),
             });
         }
-        if (req.user._id) {
-            req.body["userId"] = req.user._id
-        }
+        const { userName, phoneNumber } =req.body
+        if (!req.body.userId) {
+            const { error } = validRate.validate({ userName, phoneNumber }, { abortEarly: false })
+            if (error) {
+                return res.status(402).json({
+                    status: 402,
+                    message: error.details.map((error) => error.message),
+                });
+            }
+        } 
+
         const orderExist = await Order.findById(orderId)
         if (!orderExist) {
             return res.status(404).json({
