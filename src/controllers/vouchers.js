@@ -205,13 +205,13 @@ export const updateVoucher = async (req, res) => {
 export const getVoucherUser = async (req, res) => {
     try {
         const { miniMumOrder } = req.body;
-        if (miniMumOrder && typeof miniMumOrder !== "number") {
+        if (!miniMumOrder && typeof miniMumOrder !== "number") {
             return res.status(400).json({
                 status: 400,
                 message: "miniMumOrder is required!",
             });
         }
-        
+
         const data = await Voucher.find();
         const vouchers = [];
         const dateNow = new Date();
@@ -228,27 +228,28 @@ export const getVoucherUser = async (req, res) => {
             if (item.status === false) {
                 exist = false;
             }
-            // Chưa đạt yêu cầu với tối thiểu đơn hàng
-            if (item.miniMumOrder > miniMumOrder) {
-                exist = false;
-            }
+
             // Voucher đã hết hạn
             if (item.dateEnd < dateNow) {
                 exist = false;
             }
+            // Kiểm tra xem người dùng đã sử dụng voucher chưa
+            const userExist = item.users.find(user => user.userId.toString() === req.user._id.toString());
+            if (userExist) {
+                exist = false;
+            }
+            //
 
             if (exist) {
-                // Kiểm tra xem người dùng đã sử dụng voucher chưa
-                const userExist = item.users.find(user => user.userId.toString() === req.user._id.toString());
-                if (userExist) {
+                // Chưa đạt yêu cầu với tối thiểu đơn hàng
+                if (item.miniMumOrder > miniMumOrder) {
                     active = true;
                 }
-                //
-                item = item.toObject(); 
-                item.active = active; 
+                item = item.toObject();
+                item.active = active;
                 vouchers.push(item);
             }
-            
+
         }
 
         return res.status(201).json({
