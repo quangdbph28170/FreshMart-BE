@@ -15,7 +15,7 @@ export const getProducts = async (req, res) => {
     _minPrice = "",
     _maxPrice = "",
     _isSale,
-
+    _willExpire,
   } = req.query;
   const options = {
     page: _page,
@@ -44,7 +44,7 @@ export const getProducts = async (req, res) => {
   } else if (_minPrice) {
     query.price = { $gte: _minPrice };
   } else if (_maxPrice) {
-    query.price= { $lte: _maxPrice };
+    query.price = { $lte: _maxPrice };
   }
 
   if (_originId) {
@@ -61,6 +61,11 @@ export const getProducts = async (req, res) => {
     for (let item of prd) {
       maxPrice = Math.max(maxPrice, item.price)
       minPrice = Math.min(minPrice, item.price)
+    }
+
+    if (_willExpire) {
+      checkWillExpire(products, _willExpire, res)
+      return
     }
     // console.log(minPrice, maxPrice);
     return res.status(201).json({
@@ -85,46 +90,50 @@ export const getProducts = async (req, res) => {
   }
 };
 
+export const checkWillExpire = (products, checkWillExpire, res) => {
+  try {
+    const result = []
+    for (const product of products.docs) {
+      if (product.shipments[0]?.willExpire && product.shipments[0]?.willExpire == checkWillExpire) {
+        result.push(product)
+      }
+    }
+
+    return res.status(201).json({
+      body: {
+        data: result,
+      },
+      status: 201,
+      message: "Get products successfully",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
+}
+
 export const getRelatedProducts = async (req, res) => {
   try {
     const { cate_id, product_id } = req.params;
-    const products = await Products.aggregate([
-      {
-        $match: {
-          categoryId: new mongoose.Types.ObjectId(cate_id),
-          _id: { $ne: new mongoose.Types.ObjectId(product_id) },
-        },
-      },
-      { $sample: { size: 10 } },
-      {
-        $lookup: {
-          from: "shipments",
-          localField: "idShipment",
-          foreignField: "_id",
-          as: "shipment",
-        },
-      },
-      {
-        $unwind: "$shipment" // Unwind the shipment array to access its fields
-      },
-      {
-        $lookup: {
-          from: "origins", // Change "origins" to your actual collection name
-          localField: "shipment.originId",
-          foreignField: "_id",
-          as: "shipment.origin",
-        },
-      },
-      {
-        $group: {
-          _id: "$_id",
-          // Group back the products and push the shipments with populated originId back into the shipment array
-          shipment: { $push: "$shipment" },
-          // Add other fields you may want to keep
-        },
-      },
+    const relatedProducts = await Products.find({
+      categoryId: cate_id,
+      _id: { $ne: product_id }, // Loại trừ sản phẩm đang xem
+    }).limit(10).lean();
+
+    // Random sản phẩm
+    const shuffledProducts = relatedProducts.sort(() => 0.5 - Math.random());
+
+    // Chọn 10 sản phẩm đầu tiên
+    const selectedProducts = shuffledProducts.slice(0, 10);
+
+    // Populate shipments.idShipment và origins cho từng sản phẩm
+    const populatedProducts = await Products.populate(selectedProducts, [
+      { path: 'shipments.idShipment' },
+      { path: 'originId' },
     ]);
-    if (!products) {
+    if (!populatedProducts) {
       return res.status(404).json({
         status: 404,
         message: "No Product found",
@@ -132,7 +141,7 @@ export const getRelatedProducts = async (req, res) => {
     } else {
       return res.status(200).json({
         body: {
-          data: products,
+          data: populatedProducts,
         },
         status: 200,
         message: "Product found",
@@ -365,7 +374,7 @@ export const liquidationProduct = async (req, res) => {
     }, { new: true })
 
     //Cập nhật lại trong bảng categories => id sp THANH_LÝ  
-    await Categories.findByIdAndUpdate(cateIsSale._id,{ "products.idProduct": productId }, {
+    await Categories.findByIdAndUpdate(cateIsSale._id, { "products.idProduct": productId }, {
       $set: {
         "products.$.idProduct": data._id
       }

@@ -61,7 +61,7 @@ const statisticsSchema = new mongoose.Schema(
         /**
          Tổng số khách hàng đăng ký và số lượt khách truy cập giao dịch(mua hàng)
         */
-         totalCustomerAndTransactions: [
+        totalCustomerAndTransactions: [
             {
                 customers: {
                     type: Number,
@@ -84,7 +84,7 @@ const statisticsSchema = new mongoose.Schema(
         /**
          Trung bình tổng số tiền 1 giao dịch và trung bình tổng số sản phẩm 1 giao dịch 
         */
-         averagePriceAndUnitsPerTransaction: [
+        averagePriceAndUnitsPerTransaction: [
             {
                 pricePerTransaction: {
                     type: Number,
@@ -106,20 +106,16 @@ const statisticsSchema = new mongoose.Schema(
         ],
         // Thống kế doanh thu theo ngày
         salesRevenueByDay: [
-            {
-                date: {
+            [
+                {
                     type: Date,
                     required: true,
                 },
-                ms: {
+                {
                     type: Number,
                     required: true,
                 },
-                price: {
-                    type: Number,
-                    required: true,
-                }
-            }
+            ]
         ]
         // .... Còn nữa 
     },

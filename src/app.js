@@ -41,7 +41,7 @@ const MONGO_URL = process.env.MONGODB_LOCAL;
 
 const io = new Server(httpServer, { cors: "*" });
 
-//kiểm tra nếu đơn hàng có phương thức thanh toán là vnpay mà chưa thanh toán sau 20 phút sẽ hủy đơn hàng
+//kiểm tra nếu đơn hàng có phương thức thanh toán là vnpay/momo mà chưa thanh toán sau 20 phút sẽ hủy đơn hàng
 cron.schedule("1-59 * * * *", async () => {
   const tweentyMinutesInMilliseconds = 20 * 60 * 1000; // 20 phút tính bằng mili giây
   const orders = await Orders.find({ $or: [{ paymentMethod: 'vnpay' }, { paymentMethod: 'momo' }], pay: false, createdAt: { $lte: new Date(Date.now() - tweentyMinutesInMilliseconds) } })
@@ -214,38 +214,28 @@ cron.schedule("*/1 * * * *", async () => {
             ordersLeft.push(odr)
           }
         }
-        salesRevenueByDay.push({
-          date: targetDate,
-          ms: targetDate.getTime(),
-          price: totalPriceOfDay
-        })
+        salesRevenueByDay.push([
+          targetDate.getTime(),
+          totalPriceOfDay
+        ])
         mapOrders(ordersLeft)
         return
       }
     }
     mapOrders(orders)
-    // const result = await Orders.aggregate([
-    //   {
-    //     $group: {
-    //       _id: {
-    //         createdAt: { $dateToString: { format: "%Y-%m-%d", date:  } },
-    //         status: "$status" // Thêm status vào _id để group theo status
-    //       },
-    //       orders: { $push: "$$ROOT" },
-    //       count: { $sum: 1 },
-    //     },
-    //   },
-    //   {
-    //     $match: {
-    //       "_id.status": "đơn hàng hoàn thành", // Chỉ lấy những documents có status là 'đơn hàng hoàn thành'
-    //       count: { $gt: 1 },
-    //     },
-    //   },
-    // ])
 
     /*==================*/
-
-    // console.log({ salesRevenue, customers, averageTransactionPrice, topFiveProductsSold, topFiveCategoryByRevenue, totalCustomerAndTransactions, averagePriceAndUnitsPerTransaction, salesRevenueByDay });
+    
+    /* console.log({ 
+        salesRevenue, 
+        customers, 
+        averageTransactionPrice, 
+        topFiveProductsSold, 
+        topFiveCategoryByRevenue, 
+        totalCustomerAndTransactions, 
+        averagePriceAndUnitsPerTransaction, 
+        salesRevenueByDay 
+    }); */
 
   } catch (error) {
     console.log(error.message);
@@ -281,6 +271,15 @@ cron.schedule("* */24 * * *", async () => {
         status: "đơn hàng hoàn thành",
         pay: true,
       });
+      for (let item of order.products) {
+        const prd = await Product.findById(item.productId);
+        // Update sold +
+        await Product.findByIdAndUpdate(item.productId, {
+          $set: {
+            sold: prd.sold + 1
+          }
+        })
+      }
     }
   }
 });

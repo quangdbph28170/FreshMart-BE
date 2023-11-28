@@ -46,6 +46,10 @@ const orderSchema = new mongoose.Schema(
           type: Boolean,
           default: false,
         },
+        code: {
+          type: String,
+          default: null,
+        },
       },
     ],
     totalPayment: {
