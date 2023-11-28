@@ -121,6 +121,7 @@ cron.schedule("*/1 * * * *", async () => {
         }
         topFiveProductsSold.push({
           productId: product._id,
+          productName: product.productName,
           totalWeight: totalWeight,
         })
       }
@@ -141,6 +142,7 @@ cron.schedule("*/1 * * * *", async () => {
         }
         topFiveCategoryByRevenue.push({
           categoryId: category._id,
+          categoryName: category.cateName,
           totalPrice: totalPrice,
         })
       }
@@ -204,27 +206,21 @@ cron.schedule("*/1 * * * *", async () => {
       for (const order of array) {
         const targetDate = new Date(order.createdAt)
         let totalPriceOfDay = 0
-        const orderSameDay = []
         const ordersLeft = []
         // Lấy ra tất cả order cùng ngày tháng năm
         for (const odr of array) {
           const filterDate = new Date(odr.createdAt)
           if (targetDate.getDate() == filterDate.getDate() && targetDate.getMonth() + 1 == filterDate.getMonth() + 1 && targetDate.getFullYear() == filterDate.getFullYear()) {
             totalPriceOfDay += odr.totalPayment
-            orderSameDay.push(odr._id)
           } else {
             ordersLeft.push(odr)
           }
         }
-        salesRevenueByDay.push(
-          {
-            salesRevenueData: [
+        salesRevenueByDay.push([
               targetDate.getTime(),
               totalPriceOfDay
-            ],
-            orderByDay: orderSameDay
-          }
-        )
+          
+        ])
         mapOrders(ordersLeft)
         return
       }
@@ -243,6 +239,7 @@ cron.schedule("*/1 * * * *", async () => {
         averagePriceAndUnitsPerTransaction, 
         salesRevenueByDay 
     }); */
+    // console.log(salesRevenueByDay.map((sale) => sale.salesRevenueData));
 
   } catch (error) {
     console.log(error.message);

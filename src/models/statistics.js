@@ -36,6 +36,10 @@ const statisticsSchema = new mongoose.Schema(
                     ref: 'Products',
                     required: true,
                 },
+                productName: {
+                    type: String,
+                    required: true,
+                },
                 totalPrice: {
                     type: Number,
                     required: true,
@@ -51,6 +55,10 @@ const statisticsSchema = new mongoose.Schema(
                     type: mongoose.Types.ObjectId,
                     ref: 'Category',
                     required: true,
+                },
+                categoryName: {
+                    type: String,
+                    required: true
                 },
                 totalPrice: {
                     type: Number,
@@ -106,24 +114,16 @@ const statisticsSchema = new mongoose.Schema(
         ],
         // Thống kế doanh thu theo ngày
         salesRevenueByDay: [
-            {
-                salesRevenueData: [
-                    {
-                        type: Date,
-                        required: true,
-                    },
-                    {
-                        type: Number,
-                        required: true,
-                    },
-                ],
-                orderByDay: [
-                    {
-                        type: mongoose.Types.ObjectId,
-                        ref: 'Orders'
-                    }
-                ]
-            }
+            [
+                {
+                    type: Date,
+                    required: true,
+                },
+                {
+                    type: Number,
+                    required: true,
+                },
+            ]
         ]
         // .... Còn nữa 
     },
