@@ -315,6 +315,14 @@ io.of("/admin").on("connection", (socket) => {
               },
             }
           );
+          await Shipment.findByIdAndUpdate(
+            { _id: shipment.idShipment, "products.idProduct": product._id },
+            {
+              $set: {
+                "products.$.willExpire": 2,
+              },
+            }
+          )
           await addNotification({
             title: `Thông báo: Sản phẩm ${product.productName} đã hết Hạn`,
             message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
@@ -340,6 +348,14 @@ io.of("/admin").on("connection", (socket) => {
               },
             }
           );
+          await Shipment.findByIdAndUpdate(
+            { _id: shipment.idShipment, "products.idProduct": product._id },
+            {
+              $set: {
+                "products.$.willExpire": 1,
+              },
+            }
+          )
           const totalMilliseconds =
             threeDaysInMillis - (targetDate - currentDate);
           const totalSeconds = Math.floor(totalMilliseconds / 1000);
