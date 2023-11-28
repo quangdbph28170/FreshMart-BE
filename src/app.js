@@ -214,11 +214,10 @@ cron.schedule("*/1 * * * *", async () => {
             ordersLeft.push(odr)
           }
         }
-        salesRevenueByDay.push({
-          date: targetDate,
-          ms: targetDate.getTime(),
-          price: totalPriceOfDay
-        })
+        salesRevenueByDay.push([
+          targetDate.getTime(),
+          totalPriceOfDay
+        ])
         mapOrders(ordersLeft)
         return
       }
@@ -226,7 +225,7 @@ cron.schedule("*/1 * * * *", async () => {
     mapOrders(orders)
 
     /*==================*/
-
+    
     /* console.log({ 
         salesRevenue, 
         customers, 
