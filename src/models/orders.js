@@ -100,6 +100,10 @@ const orderSchema = new mongoose.Schema(
       ],
       default: "chờ xác nhận",
     },
+    promotionCode: {
+      type: String,
+      default: null
+    }
 
     // orderDate:{
     //     type:String,
