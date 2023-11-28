@@ -204,20 +204,27 @@ cron.schedule("*/1 * * * *", async () => {
       for (const order of array) {
         const targetDate = new Date(order.createdAt)
         let totalPriceOfDay = 0
+        const orderSameDay = []
         const ordersLeft = []
         // Lấy ra tất cả order cùng ngày tháng năm
         for (const odr of array) {
           const filterDate = new Date(odr.createdAt)
           if (targetDate.getDate() == filterDate.getDate() && targetDate.getMonth() + 1 == filterDate.getMonth() + 1 && targetDate.getFullYear() == filterDate.getFullYear()) {
             totalPriceOfDay += odr.totalPayment
+            orderSameDay.push(odr._id)
           } else {
             ordersLeft.push(odr)
           }
         }
-        salesRevenueByDay.push([
-          targetDate.getTime(),
-          totalPriceOfDay
-        ])
+        salesRevenueByDay.push(
+          {
+            salesRevenueData: [
+              targetDate.getTime(),
+              totalPriceOfDay
+            ],
+            orderByDay: orderSameDay
+          }
+        )
         mapOrders(ordersLeft)
         return
       }
@@ -225,7 +232,7 @@ cron.schedule("*/1 * * * *", async () => {
     mapOrders(orders)
 
     /*==================*/
-    
+
     /* console.log({ 
         salesRevenue, 
         customers, 
