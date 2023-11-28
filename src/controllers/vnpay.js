@@ -2,7 +2,8 @@ import config from "config";
 import dateFormat from "dateformat";
 import querystring from "qs";
 import crypto from "crypto";
-import Orders from "../models/orders";
+import Orders from '../models/orders';
+import { sendMailer } from './orders';
 
 export const vnpayCreate = async (req, orderId) => {
     //Gửi req body gồm ammount dữ liệu là string, bankCode là "" (chuỗi rỗng), orderDescription cứ lấy từ trường note khi tạo order  
@@ -25,7 +26,7 @@ export const vnpayCreate = async (req, orderId) => {
     var amount = req.body.totalPayment;
     var bankCode = '';
 
-    var orderInfo = req.body.note;
+    var orderInfo = req.body.note || '';
     var orderType = 'other';
     var locale = 'vn';
     if (locale === null || locale === '') {
@@ -74,18 +75,21 @@ export const vnpayIpn = async (req, res) => {
   var hmac = crypto.createHmac("sha512", secretKey);
   var signed = hmac.update(new Buffer(signData, "utf-8")).digest("hex");
 
-  if (secureHash === signed) {
-    var orderId = vnp_Params["vnp_TxnRef"];
-    var rspCode = vnp_Params["vnp_ResponseCode"];
-    await Orders.findByIdAndUpdate(orderId, {
-      pay: true,
-    });
-    //Kiem tra du lieu co hop le khong, cap nhat trang thai don hang va gui ket qua cho VNPAY theo dinh dang duoi
-    res.status(200).json({ RspCode: "00", Message: "success" });
-  } else {
-    res.status(200).json({ RspCode: "97", Message: "Fail checksum" });
-  }
-};
+    if (secureHash === signed) {
+        var orderId = vnp_Params['vnp_TxnRef'];
+        var rspCode = vnp_Params['vnp_ResponseCode'];
+        await Orders.findByIdAndUpdate(orderId, {
+            pay: true
+        })
+        const order = await Orders.findById(orderId);
+        await sendMailer(order.email, order)
+        //Kiem tra du lieu co hop le khong, cap nhat trang thai don hang va gui ket qua cho VNPAY theo dinh dang duoi
+        res.status(200).json({ RspCode: rspCode, Message: 'success' })
+    }
+    else {
+        res.status(200).json({ RspCode: '97', Message: 'Fail checksum' })
+    }
+}
 
 export const vnpayReturn = (req, res) => {
   var vnp_Params = req.query;

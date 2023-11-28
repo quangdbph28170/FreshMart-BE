@@ -43,6 +43,7 @@ export const validateCheckout = joi.object({
   note: joi.string().trim(),
   pay: joi.boolean(),
   paymentMethod: joi.string().valid("cod", "momo", "vnpay").required(),
+  code:joi.string().allow()
 });
 
 export const validatePhoneAndMail = joi

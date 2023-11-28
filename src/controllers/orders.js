@@ -8,6 +8,8 @@ import { handleTransaction } from "./momo-pay";
 import { statusOrder } from "../config/constants";
 import Carts from "../models/carts";
 import { vnpayCreate } from "./vnpay";
+import { validateVoucher } from "./vouchers";
+import vouchers from "../models/vouchers";
 const checkCancellationTime = (order) => {
   const checkTime = new Date(order.createdAt);
   const currentTime = new Date();
@@ -30,7 +32,7 @@ const formatDateTime = (dateTime) => {
   const formattedTime = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
   return `${formattedDate} ${formattedTime}`;
 };
-const sendMailer = async (email, data) => {
+export const sendMailer = async (email, data) => {
 
 
   // console.log(email,data);
@@ -191,6 +193,97 @@ export const CreateOrder = async (req, res) => {
       const prd = await Product.findById(item.productId);
       totalPayment += (prd.price - (prd.price * prd.discount / 100)) * item.weight
     }
+    if (req.user != null) {
+      req.body["userId"] = req.user._id;
+      await Carts.findOneAndUpdate({ userId: req.user._id }, {
+        products: []
+      })
+      if (req.body.code) {
+        const voucherExist = await vouchers.findOne({ code: req.body.code })
+        if (!voucherExist) {
+          return res.status(404).json({
+            status: 404,
+            message: "Voucher does not exist!",
+          });
+        }
+        //Hết số lượng
+        if (voucherExist.quantity == 0) {
+          return res.status(400).json({
+            status: 400,
+            message: "Voucher is out of quantity!",
+          });
+        }
+        //Voucher ko còn hoạt động
+        if (voucherExist.status == false) {
+          return res.status(400).json({
+            status: 400,
+            message: "Voucher does not work!",
+          });
+        }
+
+        //Voucher đã hết hạn
+        const dateNow = new Date()
+        if (voucherExist.dateEnd < dateNow) {
+          return res.status(400).json({
+            status: 400,
+            message: "Voucher is out of date",
+          });
+        }
+
+        //Chưa đạt yc với tối thiểu đơn hàng
+        if (voucherExist.miniMumOrder > totalPayment) {
+          return res.status(400).json({
+            status: 400,
+            message: "Orders are not satisfactory!",
+
+          });
+        }
+         //Check xem user đã dùng voucher này chưa
+         const userExist = await vouchers.findOne({code:req.body.code, "users.userId": req.body.userId})
+    
+         if (userExist) {
+          return res.status(400).json({
+            status: 400,
+            message: "This voucher code has already been used. Please enter a different code!",
+
+          });
+        }
+  
+        //Trừ 1 vé voucher và thêm id user
+        await vouchers.findOneAndUpdate({ code: req.body.code }, {
+          $set: {
+            quantity: voucherExist.quantity - 1
+          },
+          $push:{
+            users:{
+              userId: req.body.userId
+            }
+          }
+        })
+
+        // đơn hàng 10k giảm 50% tối đa 8k
+        // tính số tiền giảm:
+        const amount = totalPayment * voucherExist.percent / 100
+
+        // nếu sô tiền giảm vượt quá tối đa cho phép thì trừ đi số tiền tối đa
+        if (amount > voucherExist.maxReduce) {
+          totalPayment = totalPayment - voucherExist.maxReduce
+        } else {
+          totalPayment = totalPayment - (totalPayment * voucherExist.percent / 100)
+        }
+
+        if (req.body.totalPayment !== totalPayment) {
+          return res.status(400).json({
+            status: 400,
+            message: "Invalid totalPayment!",
+            true: totalPayment,
+            false: req.body.totalPayment
+          });
+        }
+      }
+
+
+    }
 
 
     if (req.body.totalPayment !== totalPayment) {
@@ -273,21 +366,17 @@ export const CreateOrder = async (req, res) => {
 
 
     // console.log(req.user);
-    if (req.user != null) {
-      req.body["userId"] = req.user._id;
-      await Carts.findOneAndUpdate({ userId: req.user._id }, {
-        products: []
-      })
-    }
+
     const data = await Order.create(req.body);
 
     let url = ''
     // kiểm tra phương thức thanh toán là momo
     if (paymentMethod === "vnpay") {
       url = await vnpayCreate(req, data._id)
+    } else {
+      await sendMailer(req.body.email, data);
     }
 
-    await sendMailer(req.body.email, data);
     return res.status(201).json({
       status: 201,
       message: "Order success",

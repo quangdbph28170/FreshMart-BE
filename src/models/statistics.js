@@ -61,9 +61,9 @@ const statisticsSchema = new mongoose.Schema(
         /**
          Tổng số khách hàng đăng ký và số lượt khách truy cập giao dịch(mua hàng)
         */
-        totalCustomerAndVisitorsTransactions: [
+        totalCustomerAndTransactions: [
             {
-                visitors: {
+                customers: {
                     type: Number,
                     required: true,
                 },
@@ -71,8 +71,12 @@ const statisticsSchema = new mongoose.Schema(
                     type: Number,
                     required: true,
                 },
-                date: {
-                    type: Date,
+                month: {
+                    type: Number,
+                    required: true,
+                },
+                year: {
+                    type: Number,
                     required: true,
                 }
             }
@@ -80,7 +84,7 @@ const statisticsSchema = new mongoose.Schema(
         /**
          Trung bình tổng số tiền 1 giao dịch và trung bình tổng số sản phẩm 1 giao dịch 
         */
-         averagePriceAndUnitsPerTransaction: [
+        averagePriceAndUnitsPerTransaction: [
             {
                 pricePerTransaction: {
                     type: Number,
@@ -90,12 +94,37 @@ const statisticsSchema = new mongoose.Schema(
                     type: Number,
                     required: true,
                 },
-                date: {
-                    type: Date,
+                month: {
+                    type: Number,
+                    required: true,
+                },
+                year: {
+                    type: Number,
                     required: true,
                 }
             }
         ],
+        // Thống kế doanh thu theo ngày
+        salesRevenueByDay: [
+            {
+                salesRevenueData: [
+                    {
+                        type: Date,
+                        required: true,
+                    },
+                    {
+                        type: Number,
+                        required: true,
+                    },
+                ],
+                orderByDay: [
+                    {
+                        type: mongoose.Types.ObjectId,
+                        ref: 'Orders'
+                    }
+                ]
+            }
+        ]
         // .... Còn nữa 
     },
     { timestamps: true, versionKey: false },

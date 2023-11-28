@@ -10,11 +10,7 @@ const voucherSchema = new mongoose.Schema(
             type: String,
             required: true,
         },
-        discount: {
-            type: Number,
-            required: true,
-        },
-        condition: {
+        miniMumOrder: {
             type: Number,
             required: true,
         },
@@ -22,15 +18,34 @@ const voucherSchema = new mongoose.Schema(
             type: Number,
             required: true,
         },
-        date_end: {
+        dateStart: {
+            type: Date,
+            required: true,
+        },
+        dateEnd: {
             type: Date,
             required: true,
         },
         status: {
             type: Boolean,
-            default:true
-            
+            default: true
         },
+        maxReduce: {
+            type: Number,
+            default: 0,
+        },
+        percent: {
+            type: Number,
+            required: true,
+        },
+        users: [
+            {
+                userId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "User"
+                }
+            }
+        ]
     },
     { timestamps: true, versionKey: false },
 );
