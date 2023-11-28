@@ -31,6 +31,7 @@ import session from 'express-session';
 import { connectToGoogle } from './config/googleOAuth';
 import { months } from "./config/constants";
 import UnSoldProduct from "./models/unsoldProducts"
+import routerUnSoldProduct from "./routers/unsoldProducts"
 
 const app = express();
 const httpServer = createServer(app);
@@ -311,6 +312,7 @@ cron.schedule("*/1 * * * *", async () => {
     for (let shipment of product.shipments) {
       // lấy ra sp hết hạn mà vẫn còn hàng
       if (shipment.willExpire == 2 && shipment.weight > 0) {
+
         //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
         const unsoldExist = await UnSoldProduct.findOne({ originalID })
         if (unsoldExist) {
@@ -324,30 +326,37 @@ cron.schedule("*/1 * * * *", async () => {
             }
           }, { new: true })
           console.log("Update succes: ", productUnsold);
-          return
-        }
 
-        // nếu chưa có thì tạo mới sp thất thoát (sp ế)
-        const data = await UnSoldProduct.create({
-          originalID,
-          productName: product.productName,
-          shipments: [
-            {
-              shipmentId: shipment.idShipment,
-              purchasePrice: product.price,
-              weight: shipment.weight
-            }
-          ]
-        })
-        console.log(data)
+        } else {
+          // nếu chưa có thì tạo mới sp thất thoát (sp ế)
+          const data = await UnSoldProduct.create({
+            originalID,
+            productName: product.productName,
+            shipments: [
+              {
+                shipmentId: shipment.idShipment,
+                purchasePrice: product.price,
+                weight: shipment.weight
+              }
+            ]
+          })
+          console.log(data)
+
+
+        }
         //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
         if (product.isSale) {
           const remove = await Product.findByIdAndDelete(product._id)
-          if(remove){
+          if (remove) {
             console.log("Đã xóa sp thanh lý ")
-          }else{
+          } else {
             console.log("xóa sp thanh lý thất bại ")
           }
+        } else {
+          const data = await Product.findByIdAndUpdate(product._id, {
+            shipments: []
+          },{new:true})
+          console.log("Shipments empty ", data)
         }
 
       }
@@ -554,6 +563,7 @@ app.use("/api", vnpayRouter);
 app.use("/api", notificationRouter);
 app.use("/api", evaluationRouter);
 app.use("/api", voucherRouter);
+app.use("/api", routerUnSoldProduct);
 mongoose
   .connect(MONGO_URL)
   .then(() => console.log("connected to db"))

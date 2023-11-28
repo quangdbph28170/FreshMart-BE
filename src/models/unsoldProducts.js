@@ -4,6 +4,7 @@ const unsoldProductSchema = new mongoose.Schema(
   {
     originalID: {
       type: mongoose.Types.ObjectId,
+      ref:"Products",
       required: true,
     },
     productName: {
