@@ -3,6 +3,7 @@ import dateFormat from 'dateformat';
 import querystring from 'qs';
 import crypto from "crypto";
 import Orders from '../models/orders';
+import { sendMailer } from './orders';
 
 export const vnpayCreate = async (req, orderId) => {
     //Gửi req body gồm ammount dữ liệu là string, bankCode là "" (chuỗi rỗng), orderDescription cứ lấy từ trường note khi tạo order  
@@ -24,7 +25,7 @@ export const vnpayCreate = async (req, orderId) => {
     var amount = req.body.totalPayment;
     var bankCode = '';
 
-    var orderInfo = req.body.note;
+    var orderInfo = req.body.note || '';
     var orderType = 'other';
     var locale = 'vn';
     if (locale === null || locale === '') {
@@ -80,8 +81,10 @@ export const vnpayIpn = async (req, res) => {
         await Orders.findByIdAndUpdate(orderId, {
             pay: true
         })
+        const order = await Orders.findById(orderId);
+        await sendMailer(order.email, order)
         //Kiem tra du lieu co hop le khong, cap nhat trang thai don hang va gui ket qua cho VNPAY theo dinh dang duoi
-        res.status(200).json({ RspCode: '00', Message: 'success' })
+        res.status(200).json({ RspCode: rspCode, Message: 'success' })
     }
     else {
         res.status(200).json({ RspCode: '97', Message: 'Fail checksum' })

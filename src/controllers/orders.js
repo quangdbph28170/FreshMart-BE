@@ -30,7 +30,7 @@ const formatDateTime = (dateTime) => {
   const formattedTime = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
   return `${formattedDate} ${formattedTime}`;
 };
-const sendMailer = async (email, data) => {
+export const sendMailer = async (email, data) => {
 
 
   // console.log(email,data);
@@ -285,9 +285,10 @@ export const CreateOrder = async (req, res) => {
     // kiểm tra phương thức thanh toán là momo
     if (paymentMethod === "vnpay") {
       url = await vnpayCreate(req, data._id)
+    } else {
+      await sendMailer(req.body.email, data);
     }
 
-    await sendMailer(req.body.email, data);
     return res.status(201).json({
       status: 201,
       message: "Order success",

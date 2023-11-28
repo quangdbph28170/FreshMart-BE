@@ -24,7 +24,12 @@ import { addNotification } from "./controllers/notification";
 import evaluationRouter from "./routers/evaluation";
 import Orders from "./models/orders";
 import User from "./models/user";
+import Shipment from "./models/shipment";
+import Category from "./models/categories";
 import voucherRouter from "./routers/vouchers";
+import session from 'express-session';
+import { connectToGoogle } from './config/googleOAuth';
+import { months } from "./config/constants";
 
 const app = express();
 const httpServer = createServer(app);
@@ -36,8 +41,46 @@ const MONGO_URL = process.env.MONGODB_LOCAL;
 
 const io = new Server(httpServer, { cors: "*" });
 
-//Thống kê lại dữ liệu sau mỗi 30 phút 
+//kiểm tra nếu đơn hàng có phương thức thanh toán là vnpay mà chưa thanh toán sau 20 phút sẽ hủy đơn hàng
 cron.schedule("1-59 * * * *", async () => {
+  const tweentyMinutesInMilliseconds = 20 * 60 * 1000; // 20 phút tính bằng mili giây
+  const orders = await Orders.find({ $or: [{ paymentMethod: 'vnpay' }, { paymentMethod: 'momo' }], pay: false, createdAt: { $lte: new Date(Date.now() - tweentyMinutesInMilliseconds) } })
+
+  for (const order of orders) {
+    await Orders.findByIdAndUpdate(order._id, {
+      status: 'đã hủy'
+    })
+    for (let item of order.products) {
+
+      const product = await Product.findById(item.productId)
+      // update lại sold
+      await Product.findByIdAndUpdate(item.productId, {
+        $set: {
+          sold: product.sold - 1
+        }
+      })
+      for (let shipment of product.shipments) {
+        // Trả lại cân ở bảng products
+        await Product.findOneAndUpdate({ _id: product._id, "shipments.idShipment": shipment.idShipment }, {
+          $set: {
+            "shipments.$.weight": shipment.weight + item.weight
+          }
+        }, { new: true })
+
+        //Bảng shipment
+        await Shipment.findOneAndUpdate({ _id: shipment.idShipment, "products.idProduct": product._id }, {
+          $set: {
+            "products.$.weight": shipment.weight + item.weight
+          }
+        }, { new: true })
+
+      }
+    }
+  }
+})
+
+//Thống kê lại dữ liệu sau mỗi 30 phút 
+cron.schedule("*/1 * * * *", async () => {
   try {
     //Lấy ra tất cả sản phẩm (ko lấy sp thanh lý/thất thoát)
     const products = await Product.find({ isSale: false });
@@ -48,7 +91,10 @@ cron.schedule("1-59 * * * *", async () => {
     //lấy ra tất cả tài khoản của người dùng (not admin)
     const users = await User.find({ role: 'member' })
 
-    /*console.log('data: ', products, orders, users)*/
+    //Lấy ra tất cả danh mục (not type default)
+    const categories = await Category.find({ type: 'normal' })
+
+    /*console.log('data: ', products, orders, users, categories)*/
 
     /*==================*/
 
@@ -61,30 +107,145 @@ cron.schedule("1-59 * * * *", async () => {
     // Tính trung bình tổng số tiền đã thanh toán
     const averageTransactionPrice = salesRevenue > 0 && (orders && orders.length > 0) ? Number((salesRevenue / orders.length).toFixed(2)) : 0;
 
-    // Lấy ra top 5 tổng tiền thu được theo sản phẩm bán đã bán
+    // Lấy ra top 5 sản phẩm có số lượng bán ra nhiều nhất
     let topFiveProductsSold = []
     if (products.length > 0 && orders.length > 0) {
       for (const product of products) {
-        let totalPrice = 0
+        let totalWeight = 0
         for (const order of orders) {
           for (const productOfOrder of order.products) {
             if (product._id.equals(productOfOrder.productId._id)) {
-              totalPrice += productOfOrder.price * productOfOrder.weight
+              totalWeight += productOfOrder.weight
             }
           }
         }
         topFiveProductsSold.push({
           productId: product._id,
+          totalWeight: totalWeight,
+        })
+      }
+    }
+    topFiveProductsSold = topFiveProductsSold?.sort((a, b) => b?.totalWeight - a?.totalWeight).slice(0, 5) || []
+
+    // Lấy ra top 5 danh mục có tổng doanh thu cao nhất
+    let topFiveCategoryByRevenue = []
+    if (categories.length > 0 && orders.length > 0) {
+      for (const category of categories) {
+        let totalPrice = 0
+        for (const order of orders) {
+          for (const productOfOrder of order.products) {
+            if (category._id.equals(productOfOrder.productId.categoryId)) {
+              totalPrice += productOfOrder.price * productOfOrder.weight
+            }
+          }
+        }
+        topFiveCategoryByRevenue.push({
+          categoryId: category._id,
           totalPrice: totalPrice,
         })
       }
     }
-    topFiveProductsSold = topFiveProductsSold?.sort((a, b) => b?.totalPrice - a?.totalPrice).slice(0, 5) || [],
+    topFiveCategoryByRevenue = topFiveCategoryByRevenue?.sort((a, b) => b?.totalPrice - a?.totalPrice).slice(0, 5) || []
 
-      //
-      /*==================*/
+    // Lấy tổng số người và tổng số đơn hàng trong 1 tháng trong năm
+    const totalCustomerAndTransactions = []
+    for (const month of months) {
+      let customers = 0
+      let transactions = 0
+      const currentYear = new Date().getFullYear()
+      for (const user of users) {
+        const targetUserDate = new Date(user.createdAt)
+        if (month == targetUserDate.getMonth() + 1 && currentYear == targetUserDate.getFullYear()) {
+          customers += 1
+        }
+      }
+      for (const order of orders) {
+        const targetOrderDate = new Date(order.createdAt)
+        if (month == targetOrderDate.getMonth() + 1 && currentYear == targetOrderDate.getFullYear()) {
+          transactions += 1
+        }
+      }
+      totalCustomerAndTransactions.push({
+        customers,
+        transactions,
+        month,
+        year: currentYear,
+      })
+    }
 
-      console.log({ salesRevenue, customers, averageTransactionPrice, topFiveProductsSold });
+    // Lấy tổng số người và tổng số đơn hàng trong 1 tháng trong năm
+    const averagePriceAndUnitsPerTransaction = []
+    for (const month of months) {
+      let pricePerTransaction = 0
+      let ordersInOnOneMonth = 0
+      let unitsPerTransaction = 0
+      const currentYear = new Date().getFullYear()
+      for (const order of orders) {
+        const targetOrderDate = new Date(order.createdAt)
+        if (month == targetOrderDate.getMonth() + 1 && currentYear == targetOrderDate.getFullYear()) {
+          ordersInOnOneMonth += 1
+          pricePerTransaction += order.totalPayment
+          unitsPerTransaction += order.products.length
+        }
+      }
+      pricePerTransaction = pricePerTransaction / ordersInOnOneMonth || 0
+      unitsPerTransaction = unitsPerTransaction / ordersInOnOneMonth || 0
+      averagePriceAndUnitsPerTransaction.push({
+        pricePerTransaction,
+        unitsPerTransaction,
+        month,
+        year: currentYear,
+      })
+    }
+
+    // Thống kế doanh thu theo ngày
+    const salesRevenueByDay = []
+    const mapOrders = (array) => {
+      for (const order of array) {
+        const targetDate = new Date(order.createdAt)
+        let totalPriceOfDay = 0
+        const ordersLeft = []
+        // Lấy ra tất cả order cùng ngày tháng năm
+        for (const odr of array) {
+          const filterDate = new Date(odr.createdAt)
+          if (targetDate.getDate() == filterDate.getDate() && targetDate.getMonth() + 1 == filterDate.getMonth() + 1 && targetDate.getFullYear() == filterDate.getFullYear()) {
+            totalPriceOfDay += odr.totalPayment
+          } else {
+            ordersLeft.push(odr)
+          }
+        }
+        salesRevenueByDay.push({
+          date: targetDate,
+          ms: targetDate.getTime(),
+          price: totalPriceOfDay
+        })
+        mapOrders(ordersLeft)
+        return
+      }
+    }
+    mapOrders(orders)
+    // const result = await Orders.aggregate([
+    //   {
+    //     $group: {
+    //       _id: {
+    //         createdAt: { $dateToString: { format: "%Y-%m-%d", date:  } },
+    //         status: "$status" // Thêm status vào _id để group theo status
+    //       },
+    //       orders: { $push: "$$ROOT" },
+    //       count: { $sum: 1 },
+    //     },
+    //   },
+    //   {
+    //     $match: {
+    //       "_id.status": "đơn hàng hoàn thành", // Chỉ lấy những documents có status là 'đơn hàng hoàn thành'
+    //       count: { $gt: 1 },
+    //     },
+    //   },
+    // ])
+
+    /*==================*/
+
+    // console.log({ salesRevenue, customers, averageTransactionPrice, topFiveProductsSold, topFiveCategoryByRevenue, totalCustomerAndTransactions, averagePriceAndUnitsPerTransaction, salesRevenueByDay });
 
   } catch (error) {
     console.log(error.message);
@@ -284,6 +445,15 @@ app.use(express.json());
 app.use(cors({ origin: true, credentials: true }));
 app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
+app.use(
+  session({
+    resave: false,
+    saveUninitialized: true,
+    secret: 'SECRET',
+  }),
+);
+
+connectToGoogle()
 app.use("/api", categoryRouter);
 app.use("/api", productRouter);
 app.use("/api", uploadRouter);
