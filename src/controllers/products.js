@@ -94,7 +94,10 @@ export const checkWillExpire = (products, checkWillExpire, res) => {
   try {
     const result = []
     for (const product of products.docs) {
-      if (product.shipments[0].willExpire == checkWillExpire) {
+      if(!product.shipments[0]?.willExpire) {
+        result.push(product)
+      }
+      if (product.shipments[0]?.willExpire == checkWillExpire) {
         result.push(product)
       }
     }
