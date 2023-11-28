@@ -292,7 +292,7 @@ cron.schedule("* */24 * * *", async () => {
   }
 });
 
-//Xử lý sp thất thoát - 1p chạy lại 1 lần
+//Xử lý sp thất thoát (SP Ế) - 1p chạy lại 1 lần
 
 cron.schedule("*/1 * * * *", async () => {
   // Lấy ra tất cả sp
