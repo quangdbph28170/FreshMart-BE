@@ -33,8 +33,13 @@ const categorySchema = new mongoose.Schema(
     },
     isSale: {
       type: Boolean,
-      default : false
+      default: false
+    },
+    liquidation: {
+      type: Boolean,
+      default: false
     }
+
   },
   { timestamps: true, versionKey: false }
 );

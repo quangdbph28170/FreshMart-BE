@@ -30,6 +30,7 @@ import voucherRouter from "./routers/vouchers";
 import session from 'express-session';
 import { connectToGoogle } from './config/googleOAuth';
 import { months } from "./config/constants";
+import { log } from "console";
 
 const app = express();
 const httpServer = createServer(app);
@@ -291,6 +292,21 @@ cron.schedule("* */24 * * *", async () => {
   }
 });
 
+//Xử lý sp thất thoát - 1p chạy lại 1 lần
+
+cron.schedule("*/1 * * * *", async () => {
+  const productSale = await Product.find({ isSale: true })
+  for (let product of productSale) {
+    for (let shipment of product.shipments) {
+      if (shipment.willExpire == 2 && shipment.weight > 0) {
+        const prd = await Product.findByIdAndUpdate(product._id, {
+          liquidation: true
+        }, { new: true })
+        
+      }
+    }
+  }
+})
 io.of("/admin").on("connection", (socket) => {
   cron.schedule("* 0,12 * * *", async () => {
     const response = [];
