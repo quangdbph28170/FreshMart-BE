@@ -30,6 +30,7 @@ import voucherRouter from "./routers/vouchers";
 import session from 'express-session';
 import { connectToGoogle } from './config/googleOAuth';
 import { months } from "./config/constants";
+import { log } from "console";
 
 const app = express();
 const httpServer = createServer(app);
@@ -204,20 +205,27 @@ cron.schedule("*/1 * * * *", async () => {
       for (const order of array) {
         const targetDate = new Date(order.createdAt)
         let totalPriceOfDay = 0
+        const orderSameDay = []
         const ordersLeft = []
         // Lấy ra tất cả order cùng ngày tháng năm
         for (const odr of array) {
           const filterDate = new Date(odr.createdAt)
           if (targetDate.getDate() == filterDate.getDate() && targetDate.getMonth() + 1 == filterDate.getMonth() + 1 && targetDate.getFullYear() == filterDate.getFullYear()) {
             totalPriceOfDay += odr.totalPayment
+            orderSameDay.push(odr._id)
           } else {
             ordersLeft.push(odr)
           }
         }
-        salesRevenueByDay.push([
-          targetDate.getTime(),
-          totalPriceOfDay
-        ])
+        salesRevenueByDay.push(
+          {
+            salesRevenueData: [
+              targetDate.getTime(),
+              totalPriceOfDay
+            ],
+            orderByDay: orderSameDay
+          }
+        )
         mapOrders(ordersLeft)
         return
       }
@@ -225,7 +233,7 @@ cron.schedule("*/1 * * * *", async () => {
     mapOrders(orders)
 
     /*==================*/
-    
+
     /* console.log({ 
         salesRevenue, 
         customers, 
@@ -284,6 +292,21 @@ cron.schedule("* */24 * * *", async () => {
   }
 });
 
+//Xử lý sp thất thoát - 1p chạy lại 1 lần
+
+cron.schedule("*/1 * * * *", async () => {
+  const productSale = await Product.find({ isSale: true })
+  for (let product of productSale) {
+    for (let shipment of product.shipments) {
+      if (shipment.willExpire == 2 && shipment.weight > 0) {
+        const prd = await Product.findByIdAndUpdate(product._id, {
+          liquidation: true
+        }, { new: true })
+        
+      }
+    }
+  }
+})
 io.of("/admin").on("connection", (socket) => {
   cron.schedule("* 0,12 * * *", async () => {
     const response = [];
@@ -308,6 +331,14 @@ io.of("/admin").on("connection", (socket) => {
               },
             }
           );
+          await Shipment.findByIdAndUpdate(
+            { _id: shipment.idShipment, "products.idProduct": product._id },
+            {
+              $set: {
+                "products.$.willExpire": 2,
+              },
+            }
+          )
           await addNotification({
             title: `Thông báo: Sản phẩm ${product.productName} đã hết Hạn`,
             message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
@@ -333,6 +364,14 @@ io.of("/admin").on("connection", (socket) => {
               },
             }
           );
+          await Shipment.findByIdAndUpdate(
+            { _id: shipment.idShipment, "products.idProduct": product._id },
+            {
+              $set: {
+                "products.$.willExpire": 1,
+              },
+            }
+          )
           const totalMilliseconds =
             threeDaysInMillis - (targetDate - currentDate);
           const totalSeconds = Math.floor(totalMilliseconds / 1000);

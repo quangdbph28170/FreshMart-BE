@@ -106,16 +106,24 @@ const statisticsSchema = new mongoose.Schema(
         ],
         // Thống kế doanh thu theo ngày
         salesRevenueByDay: [
-            [
-                {
-                    type: Date,
-                    required: true,
-                },
-                {
-                    type: Number,
-                    required: true,
-                },
-            ]
+            {
+                salesRevenueData: [
+                    {
+                        type: Date,
+                        required: true,
+                    },
+                    {
+                        type: Number,
+                        required: true,
+                    },
+                ],
+                orderByDay: [
+                    {
+                        type: mongoose.Types.ObjectId,
+                        ref: 'Orders'
+                    }
+                ]
+            }
         ]
         // .... Còn nữa 
     },

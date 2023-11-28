@@ -26,6 +26,11 @@ const shipmentSchema = new mongoose.Schema(
           originPrice: {
             type: Number,
             required: true,
+          },
+          willExpire: {
+            type: Number,
+            enum: [0, 1, 2],
+            default: 0,
           }
         },
       ],

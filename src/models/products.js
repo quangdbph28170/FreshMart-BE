@@ -50,7 +50,7 @@ const productSchema = new mongoose.Schema(
           },
           originWeight: Number,
           weight: Number,
-          date: String,        
+          date: String,
           originPrice: Number,
           willExpire: {
             type: Number,
@@ -74,14 +74,18 @@ const productSchema = new mongoose.Schema(
       ],
       default: [],
     },
-    isSale:{
-      type:Boolean,
+    isSale: {
+      type: Boolean,
+      default: false,
+    },
+    liquidation: {
+      type: Boolean,
       default: false,
     },
     evaluated: [{
-        evaluatedId: {
+      evaluatedId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref:"Evaluation"
+        ref: "Evaluation"
       }
     }]
   },

@@ -21,7 +21,6 @@ export const validateVoucher = async (req, res) => {
         }
         const { code, miniMumOrder, userId } = req.body
         const voucherExist = await Voucher.findOne({ code })
-
         const user = await User.findById(userId)
 
         //Id user 
@@ -203,3 +202,64 @@ export const updateVoucher = async (req, res) => {
         });
     }
 }
+export const getVoucherUser = async (req, res) => {
+    try {
+        const { miniMumOrder } = req.body;
+        if (miniMumOrder && typeof miniMumOrder !== "number") {
+            return res.status(400).json({
+                status: 400,
+                message: "miniMumOrder is required!",
+            });
+        }
+        
+        const data = await Voucher.find();
+        const vouchers = [];
+        const dateNow = new Date();
+
+        for (let item of data) {
+            let exist = true;
+            let active = false;
+
+            // Hết số lượng
+            if (item.quantity === 0) {
+                exist = false;
+            }
+            // Voucher không còn hoạt động
+            if (item.status === false) {
+                exist = false;
+            }
+            // Chưa đạt yêu cầu với tối thiểu đơn hàng
+            if (item.miniMumOrder > miniMumOrder) {
+                exist = false;
+            }
+            // Voucher đã hết hạn
+            if (item.dateEnd < dateNow) {
+                exist = false;
+            }
+
+            if (exist) {
+                // Kiểm tra xem người dùng đã sử dụng voucher chưa
+                const userExist = item.users.find(user => user.userId.toString() === req.user._id.toString());
+                if (userExist) {
+                    active = true;
+                }
+                //
+                item = item.toObject(); 
+                item.active = active; 
+                vouchers.push(item);
+            }
+            
+        }
+
+        return res.status(201).json({
+            status: 201,
+            message: "Get voucher success",
+            body: { data: vouchers },
+        });
+    } catch (error) {
+        return res.status(500).json({
+            status: 500,
+            message: error.message,
+        });
+    }
+};
