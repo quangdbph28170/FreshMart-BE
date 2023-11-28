@@ -244,7 +244,7 @@ export const updateProduct = async (req, res) => {
         message: error.details.map((error) => error.message),
       });
     }
-
+    const prd = await Products.findById(req.params.id)
     const product = await Products.findByIdAndUpdate(req.params.id, req.body);
     if (!product) {
       return res.status(404).json({
@@ -252,7 +252,16 @@ export const updateProduct = async (req, res) => {
         message: "Product not found",
       });
     }
-
+    await Categories.findByIdAndUpdate(prd.categoryId, {
+      $pull: {
+        products: req.params.id,
+      },
+    });
+    await Categories.findByIdAndUpdate(req.body.categoryId, {
+      $push: {
+        products: req.params.id,
+      },
+    });
 
     return res.status(201).json({
       body: {
