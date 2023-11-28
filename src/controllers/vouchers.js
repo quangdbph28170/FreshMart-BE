@@ -83,6 +83,7 @@ export const validateVoucher = async (req, res) => {
         return res.status(200).json({
             status: 200,
             message: "Valid",
+            body: { data: voucherExist }
         });
 
     } catch (error) {
