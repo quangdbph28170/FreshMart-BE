@@ -8,7 +8,7 @@ const router = express.Router();
 
 router.post("/vouchers", authorization, createVoucher);
 router.get("/vouchers", authorization, getAllVoucher);
-router.get("/vouchers-user", authentication, getVoucherUser);
+router.post("/vouchers-user", authentication, getVoucherUser);
 router.get("/vouchers/:id", authorization, getVoucher);
 router.patch("/vouchers/:id", authorization, updateVoucher);
 router.delete("/vouchers/:id", authorization, removeVoucher);
