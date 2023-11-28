@@ -31,6 +31,7 @@ export const createShipment = async (req, res) => {
             date: data.date,
             originPrice: data.originPrice,
             price: data.price,
+            willExpire: 0
           },
         },
       });
