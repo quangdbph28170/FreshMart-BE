@@ -14,7 +14,7 @@ const calculateTotalPrice = async (data) => {
             if (item.productId) {
                 await data.populate("products.productId")
                 await data.populate("products.productId.originId")
-                totalPrice += (item.productId.price - item.productId.price * item.productId.discount) * item.weight;
+                totalPrice += (item.productId.price - (item.productId.price * item.productId.discount / 100)) * item.weight;
             }
 
         }
@@ -67,7 +67,6 @@ export const addToCart = async (req, res) => {
                 message: "The remaining quantity is not enough!",
                 totalWeight: totalWeight
             })
-
         }
         if (cartExist) {
             const productExits = cartExist.products.find(item => item.productId == productId)
@@ -83,9 +82,7 @@ export const addToCart = async (req, res) => {
             }
         }
         // check xem người dùng đã có giỏ hàng chưa
-
         let data = null;
-
         if (!cartExist) {
             // nếu chưa có => Tạo luôn
             cartExist = await Cart.create({
