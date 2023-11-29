@@ -67,7 +67,6 @@ export const addToCart = async (req, res) => {
                 message: "The remaining quantity is not enough!",
                 totalWeight: totalWeight
             })
-
         }
         if (cartExist) {
             const productExits = cartExist.products.find(item => item.productId == productId)
@@ -83,9 +82,7 @@ export const addToCart = async (req, res) => {
             }
         }
         // check xem người dùng đã có giỏ hàng chưa
-
         let data = null;
-
         if (!cartExist) {
             // nếu chưa có => Tạo luôn
             cartExist = await Cart.create({

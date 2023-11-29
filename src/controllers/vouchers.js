@@ -183,7 +183,7 @@ export const updateVoucher = async (req, res) => {
         const { quantity, date_end, status } = req.body
         const data = await Voucher.findByIdAndUpdate(req.params.id, {
             quantity, date_end, status
-        })
+        },{new:true})
         if (!data) {
             return res.status(404).json({
                 status: 404,
