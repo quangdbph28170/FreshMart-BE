@@ -1,5 +1,5 @@
 import mongoose from "mongoose";
-
+import mongoosePaginate from "mongoose-paginate-v2";
 const evaluationSchema = new mongoose.Schema({
     userId: {
         type: mongoose.Types.ObjectId,
@@ -40,5 +40,5 @@ const evaluationSchema = new mongoose.Schema({
     // date: => createdAt
 
 }, { timestamps: true, versionKey: false });
-
+evaluationSchema.plugin(mongoosePaginate);
 export default mongoose.model("Evaluation", evaluationSchema)

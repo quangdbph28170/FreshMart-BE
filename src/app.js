@@ -13,6 +13,7 @@ import orderRouter from "./routers/orders";
 import authRouter from "./routers/auth";
 import userRouter from "./routers/user";
 import vnpayRouter from "./routers/vnpay";
+import statistic from "./routers/statistics";
 import notificationRouter from "./routers/notification";
 import momoRouter from "./routers/momo-pay";
 import { createServer } from "http";
@@ -30,7 +31,9 @@ import voucherRouter from "./routers/vouchers";
 import session from 'express-session';
 import { connectToGoogle } from './config/googleOAuth';
 import { months } from "./config/constants";
-import { log } from "console";
+import { uploadData } from "./controllers/statistics";
+import UnSoldProduct from "./models/unsoldProducts"
+import routerUnSoldProduct from "./routers/unsoldProducts"
 
 const app = express();
 const httpServer = createServer(app);
@@ -122,6 +125,7 @@ cron.schedule("*/1 * * * *", async () => {
         }
         topFiveProductsSold.push({
           productId: product._id,
+          productName: product.productName,
           totalWeight: totalWeight,
         })
       }
@@ -142,6 +146,7 @@ cron.schedule("*/1 * * * *", async () => {
         }
         topFiveCategoryByRevenue.push({
           categoryId: category._id,
+          categoryName: category.cateName,
           totalPrice: totalPrice,
         })
       }
@@ -205,45 +210,42 @@ cron.schedule("*/1 * * * *", async () => {
       for (const order of array) {
         const targetDate = new Date(order.createdAt)
         let totalPriceOfDay = 0
-        const orderSameDay = []
         const ordersLeft = []
         // Lấy ra tất cả order cùng ngày tháng năm
         for (const odr of array) {
           const filterDate = new Date(odr.createdAt)
           if (targetDate.getDate() == filterDate.getDate() && targetDate.getMonth() + 1 == filterDate.getMonth() + 1 && targetDate.getFullYear() == filterDate.getFullYear()) {
             totalPriceOfDay += odr.totalPayment
-            orderSameDay.push(odr._id)
           } else {
             ordersLeft.push(odr)
           }
         }
-        salesRevenueByDay.push(
-          {
-            salesRevenueData: [
-              targetDate.getTime(),
-              totalPriceOfDay
-            ],
-            orderByDay: orderSameDay
-          }
-        )
+        salesRevenueByDay.push([
+          targetDate.getTime(),
+          totalPriceOfDay
+
+        ])
         mapOrders(ordersLeft)
         return
       }
     }
     mapOrders(orders)
 
-    /*==================*/
 
-    /* console.log({ 
-        salesRevenue, 
-        customers, 
-        averageTransactionPrice, 
-        topFiveProductsSold, 
-        topFiveCategoryByRevenue, 
-        totalCustomerAndTransactions, 
-        averagePriceAndUnitsPerTransaction, 
-        salesRevenueByDay 
-    }); */
+    const dataToUpload = {
+      salesRevenue,
+      customers,
+      averageTransactionPrice,
+      topFiveProductsSold,
+      topFiveCategoryByRevenue,
+      totalCustomerAndTransactions,
+      averagePriceAndUnitsPerTransaction,
+      salesRevenueByDay
+    }
+    /*==================*/
+    uploadData(dataToUpload)
+
+    // console.log(salesRevenueByDay.map((sale) => sale.salesRevenueData));
 
   } catch (error) {
     console.log(error.message);
@@ -292,17 +294,72 @@ cron.schedule("* */24 * * *", async () => {
   }
 });
 
-//Xử lý sp thất thoát - 1p chạy lại 1 lần
+//Xử lý sp thất thoát (SP Ế) - 1p chạy lại 1 lần
 
 cron.schedule("*/1 * * * *", async () => {
-  const productSale = await Product.find({ isSale: true })
-  for (let product of productSale) {
+  // Lấy ra tất cả sp
+  const products = await Product.find()
+
+  let originalID = null
+  //Kiểm tra để lấy id của sp gốc
+  for (let product of products) {
+    if (!product.isSale) {
+      originalID = product._id
+    } else {
+      originalID = product.originalID
+    }
+
+
     for (let shipment of product.shipments) {
+      // lấy ra sp hết hạn mà vẫn còn hàng
       if (shipment.willExpire == 2 && shipment.weight > 0) {
-        const prd = await Product.findByIdAndUpdate(product._id, {
-          liquidation: true
-        }, { new: true })
-        
+
+        //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
+        const unsoldExist = await UnSoldProduct.findOne({ originalID })
+        if (unsoldExist) {
+          const productUnsold = await UnSoldProduct.findOneAndUpdate({ originalID }, {
+            $push: {
+              shipments: {
+                shipmentId: shipment.idShipment,
+                purchasePrice: product.price,
+                weight: shipment.weight
+              }
+            }
+          }, { new: true })
+          console.log("Update succes: ", productUnsold);
+
+        } else {
+          // nếu chưa có thì tạo mới sp thất thoát (sp ế)
+          const data = await UnSoldProduct.create({
+            originalID,
+            productName: product.productName,
+            shipments: [
+              {
+                shipmentId: shipment.idShipment,
+                purchasePrice: product.price,
+                weight: shipment.weight
+              }
+            ]
+          })
+          console.log(data)
+
+
+        }
+        //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
+        if (product.isSale) {
+          const remove = await Product.findByIdAndDelete(product._id)
+          if (remove) {
+            console.log("Đã xóa sp thanh lý ")
+          } else {
+            console.log("xóa sp thanh lý thất bại ")
+          }
+        } else {
+          const data = await Product.findByIdAndUpdate(product._id, {
+            shipments: []
+          },{new:true})
+          console.log("Shipments empty ", data)
+        }
+
       }
     }
   }
@@ -507,6 +564,8 @@ app.use("/api", vnpayRouter);
 app.use("/api", notificationRouter);
 app.use("/api", evaluationRouter);
 app.use("/api", voucherRouter);
+app.use("/api", statistic);
+app.use("/api", routerUnSoldProduct);
 mongoose
   .connect(MONGO_URL)
   .then(() => console.log("connected to db"))

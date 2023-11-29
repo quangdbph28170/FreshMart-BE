@@ -5,7 +5,7 @@ import Shipment from "../models/shipment";
 import { validateCheckout } from "../validation/checkout";
 import { transporter } from "../config/mail";
 import { handleTransaction } from "./momo-pay";
-import { statusOrder } from "../config/constants";
+import { doneOrder, failedOrder, messageCreateOrder, messageOrderSuccess, messageUpdateOrder, statusOrder, subjectCreateOrder, subjectUpdateOrder } from "../config/constants";
 import Carts from "../models/carts";
 import { vnpayCreate } from "./vnpay";
 import { validateVoucher } from "./vouchers";
@@ -33,20 +33,39 @@ const formatDateTime = (dateTime) => {
   return `${formattedDate} ${formattedTime}`;
 };
 export const sendMailer = async (email, data) => {
-
-
+  let subject = null
+  let message = null
+  if (data.status == "chờ xác nhận") {
+    subject = subjectCreateOrder
+    message = messageCreateOrder
+  } else if (data.status == "giao hàng thành công") {
+    subject = subjectUpdateOrder
+    message = messageOrderSuccess
+  } else {
+    subject = subjectUpdateOrder
+    message = messageUpdateOrder
+  }
   // console.log(email,data);
+  let voucher = null
+  if (data.promotionCode != null) {
+    voucher = await vouchers.findOne({ code: data.promotionCode })
+  }
+  let code = null
+
+  if (voucher != null) {
+    code = "Voucher đã dùng: " + voucher.code
+  }
+
   await transporter.sendMail({
     from: "namphpmailer@gmail.com",
     to: email,
-    subject: "Thông báo đặt hàng thành công ✔",
+    subject: subject,
     html: `<div>
                   <a target="_blank" href="http:localhost:5173">
                     <img src="https://spacingtech.com/html/tm/freozy/freezy-ltr/image/logo/logo.png" style="width:80px;color:#000"/>
                   </a>
-                  <p style="color:#2986cc;">Kính gửi Anh/chị: ${data.customerName
-      } </p> 
-                  <p>Cảm ơn Anh/chị đã mua hàng tại FRESH MART. Chúng tôi cảm thấy may mắn khi được phục vụ Anh/chị. Sau đây là hóa đơn chi tiết về đơn hàng</p>
+                  <p style="color:#2986cc;">Kính gửi Anh/chị: ${data.customerName} </p> 
+                  <p>${message} </p>
                   <p style="font-weight:bold">Hóa đơn được tạo lúc: ${formatDateTime(data.createdAt)}</p>
                   <div style="border:1px solid #ccc;border-radius:10px; padding:10px 20px;width: max-content">
                   <p>Mã hóa đơn: ${data.invoiceId}</p>
@@ -84,6 +103,7 @@ export const sendMailer = async (email, data) => {
         .join("")}
                   </tbody>
                 </table>  
+                <p>${code} </p>
                   <p style="color: red;font-weight:bold;margin-top:20px">Tổng tiền thanh toán: ${data.totalPayment.toLocaleString(
           "vi-VN"
         )}VNĐ</p>
@@ -121,6 +141,7 @@ export const CreateOrder = async (req, res) => {
     }
 
     const errors = [];
+
     for (let item of products) {
       if (item.weight <= 0) {
         errors.push({
@@ -195,9 +216,7 @@ export const CreateOrder = async (req, res) => {
     }
     if (req.user != null) {
       req.body["userId"] = req.user._id;
-      await Carts.findOneAndUpdate({ userId: req.user._id }, {
-        products: []
-      })
+
       if (req.body.code) {
         const voucherExist = await vouchers.findOne({ code: req.body.code })
         if (!voucherExist) {
@@ -229,7 +248,13 @@ export const CreateOrder = async (req, res) => {
             message: "Voucher is out of date",
           });
         }
-
+        //Voucher chưa được bắt đầu sử dụng
+        if (voucherExist.dateStart > dateNow) {
+          return res.status(400).json({
+            status: 400,
+            message: "Sorry, this voucher is not yet available for use!",
+          });
+        }
         //Chưa đạt yc với tối thiểu đơn hàng
         if (voucherExist.miniMumOrder > totalPayment) {
           return res.status(400).json({
@@ -238,36 +263,30 @@ export const CreateOrder = async (req, res) => {
 
           });
         }
-         //Check xem user đã dùng voucher này chưa
-         const userExist = await vouchers.findOne({code:req.body.code, "users.userId": req.body.userId})
-    
-         if (userExist) {
+        //Check xem user đã dùng voucher này chưa
+        const userExist = await vouchers.findOne({ code: req.body.code, "users.userId": req.body.userId })
+
+        if (userExist) {
           return res.status(400).json({
             status: 400,
             message: "This voucher code has already been used. Please enter a different code!",
 
           });
         }
-  
-        //Trừ 1 vé voucher và thêm id user
-        await vouchers.findOneAndUpdate({ code: req.body.code }, {
-          $set: {
-            quantity: voucherExist.quantity - 1
-          },
-          $push:{
-            users:{
-              userId: req.body.userId
-            }
-          }
-        })
+
+
 
         // đơn hàng 10k giảm 50% tối đa 8k
         // tính số tiền giảm:
         const amount = totalPayment * voucherExist.percent / 100
 
         // nếu sô tiền giảm vượt quá tối đa cho phép thì trừ đi số tiền tối đa
-        if (amount > voucherExist.maxReduce) {
-          totalPayment = totalPayment - voucherExist.maxReduce
+        if (voucherExist.maxReduce > 0) {
+          if (amount > voucherExist.maxReduce) {
+            totalPayment = totalPayment - voucherExist.maxReduce
+          } else {
+            totalPayment = totalPayment - (totalPayment * voucherExist.percent / 100)
+          }
         } else {
           totalPayment = totalPayment - (totalPayment * voucherExist.percent / 100)
         }
@@ -280,6 +299,7 @@ export const CreateOrder = async (req, res) => {
             false: req.body.totalPayment
           });
         }
+
       }
 
 
@@ -362,13 +382,44 @@ export const CreateOrder = async (req, res) => {
           }
         }
       }
+      if (prd.shipments.length > 0) {
+        const firstShipment = prd.shipments[0];
+        item.shipmentId = firstShipment.idShipment;
+        // item["shipmentId"] = firstShipment.idShipment;
+      }
+
     }
-
-
-    // console.log(req.user);
-
+    console.log(req.body.products);
+    //  return
     const data = await Order.create(req.body);
 
+    // nếu đăng nhập thì xóa hết sp (.) cart
+    if (req.user) {
+      await Carts.findOneAndUpdate({ userId: req.user._id }, {
+        products: []
+      })
+      if (req.body.code) {
+        //lưu mã voucher vào đơn hàng
+        await Order.findOneAndUpdate({ _id: data._id }, {
+          $set: {
+            promotionCode: req.body.code
+          },
+
+        })
+        const voucherExist = await vouchers.findOne({ code: req.body.code })
+        //Trừ 1 vé voucher và thêm id user
+        await vouchers.findOneAndUpdate({ code: req.body.code }, {
+          $set: {
+            quantity: voucherExist.quantity - 1
+          },
+          $push: {
+            users: {
+              userId: req.body.userId
+            }
+          }
+        })
+      }
+    }
     let url = ''
     // kiểm tra phương thức thanh toán là momo
     if (paymentMethod === "vnpay") {
@@ -493,7 +544,7 @@ export const OrdersForGuest = async (req, res) => {
 };
 //Khách hàng (đã đăng nhập) tra cứu đơn hàng
 export const OrdersForMember = async (req, res) => {
-  const { _status = "", _day } = req.query;
+  const { _status = "", _day, _from, _to } = req.query;
   try {
     const userId = req.user._id;
     let data = await Order.find({ userId }).sort({ createdAt: -1 });
@@ -519,6 +570,10 @@ export const OrdersForMember = async (req, res) => {
       filterOrderDay(data, _day, res);
       return;
     }
+    if (_from && _to) {
+      filterOrderDay(data, _day, res, _from, _to);
+      return;
+    }
     return res.status(201).json({
       body: {
         data,
@@ -534,17 +589,32 @@ export const OrdersForMember = async (req, res) => {
   }
 };
 // Hàm xử lý lọc đơn hàng theo ngày gần nhất
-export const filterOrderDay = async (data, day, res) => {
+export const filterOrderDay = async (data, day, res, from, to) => {
   const today = new Date();
-  const dayOfPast = today - day * 24 * 60 * 60 * 1000;
   const filterData = [];
-
-  for (let item of data) {
-    const itemDate = new Date(item.createdAt);
-    // console.log(itemDate );
-    if (itemDate >= dayOfPast && itemDate <= today) {
-      filterData.push(item);
+  if (day) {
+    //Tính ngày trong qua khứ
+    const dayOfPast = today - day * 24 * 60 * 60 * 1000;
+    for (let item of data) {
+      const itemDate = new Date(item.createdAt);
+      // console.log(itemDate );
+      if (itemDate >= dayOfPast && itemDate <= today) {
+        filterData.push(item);
+      }
     }
+  }
+  if (from && to) {
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    //lấy đến cuối ngày đó = cả ngày hôm đó
+    toDate.setHours(23, 59, 59, 999);
+    for (let item of data) {
+      const itemDate = new Date(item.createdAt);
+      if (itemDate >= fromDate && itemDate <= toDate) {
+        filterData.push(item);
+      }
+    }
+
   }
   // console.log(today, dayOfPast, filterData);
   if (filterData.length == 0) {
@@ -624,7 +694,13 @@ export const FilterOrdersForMember = async (req, res) => {
 export const OrderDetail = async (req, res) => {
   try {
     const orderId = req.params.id;
-    const data = await Order.findById(orderId);
+    let data = await Order.findById(orderId);
+    let voucher = null
+    if (data.promotionCode != null) {
+      voucher = await vouchers.findOne({ code: data.promotionCode })
+
+    }
+
     if (!data) {
       return res.status(404).json({
         status: 404,
@@ -634,7 +710,7 @@ export const OrderDetail = async (req, res) => {
     }
     const { canCancel } = checkCancellationTime(data);
     return res.status(201).json({
-      body: { data },
+      body: { data, voucher },
       status: 201,
       message: "Get order successfully",
       canCancel,
@@ -652,7 +728,7 @@ export const CanceledOrder = async (req, res) => {
   try {
     const orderId = req.params.id;
     const order = await Order.findById(orderId);
-    if (order.status == "đã hủy") {
+    if (order.status == failedOrder) {
       return res.status(401).json({
         status: 401,
         message: "The previous order has been cancelled",
@@ -662,7 +738,7 @@ export const CanceledOrder = async (req, res) => {
     if (canCancel) {
       const data = await Order.findByIdAndUpdate(
         orderId,
-        { status: "đã hủy" },
+        { status: failedOrder },
         { new: true }
       );
       if (!data) {
@@ -723,7 +799,7 @@ export const ConfirmOrder = async (req, res) => {
     const data = await Order.findByIdAndUpdate(
       orderId,
       {
-        status: "đơn hàng hoàn thành",
+        status: doneOrder,
         pay: true
       },
       { new: true }
