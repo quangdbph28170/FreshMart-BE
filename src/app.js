@@ -83,8 +83,8 @@ cron.schedule("1-59 * * * *", async () => {
   }
 })
 
-//Thống kê lại dữ liệu sau mỗi 30 phút 
-cron.schedule("*/1 * * * *", async () => {
+//Thống kê lại dữ liệu sau mỗi 24h 
+cron.schedule("* 0 * * *", async () => {
   try {
     //Lấy ra tất cả sản phẩm (ko lấy sp thanh lý/thất thoát)
     const products = await Product.find({ isSale: false });
@@ -118,7 +118,7 @@ cron.schedule("*/1 * * * *", async () => {
         let totalWeight = 0
         for (const order of orders) {
           for (const productOfOrder of order.products) {
-            if (product._id.equals(productOfOrder.productId._id)) {
+            if (productOfOrder.productId?._id && product._id.equals(productOfOrder.productId._id)) {
               totalWeight += productOfOrder.weight
             }
           }
@@ -139,7 +139,7 @@ cron.schedule("*/1 * * * *", async () => {
         let totalPrice = 0
         for (const order of orders) {
           for (const productOfOrder of order.products) {
-            if (category._id.equals(productOfOrder.productId.categoryId)) {
+            if (productOfOrder.productId?.categoryId && category._id.equals(productOfOrder.productId.categoryId)) {
               totalPrice += productOfOrder.price * productOfOrder.weight
             }
           }
@@ -356,7 +356,7 @@ cron.schedule("*/1 * * * *", async () => {
         } else {
           const data = await Product.findByIdAndUpdate(product._id, {
             shipments: []
-          },{new:true})
+          }, { new: true })
           console.log("Shipments empty ", data)
         }
 

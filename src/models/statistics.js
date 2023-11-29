@@ -116,13 +116,9 @@ const statisticsSchema = new mongoose.Schema(
         salesRevenueByDay: [
             [
                 {
-                    type: Date,
-                    required: true,
-                },
-                {
                     type: Number,
                     required: true,
-                },
+                }
             ]
         ]
         // .... Còn nữa 
