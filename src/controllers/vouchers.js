@@ -180,7 +180,7 @@ export const removeVoucher = async (req, res) => {
 }
 export const updateVoucher = async (req, res) => {
     try {
-        const { quantity, date_end, status } = req.body
+        const { quantity, dateEnd, status } = req.body
         const data = await Voucher.findByIdAndUpdate(req.params.id, {
             quantity, dateEnd, status
         },{new:true})
