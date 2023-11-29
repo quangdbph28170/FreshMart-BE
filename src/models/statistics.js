@@ -40,7 +40,7 @@ const statisticsSchema = new mongoose.Schema(
                     type: String,
                     required: true,
                 },
-                totalPrice: {
+                totalWeight: {
                     type: Number,
                     required: true,
                 }

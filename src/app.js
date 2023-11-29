@@ -13,6 +13,7 @@ import orderRouter from "./routers/orders";
 import authRouter from "./routers/auth";
 import userRouter from "./routers/user";
 import vnpayRouter from "./routers/vnpay";
+import statistic from "./routers/statistics";
 import notificationRouter from "./routers/notification";
 import momoRouter from "./routers/momo-pay";
 import { createServer } from "http";
@@ -30,6 +31,7 @@ import voucherRouter from "./routers/vouchers";
 import session from 'express-session';
 import { connectToGoogle } from './config/googleOAuth';
 import { months } from "./config/constants";
+import { uploadData } from "./controllers/statistics";
 
 const app = express();
 const httpServer = createServer(app);
@@ -217,9 +219,9 @@ cron.schedule("*/1 * * * *", async () => {
           }
         }
         salesRevenueByDay.push([
-              targetDate.getTime(),
-              totalPriceOfDay
-          
+          targetDate.getTime(),
+          totalPriceOfDay
+
         ])
         mapOrders(ordersLeft)
         return
@@ -227,18 +229,20 @@ cron.schedule("*/1 * * * *", async () => {
     }
     mapOrders(orders)
 
-    /*==================*/
 
-    /* console.log({ 
-        salesRevenue, 
-        customers, 
-        averageTransactionPrice, 
-        topFiveProductsSold, 
-        topFiveCategoryByRevenue, 
-        totalCustomerAndTransactions, 
-        averagePriceAndUnitsPerTransaction, 
-        salesRevenueByDay 
-    }); */
+    const dataToUpload = {
+      salesRevenue,
+      customers,
+      averageTransactionPrice,
+      topFiveProductsSold,
+      topFiveCategoryByRevenue,
+      totalCustomerAndTransactions,
+      averagePriceAndUnitsPerTransaction,
+      salesRevenueByDay
+    }
+    /*==================*/
+    uploadData(dataToUpload)
+
     // console.log(salesRevenueByDay.map((sale) => sale.salesRevenueData));
 
   } catch (error) {
@@ -488,6 +492,7 @@ app.use("/api", vnpayRouter);
 app.use("/api", notificationRouter);
 app.use("/api", evaluationRouter);
 app.use("/api", voucherRouter);
+app.use("/api", statistic);
 mongoose
   .connect(MONGO_URL)
   .then(() => console.log("connected to db"))
