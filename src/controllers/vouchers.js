@@ -192,11 +192,11 @@ export const updateVoucher = async (req, res) => {
         const dateEnd = new Date(voucher.dateStart)
         const date_end = new Date(req.body.dateEnd)
         const date_start = new Date(req.body.dateStart)
-        const error = false
+        let error = false
         if (date_end < date_start) {
             error = true
         }
-        if (date_end < dateStart) {
+        if (dateEnd < dateStart) {
             error = true
         }
         if (date_end < dateStart) {
@@ -208,11 +208,13 @@ export const updateVoucher = async (req, res) => {
                 message: "Date invalid!"
             });
         }
-        const data = await Voucher.findByIdAndUpdate(req.params.id, {
-            quantity, dateEnd, status, dateStart
-        }, { new: true })
-
-
+        const values = {
+            quantity,
+            dateEnd: req.body.dateEnd,
+            status,
+            dateStart: req.body.dateStart
+        }
+        const data = await Voucher.findByIdAndUpdate(req.params.id, values, { new: true })
         if (!data) {
             return res.status(404).json({
                 status: 404,
