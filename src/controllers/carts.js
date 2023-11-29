@@ -51,7 +51,7 @@ export const addToCart = async (req, res) => {
             })
         }
 
-        const cartExist = await Cart.findOne({ userId })
+        let cartExist = await Cart.findOne({ userId })
         for (let item of checkProduct.shipments) {
             totalWeight += item.weight
         }
@@ -158,6 +158,13 @@ export const updateProductWeightInCart = async (req, res) => {
         }
         //Check cân gửi lên lớn hơn tổng cân trong kho
         if (weight > totalWeight) {
+            data = await Cart.findOneAndUpdate(
+                { userId, "products.productId": productId },
+                {
+                    $set: {
+                        "products.$.weight": totalWeight
+                    }
+                }, { new: true })
 
             return res.status(400).json({
                 status: 400,
