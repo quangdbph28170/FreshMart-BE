@@ -13,6 +13,7 @@ import orderRouter from "./routers/orders";
 import authRouter from "./routers/auth";
 import userRouter from "./routers/user";
 import vnpayRouter from "./routers/vnpay";
+import statistic from "./routers/statistics";
 import notificationRouter from "./routers/notification";
 import momoRouter from "./routers/momo-pay";
 import { createServer } from "http";
@@ -30,6 +31,7 @@ import voucherRouter from "./routers/vouchers";
 import session from 'express-session';
 import { connectToGoogle } from './config/googleOAuth';
 import { months } from "./config/constants";
+import { uploadData } from "./controllers/statistics";
 import UnSoldProduct from "./models/unsoldProducts"
 import routerUnSoldProduct from "./routers/unsoldProducts"
 
@@ -123,6 +125,7 @@ cron.schedule("*/1 * * * *", async () => {
         }
         topFiveProductsSold.push({
           productId: product._id,
+          productName: product.productName,
           totalWeight: totalWeight,
         })
       }
@@ -143,6 +146,7 @@ cron.schedule("*/1 * * * *", async () => {
         }
         topFiveCategoryByRevenue.push({
           categoryId: category._id,
+          categoryName: category.cateName,
           totalPrice: totalPrice,
         })
       }
@@ -206,45 +210,42 @@ cron.schedule("*/1 * * * *", async () => {
       for (const order of array) {
         const targetDate = new Date(order.createdAt)
         let totalPriceOfDay = 0
-        const orderSameDay = []
         const ordersLeft = []
         // Lấy ra tất cả order cùng ngày tháng năm
         for (const odr of array) {
           const filterDate = new Date(odr.createdAt)
           if (targetDate.getDate() == filterDate.getDate() && targetDate.getMonth() + 1 == filterDate.getMonth() + 1 && targetDate.getFullYear() == filterDate.getFullYear()) {
             totalPriceOfDay += odr.totalPayment
-            orderSameDay.push(odr._id)
           } else {
             ordersLeft.push(odr)
           }
         }
-        salesRevenueByDay.push(
-          {
-            salesRevenueData: [
-              targetDate.getTime(),
-              totalPriceOfDay
-            ],
-            orderByDay: orderSameDay
-          }
-        )
+        salesRevenueByDay.push([
+          targetDate.getTime(),
+          totalPriceOfDay
+
+        ])
         mapOrders(ordersLeft)
         return
       }
     }
     mapOrders(orders)
 
-    /*==================*/
 
-    /* console.log({ 
-        salesRevenue, 
-        customers, 
-        averageTransactionPrice, 
-        topFiveProductsSold, 
-        topFiveCategoryByRevenue, 
-        totalCustomerAndTransactions, 
-        averagePriceAndUnitsPerTransaction, 
-        salesRevenueByDay 
-    }); */
+    const dataToUpload = {
+      salesRevenue,
+      customers,
+      averageTransactionPrice,
+      topFiveProductsSold,
+      topFiveCategoryByRevenue,
+      totalCustomerAndTransactions,
+      averagePriceAndUnitsPerTransaction,
+      salesRevenueByDay
+    }
+    /*==================*/
+    uploadData(dataToUpload)
+
+    // console.log(salesRevenueByDay.map((sale) => sale.salesRevenueData));
 
   } catch (error) {
     console.log(error.message);
@@ -563,6 +564,7 @@ app.use("/api", vnpayRouter);
 app.use("/api", notificationRouter);
 app.use("/api", evaluationRouter);
 app.use("/api", voucherRouter);
+app.use("/api", statistic);
 app.use("/api", routerUnSoldProduct);
 mongoose
   .connect(MONGO_URL)
