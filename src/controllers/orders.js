@@ -534,7 +534,7 @@ export const OrdersForGuest = async (req, res) => {
 };
 //Khách hàng (đã đăng nhập) tra cứu đơn hàng
 export const OrdersForMember = async (req, res) => {
-  const { _status = "", _day } = req.query;
+  const { _status = "", _day, _from, _to } = req.query;
   try {
     const userId = req.user._id;
     let data = await Order.find({ userId }).sort({ createdAt: -1 });
@@ -560,6 +560,10 @@ export const OrdersForMember = async (req, res) => {
       filterOrderDay(data, _day, res);
       return;
     }
+    if (_from && _to) {
+      filterOrderDay(data, _day, res, _from, _to);
+      return;
+    }
     return res.status(201).json({
       body: {
         data,
@@ -575,17 +579,32 @@ export const OrdersForMember = async (req, res) => {
   }
 };
 // Hàm xử lý lọc đơn hàng theo ngày gần nhất
-export const filterOrderDay = async (data, day, res) => {
+export const filterOrderDay = async (data, day, res, from, to) => {
   const today = new Date();
-  const dayOfPast = today - day * 24 * 60 * 60 * 1000;
   const filterData = [];
-
-  for (let item of data) {
-    const itemDate = new Date(item.createdAt);
-    // console.log(itemDate );
-    if (itemDate >= dayOfPast && itemDate <= today) {
-      filterData.push(item);
+  if (day) {
+    //Tính ngày trong qua khứ
+    const dayOfPast = today - day * 24 * 60 * 60 * 1000;
+    for (let item of data) {
+      const itemDate = new Date(item.createdAt);
+      // console.log(itemDate );
+      if (itemDate >= dayOfPast && itemDate <= today) {
+        filterData.push(item);
+      }
     }
+  }
+  if (from && to) {
+    const fromDate = new Date(from);
+    const toDate = new Date(to);
+    //lấy đến cuối ngày đó = cả ngày hôm đó
+    toDate.setHours(23, 59, 59, 999);
+    for (let item of data) {
+      const itemDate = new Date(item.createdAt);
+      if (itemDate >= fromDate && itemDate <= toDate) {
+        filterData.push(item);
+      }
+    }
+
   }
   // console.log(today, dayOfPast, filterData);
   if (filterData.length == 0) {
