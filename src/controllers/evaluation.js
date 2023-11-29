@@ -168,29 +168,29 @@ export const getIsRatedDetail = async (req, res) => {
 //Admin Lấy toàn bộ đánh giá
 export const getAllRating = async (req, res) => {
     try {
-        const data = await Evaluation.find()
-        const highestRatedProduct = await Evaluation.aggregate([
-            { $group: { _id: "$productId", averageRating: { $avg: "$rate" } } },
-            { $sort: { averageRating: -1 } },
-            { $limit: 1 },
-            { $project: { _id: 0, productId: "$_id" } }
-        ]);
+        const data = await Evaluation.find().populate("userId")
+        // const highestRatedProduct = await Evaluation.aggregate([
+        //     { $group: { _id: "$productId", averageRating: { $avg: "$rate" } } },
+        //     { $sort: { averageRating: -1 } },
+        //     { $limit: 1 },
+        //     { $project: { _id: 0, productId: "$_id" } }
+        // ]);
 
-        const lowestRatedProduct = await Evaluation.aggregate([
-            { $group: { _id: "$productId", averageRating: { $avg: "$rate" } } },
-            { $sort: { averageRating: 1 } },
-            { $limit: 1 },
-            { $project: { _id: 0, productId: "$_id" } }
-        ]);
-        console.log(highestRatedProduct);
-        console.log(lowestRatedProduct);
+        // const lowestRatedProduct = await Evaluation.aggregate([
+        //     { $group: { _id: "$productId", averageRating: { $avg: "$rate" } } },
+        //     { $sort: { averageRating: 1 } },
+        //     { $limit: 1 },
+        //     { $project: { _id: 0, productId: "$_id" } }
+        // // ]);
+        // console.log(highestRatedProduct);
+        // console.log(lowestRatedProduct);
         return res.status(200).json({
             status: 200,
             message: "success",
             body: {
                 data,
-                highestRatedProductId: highestRatedProduct[0].productId,
-                lowestRatedProductId: lowestRatedProduct[0].productId
+                // highestRatedProductId: highestRatedProduct[0].productId,
+                // lowestRatedProductId: lowestRatedProduct[0].productId
             }
         });
     } catch (error) {
