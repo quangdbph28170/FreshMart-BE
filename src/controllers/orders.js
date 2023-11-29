@@ -247,7 +247,13 @@ export const CreateOrder = async (req, res) => {
             message: "Voucher is out of date",
           });
         }
-
+        //Voucher chưa được bắt đầu sử dụng
+        if (voucherExist.dateStart > dateNow) {
+          return res.status(400).json({
+            status: 400,
+            message: "Sorry, this voucher is not yet available for use!",
+          });
+        }
         //Chưa đạt yc với tối thiểu đơn hàng
         if (voucherExist.miniMumOrder > totalPayment) {
           return res.status(400).json({

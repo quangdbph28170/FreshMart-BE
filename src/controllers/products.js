@@ -245,7 +245,7 @@ export const updateProduct = async (req, res) => {
       });
     }
     const prd = await Products.findById(req.params.id)
-    const product = await Products.findByIdAndUpdate(req.params.id, req.body);
+    const product = await Products.findByIdAndUpdate(req.params.id, req.body,{new:true});
     if (!product) {
       return res.status(404).json({
         status: 404,
