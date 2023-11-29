@@ -52,15 +52,21 @@ export const validateVoucher = async (req, res) => {
             });
         }
 
-        //Voucher đã hết hạn
         const dateNow = new Date()
+        //Voucher đã hết hạn
         if (voucherExist.dateEnd < dateNow) {
             return res.status(400).json({
                 status: 400,
                 message: "Voucher is out of date",
             });
         }
-
+        //Voucher chưa được bắt đầu sử dụng
+        if (voucherExist.dateStart > dateNow) {
+            return res.status(400).json({
+                status: 400,
+                message: "Sorry, this voucher is not yet available for use!",
+            });
+        }
         //Chưa đạt yc với tối thiểu đơn hàng
         if (voucherExist.miniMumOrder > miniMumOrder) {
             return res.status(400).json({
@@ -180,10 +186,33 @@ export const removeVoucher = async (req, res) => {
 }
 export const updateVoucher = async (req, res) => {
     try {
-        const { quantity, dateEnd, status } = req.body
+        const { quantity, status } = req.body
+        const voucher = await Voucher.findById(req.params.id)
+        const dateStart = new Date(voucher.dateStart)
+        const dateEnd = new Date(voucher.dateStart)
+        const date_end = new Date(req.body.dateEnd)
+        const date_start = new Date(req.body.dateStart)
+        const error = false
+        if (date_end < date_start) {
+            error = true
+        }
+        if (date_end < dateStart) {
+            error = true
+        }
+        if (date_end < dateStart) {
+            error = true
+        }
+        if (error) {
+            return res.status(400).json({
+                status: 400,
+                message: "Date invalid!"
+            });
+        }
         const data = await Voucher.findByIdAndUpdate(req.params.id, {
-            quantity, dateEnd, status
-        },{new:true})
+            quantity, dateEnd, status, dateStart
+        }, { new: true })
+
+
         if (!data) {
             return res.status(404).json({
                 status: 404,
@@ -231,6 +260,10 @@ export const getVoucherUser = async (req, res) => {
 
             // Voucher đã hết hạn
             if (item.dateEnd < dateNow) {
+                exist = false;
+            }
+            // Voucher chưa cho phép dùng
+            if (item.dateStart > dateNow) {
                 exist = false;
             }
             // Kiểm tra xem người dùng đã sử dụng voucher chưa
