@@ -14,7 +14,7 @@ const calculateTotalPrice = async (data) => {
             if (item.productId) {
                 await data.populate("products.productId")
                 await data.populate("products.productId.originId")
-                totalPrice += (item.productId.price - item.productId.price * item.productId.discount) * item.weight;
+                totalPrice += (item.productId.price - (item.productId.price * item.productId.discount / 100)) * item.weight;
             }
 
         }
