@@ -17,8 +17,10 @@ export const validateProduct = joi.object({
   originId: joi.string().required().trim(),
   discount: joi.number().required(),
   isSale: joi.boolean(),
+  originalID: joi.string().allow(),
+  evaluated:joi.allow()
 });
-export const validateLiquidationProduct = joi.object({
+export const validateProductClearance = joi.object({
   productName: joi.string().required().trim(),
   productId: joi.string().required().trim(),
   shipmentId: joi.string().required().trim(),

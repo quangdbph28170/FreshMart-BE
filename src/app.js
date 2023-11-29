@@ -30,7 +30,8 @@ import voucherRouter from "./routers/vouchers";
 import session from 'express-session';
 import { connectToGoogle } from './config/googleOAuth';
 import { months } from "./config/constants";
-import { log } from "console";
+import UnSoldProduct from "./models/unsoldProducts"
+import routerUnSoldProduct from "./routers/unsoldProducts"
 
 const app = express();
 const httpServer = createServer(app);
@@ -292,17 +293,72 @@ cron.schedule("* */24 * * *", async () => {
   }
 });
 
-//Xử lý sp thất thoát - 1p chạy lại 1 lần
+//Xử lý sp thất thoát (SP Ế) - 1p chạy lại 1 lần
 
 cron.schedule("*/1 * * * *", async () => {
-  const productSale = await Product.find({ isSale: true })
-  for (let product of productSale) {
+  // Lấy ra tất cả sp
+  const products = await Product.find()
+
+  let originalID = null
+  //Kiểm tra để lấy id của sp gốc
+  for (let product of products) {
+    if (!product.isSale) {
+      originalID = product._id
+    } else {
+      originalID = product.originalID
+    }
+
+
     for (let shipment of product.shipments) {
+      // lấy ra sp hết hạn mà vẫn còn hàng
       if (shipment.willExpire == 2 && shipment.weight > 0) {
-        const prd = await Product.findByIdAndUpdate(product._id, {
-          liquidation: true
-        }, { new: true })
-        
+
+        //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
+        const unsoldExist = await UnSoldProduct.findOne({ originalID })
+        if (unsoldExist) {
+          const productUnsold = await UnSoldProduct.findOneAndUpdate({ originalID }, {
+            $push: {
+              shipments: {
+                shipmentId: shipment.idShipment,
+                purchasePrice: product.price,
+                weight: shipment.weight
+              }
+            }
+          }, { new: true })
+          console.log("Update succes: ", productUnsold);
+
+        } else {
+          // nếu chưa có thì tạo mới sp thất thoát (sp ế)
+          const data = await UnSoldProduct.create({
+            originalID,
+            productName: product.productName,
+            shipments: [
+              {
+                shipmentId: shipment.idShipment,
+                purchasePrice: product.price,
+                weight: shipment.weight
+              }
+            ]
+          })
+          console.log(data)
+
+
+        }
+        //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
+        if (product.isSale) {
+          const remove = await Product.findByIdAndDelete(product._id)
+          if (remove) {
+            console.log("Đã xóa sp thanh lý ")
+          } else {
+            console.log("xóa sp thanh lý thất bại ")
+          }
+        } else {
+          const data = await Product.findByIdAndUpdate(product._id, {
+            shipments: []
+          },{new:true})
+          console.log("Shipments empty ", data)
+        }
+
       }
     }
   }
@@ -507,6 +563,7 @@ app.use("/api", vnpayRouter);
 app.use("/api", notificationRouter);
 app.use("/api", evaluationRouter);
 app.use("/api", voucherRouter);
+app.use("/api", routerUnSoldProduct);
 mongoose
   .connect(MONGO_URL)
   .then(() => console.log("connected to db"))
