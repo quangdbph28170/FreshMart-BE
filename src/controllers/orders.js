@@ -5,7 +5,7 @@ import Shipment from "../models/shipment";
 import { validateCheckout } from "../validation/checkout";
 import { transporter } from "../config/mail";
 import { handleTransaction } from "./momo-pay";
-import { messageCreateOrder, messageOrderSuccess, messageUpdateOrder, statusOrder, subjectCreateOrder, subjectUpdateOrder } from "../config/constants";
+import { doneOrder, failedOrder, messageCreateOrder, messageOrderSuccess, messageUpdateOrder, statusOrder, subjectCreateOrder, subjectUpdateOrder } from "../config/constants";
 import Carts from "../models/carts";
 import { vnpayCreate } from "./vnpay";
 import { validateVoucher } from "./vouchers";
@@ -724,7 +724,7 @@ export const CanceledOrder = async (req, res) => {
   try {
     const orderId = req.params.id;
     const order = await Order.findById(orderId);
-    if (order.status == "đã hủy") {
+    if (order.status == failedOrder) {
       return res.status(401).json({
         status: 401,
         message: "The previous order has been cancelled",
@@ -734,7 +734,7 @@ export const CanceledOrder = async (req, res) => {
     if (canCancel) {
       const data = await Order.findByIdAndUpdate(
         orderId,
-        { status: "đã hủy" },
+        { status: failedOrder },
         { new: true }
       );
       if (!data) {
@@ -795,7 +795,7 @@ export const ConfirmOrder = async (req, res) => {
     const data = await Order.findByIdAndUpdate(
       orderId,
       {
-        status: "đơn hàng hoàn thành",
+        status: doneOrder,
         pay: true
       },
       { new: true }

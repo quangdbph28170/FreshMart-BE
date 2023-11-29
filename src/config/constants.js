@@ -5,6 +5,8 @@ export const statusOrder = [
   "đơn hàng hoàn thành",
   "đã hủy",
 ];
+export const doneOrder = "đơn hàng hoàn thành"
+export const failedOrder = "đã hủy"
 export const subjectCreateOrder = "Thông báo đặt hàng thành công ✔"
 export const subjectUpdateOrder = "Thông báo cập nhật trạng thái đơn hàng ✔"
 export const messageCreateOrder = "Cảm ơn Anh/chị đã mua hàng tại FRESH MART. Chúng tôi cảm thấy may mắn khi được phục vụ Anh/chị. Sau đây là hóa đơn chi tiết về đơn hàng"

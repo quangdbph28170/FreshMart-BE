@@ -4,6 +4,7 @@ import Order from "../models/orders"
 import { validateEvaluation } from "../validation/evaluation"
 import Joi from "joi"
 import User from "../models/user"
+import { doneOrder } from "../config/constants"
 const formatPhoneNumber = /^0+[0-9]{9}$/;
 const validRate = Joi.object({
     userName: Joi.string().required(),
@@ -22,6 +23,7 @@ export const createEvaluation = async (req, res) => {
                 message: error.details.map((error) => error.message),
             });
         }
+        
         const { userName, phoneNumber } = req.body
         if (!req.body.userId) {
             const { error } = validRate.validate({ userName, phoneNumber }, { abortEarly: false })
@@ -38,6 +40,12 @@ export const createEvaluation = async (req, res) => {
             return res.status(404).json({
                 status: 404,
                 message: "Order not found",
+            });
+        }
+        if(orderExist.status != doneOrder){
+            return res.status(404).json({
+                status: 404,
+                message: "Order status Invalid!",
             });
         }
         const productExist = await Order.findOne({ _id: orderId, "products.productId": productId })
