@@ -149,7 +149,7 @@ export const updateProductWeightInCart = async (req, res) => {
             })
         }
         const checkProduct = await Product.findById(productId)
-        
+        let data = await Cart.findOne({ userId }).populate("products.productId")
         for (let item of checkProduct.shipments) {
             totalWeight += item.weight
         }
@@ -161,15 +161,16 @@ export const updateProductWeightInCart = async (req, res) => {
         }
         //Check cân gửi lên lớn hơn tổng cân trong kho
         if (weight > totalWeight) {
-            return res.status(401).json({
+
+            return res.status(400).json({
+                status: 400,
                 message: "The remaining quantity is not enough!",
-                totalWeight: totalWeight
+                totalWeight: totalWeight,
+                body: { data }
             })
 
         }
-
-
-        const data = await Cart.findOneAndUpdate(
+        data = await Cart.findOneAndUpdate(
             { userId, "products.productId": productId },
             {
                 $set: {
@@ -322,7 +323,7 @@ export const removeOneProductInCart = async (req, res) => {
         }
         for (let item of data.products) {
             const product = await Product.findById(item.productId._id)
-            totalPrice += product.price - product.price * product.discount /100 * item.weight;
+            totalPrice += product.price - product.price * product.discount / 100 * item.weight;
         }
         return res.status(200).json({
             status: 200,
@@ -380,7 +381,7 @@ export const cartLocal = async (req, res) => {
                     message: "Product is not exsit!",
                 });
             } else {
-                if (item.productId.price !== prd.price - prd.price * prd.discount/100) {
+                if (item.productId.price !== prd.price - prd.price * prd.discount / 100) {
                     errors.push({
                         productId: prd._id,
                         price: prd.price - prd.price * prd.discount / 100,
@@ -440,12 +441,12 @@ export const cartLocal = async (req, res) => {
                     });
                 }
 
-               
+
             }
 
 
         }
-      
+
         if (errors.length > 0) {
             return res.status(400).json({
                 status: 400,
