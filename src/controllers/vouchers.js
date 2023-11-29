@@ -196,7 +196,7 @@ export const updateVoucher = async (req, res) => {
         if (date_end < date_start) {
             error = true
         }
-        if (dateEnd < dateStart) {
+        if (dateEnd < date_start) {
             error = true
         }
         if (date_end < dateStart) {
