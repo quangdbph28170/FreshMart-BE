@@ -141,6 +141,7 @@ export const CreateOrder = async (req, res) => {
     }
 
     const errors = [];
+
     for (let item of products) {
       if (item.weight <= 0) {
         errors.push({
@@ -381,13 +382,16 @@ export const CreateOrder = async (req, res) => {
           }
         }
       }
+      if (prd.shipments.length > 0) {
+        const firstShipment = prd.shipments[0];
+        item.shipmentId = firstShipment.idShipment;
+        // item["shipmentId"] = firstShipment.idShipment;
+      }
+
     }
-
-
-    // console.log(req.user);
-
+    console.log(req.body.products);
+    //  return
     const data = await Order.create(req.body);
-
 
     // nếu đăng nhập thì xóa hết sp (.) cart
     if (req.user) {

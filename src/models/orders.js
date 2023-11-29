@@ -1,6 +1,7 @@
 import mongoose from "mongoose";
 import mongoosePaginate from "mongoose-paginate-v2";
 import shortMongoId from "short-mongo-id";
+import { statusOrder } from "../config/constants";
 const orderSchema = new mongoose.Schema(
   {
     invoiceId: {
@@ -18,6 +19,11 @@ const orderSchema = new mongoose.Schema(
         productId: {
           type: mongoose.Schema.Types.ObjectId,
           ref: "Products",
+          required: true,
+        },
+        shipmentId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Shipment",
           required: true,
         },
         originId: {
@@ -45,10 +51,6 @@ const orderSchema = new mongoose.Schema(
         evaluation: {
           type: Boolean,
           default: false,
-        },
-        code: {
-          type: String,
-          default: null,
         },
       },
     ],
@@ -91,13 +93,7 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: [
-        "chờ xác nhận",
-        "đang giao hàng",
-        "giao hàng thành công",
-        "đơn hàng hoàn thành",
-        "đã hủy",
-      ],
+      enum:statusOrder,
       default: "chờ xác nhận",
     },
     promotionCode: {

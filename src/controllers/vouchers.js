@@ -252,7 +252,7 @@ export const getVoucherUser = async (req, res) => {
             let active = false;
 
             // Hết số lượng
-            if (item.quantity === 0) {
+            if (item.quantity == 0) {
                 exist = false;
             }
             // Voucher không còn hoạt động
@@ -287,8 +287,8 @@ export const getVoucherUser = async (req, res) => {
 
         }
 
-        return res.status(201).json({
-            status: 201,
+        return res.status(200).json({
+            status: 200,
             message: "Get voucher success",
             body: { data: vouchers },
         });
