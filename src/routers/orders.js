@@ -16,6 +16,7 @@ import {
 import authentication from "../middleware/authentication";
 import jwt from "jsonwebtoken";
 import { authorization } from "../middleware/authorization";
+import { validateVoucher } from "../controllers/vouchers";
 
 dotenv.config();
 const router = express.Router();
@@ -49,10 +50,11 @@ router.post(
         const user = await User.findById(payload._id);
         req.user = user;
         next();
+        
       }
     );
   },
-  CreateOrder
+  CreateOrder,
 );
 router.get("/orders", GetAllOrders);
 router.post("/orders-guest", OrdersForGuest);

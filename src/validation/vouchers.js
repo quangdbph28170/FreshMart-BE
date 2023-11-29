@@ -5,7 +5,7 @@ import Joi from 'joi';
     code: Joi.string().required(),
     percent: Joi.number().required().max(100).min(1),
     miniMumOrder: Joi.number().required(),
-    quantity: Joi.number().required(),
+    quantity: Joi.number().required().min(0),
     dateStart: Joi.date().required(),
     dateEnd: Joi.date().required(),
     status: Joi.boolean().default(true),

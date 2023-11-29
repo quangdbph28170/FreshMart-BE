@@ -1,7 +1,7 @@
 import Products from "../models/products";
 import Shipment from "../models/shipment";
 import Categories from "../models/categories";
-import { validateProduct, validateLiquidationProduct } from "../validation/products";
+import { validateProduct, validateProductClearance } from "../validation/products";
 import mongoose from "mongoose";
 export const getProducts = async (req, res) => {
   const {
@@ -244,15 +244,24 @@ export const updateProduct = async (req, res) => {
         message: error.details.map((error) => error.message),
       });
     }
-
-    const product = await Products.findByIdAndUpdate(req.params.id, req.body);
+    const prd = await Products.findById(req.params.id)
+    const product = await Products.findByIdAndUpdate(req.params.id, req.body,{new:true});
     if (!product) {
       return res.status(404).json({
         status: 404,
         message: "Product not found",
       });
     }
-
+    await Categories.findByIdAndUpdate(prd.categoryId, {
+      $pull: {
+        products: req.params.id,
+      },
+    });
+    await Categories.findByIdAndUpdate(req.body.categoryId, {
+      $push: {
+        products: req.params.id,
+      },
+    });
 
     return res.status(201).json({
       body: {
@@ -296,11 +305,11 @@ export const removeProduct = async (req, res) => {
     });
   }
 };
-export const liquidationProduct = async (req, res) => {
+export const productClearance = async (req, res) => {
   try {
     const { productId, shipmentId, discount, productName } = req.body
 
-    const { error } = validateLiquidationProduct.validate(req.body, { abortEarly: false });
+    const { error } = validateProductClearance.validate(req.body, { abortEarly: false });
     if (error) {
       return res.status(401).json({
         status: 401,
@@ -328,21 +337,28 @@ export const liquidationProduct = async (req, res) => {
 
     //Kiểm tra xem sp CẦN_THANH_LÝ còn trong lô hàng đó 
     const checkShipmentId = productExist.shipments.find(item => item.idShipment == shipmentId)
-    console.log(checkShipmentId)
+    // console.log(checkShipmentId)
     if (!checkShipmentId) {
       return res.status(404).json({
         status: 404,
         message: "Sản phẩm đã không còn trong lô hàng này!",
       });
     }
+    console.log("no")
     // Tìm danh mục thanh lý
     const cateIsSale = await Categories.findOne({ isSale: true })
-    console.log(cateIsSale)
+   if(!cateIsSale){
+    return res.status(400).json({
+      status: 400,
+      message: "Phải tạo danh mục thanh lý trước!",
+    });
+   }
     const data = await Products.create({
       ...productExist.toObject(),
       categoryId: cateIsSale._id,
       _id: undefined,
       productName,
+      originalID:productExist._id,
       shipments: [
         {
           idShipment: shipmentExist.idShipment,
@@ -373,10 +389,10 @@ export const liquidationProduct = async (req, res) => {
       }
     }, { new: true })
 
-    //Cập nhật lại trong bảng categories => id sp THANH_LÝ  
-    await Categories.findByIdAndUpdate(cateIsSale._id, { "products.idProduct": productId }, {
-      $set: {
-        "products.$.idProduct": data._id
+    //push vào danh mục
+    await Categories.findByIdAndUpdate(cateIsSale._id, {
+      $push: {
+        products: data._id
       }
     }, { new: true })
 

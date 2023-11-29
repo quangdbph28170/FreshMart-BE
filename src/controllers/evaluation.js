@@ -4,6 +4,7 @@ import Order from "../models/orders"
 import { validateEvaluation } from "../validation/evaluation"
 import Joi from "joi"
 import User from "../models/user"
+import { doneOrder } from "../config/constants"
 const formatPhoneNumber = /^0+[0-9]{9}$/;
 const validRate = Joi.object({
     userName: Joi.string().required(),
@@ -22,6 +23,7 @@ export const createEvaluation = async (req, res) => {
                 message: error.details.map((error) => error.message),
             });
         }
+
         const { userName, phoneNumber } = req.body
         if (!req.body.userId) {
             const { error } = validRate.validate({ userName, phoneNumber }, { abortEarly: false })
@@ -40,6 +42,12 @@ export const createEvaluation = async (req, res) => {
                 message: "Order not found",
             });
         }
+        if (orderExist.status != doneOrder) {
+            return res.status(404).json({
+                status: 404,
+                message: "Order status Invalid!",
+            });
+        }
         const productExist = await Order.findOne({ _id: orderId, "products.productId": productId })
         if (!productExist) {
             return res.status(404).json({
@@ -49,7 +57,7 @@ export const createEvaluation = async (req, res) => {
         }
         // Check xem sp này trong đơn hàng đấy đã được đánh giá chưa 
         const isRated = orderExist.products.find(item => item.productId == productId)
-        
+
         if (isRated.evaluation) {
             return res.status(400).json({
                 status: 400,
@@ -87,8 +95,22 @@ export const createEvaluation = async (req, res) => {
 
 // lấy danh sách đánh giá theo sản phẩm
 export const getIsRatedByProductId = async (req, res) => {
+    const {
+        _page = 1,
+        _order = "asc",
+        _limit = 9999,
+        _sort = "createdAt",
+    } = req.query;
+    const options = {
+        page: _page,
+        limit: _limit,
+        sort: {
+            [_sort]: _order === "desc" ? -1 : 1,
+        },
+    };
     try {
-        const data = await Evaluation.find({ productId: req.params.id }).populate('userId')
+        const query = { productId: req.params.id }
+        const data = await Evaluation.paginate(query, options)
         if (data.userId != null) {
             data.populate("userId")
         }
@@ -101,7 +123,14 @@ export const getIsRatedByProductId = async (req, res) => {
         return res.status(200).json({
             status: 200,
             message: "success",
-            body: { data }
+            body: {
+                data: data.docs,
+                pagination: {
+                    currentPage: data.page,
+                    totalPages: data.totalPages,
+                    totalItems: data.totalDocs,
+                },
+            }
         })
     } catch (error) {
         return res.status(500).json({
@@ -139,29 +168,29 @@ export const getIsRatedDetail = async (req, res) => {
 //Admin Lấy toàn bộ đánh giá
 export const getAllRating = async (req, res) => {
     try {
-        const data = await Evaluation.find()
-        const highestRatedProduct = await Evaluation.aggregate([
-            { $group: { _id: "$productId", averageRating: { $avg: "$rate" } } },
-            { $sort: { averageRating: -1 } },
-            { $limit: 1 },
-            { $project: { _id: 0, productId: "$_id" } }
-        ]);
+        const data = await Evaluation.find().populate("userId")
+        // const highestRatedProduct = await Evaluation.aggregate([
+        //     { $group: { _id: "$productId", averageRating: { $avg: "$rate" } } },
+        //     { $sort: { averageRating: -1 } },
+        //     { $limit: 1 },
+        //     { $project: { _id: 0, productId: "$_id" } }
+        // ]);
 
-        const lowestRatedProduct = await Evaluation.aggregate([
-            { $group: { _id: "$productId", averageRating: { $avg: "$rate" } } },
-            { $sort: { averageRating: 1 } },
-            { $limit: 1 },
-            { $project: { _id: 0, productId: "$_id" } }
-        ]);
-        console.log(highestRatedProduct);
-        console.log(lowestRatedProduct);
+        // const lowestRatedProduct = await Evaluation.aggregate([
+        //     { $group: { _id: "$productId", averageRating: { $avg: "$rate" } } },
+        //     { $sort: { averageRating: 1 } },
+        //     { $limit: 1 },
+        //     { $project: { _id: 0, productId: "$_id" } }
+        // // ]);
+        // console.log(highestRatedProduct);
+        // console.log(lowestRatedProduct);
         return res.status(200).json({
             status: 200,
             message: "success",
             body: {
                 data,
-                highestRatedProductId: highestRatedProduct[0].productId,
-                lowestRatedProductId: lowestRatedProduct[0].productId
+                // highestRatedProductId: highestRatedProduct[0].productId,
+                // lowestRatedProductId: lowestRatedProduct[0].productId
             }
         });
     } catch (error) {

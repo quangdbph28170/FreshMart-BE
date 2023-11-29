@@ -37,7 +37,15 @@ const voucherSchema = new mongoose.Schema(
         percent: {
             type: Number,
             required: true,
-        }
+        },
+        users: [
+            {
+                userId: {
+                    type: mongoose.Schema.Types.ObjectId,
+                    ref: "User"
+                }
+            }
+        ]
     },
     { timestamps: true, versionKey: false },
 );

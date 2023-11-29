@@ -2,6 +2,10 @@ import mongoose from "mongoose";
 import mongoosePaginate from "mongoose-paginate-v2";
 const productSchema = new mongoose.Schema(
   {
+    originalID: {
+      type: mongoose.Types.ObjectId,
+      default: null,
+    },
     productName: {
       type: String,
       required: true,
@@ -50,7 +54,7 @@ const productSchema = new mongoose.Schema(
           },
           originWeight: Number,
           weight: Number,
-          date: String,        
+          date: String,
           originPrice: Number,
           willExpire: {
             type: Number,
@@ -74,14 +78,14 @@ const productSchema = new mongoose.Schema(
       ],
       default: [],
     },
-    isSale:{
-      type:Boolean,
+    isSale: {
+      type: Boolean,
       default: false,
     },
     evaluated: [{
-        evaluatedId: {
+      evaluatedId: {
         type: mongoose.Schema.Types.ObjectId,
-        ref:"Evaluation"
+        ref: "Evaluation"
       }
     }]
   },
