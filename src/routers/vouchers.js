@@ -1,8 +1,15 @@
 import express from "express";
 import { authorization } from "../middleware/authorization";
-import { createVoucher, getAllVoucher, getVoucher, getVoucherUser, removeVoucher, updateVoucher, validateVoucher } from "../controllers/vouchers";
+import {
+  createVoucher,
+  getAllVoucher,
+  getVoucher,
+  getVoucherUser,
+  removeVoucher,
+  updateVoucher,
+  validateVoucher,
+} from "../controllers/vouchers";
 import authentication from "../middleware/authentication";
-
 
 const router = express.Router();
 
