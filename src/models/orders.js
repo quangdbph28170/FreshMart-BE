@@ -26,9 +26,8 @@ const orderSchema = new mongoose.Schema(
           ref: "Shipment",
           required: true,
         },
-        originId: {
-          type: mongoose.Schema.Types.ObjectId,
-          ref: "Origin",
+        originName: {
+          type: String,
           required: true,
         },
         productName: {
