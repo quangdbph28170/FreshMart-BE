@@ -1,15 +1,18 @@
 import mongoose from "mongoose";
 import Order from "../models/orders";
+import Origin from "../models/origin";
 import Product from "../models/products";
 import Shipment from "../models/shipment";
 import { validateCheckout } from "../validation/checkout";
 import { transporter } from "../config/mail";
-import { handleTransaction } from "./momo-pay";
-import { doneOrder, failedOrder, messageCreateOrder, messageOrderSuccess, messageUpdateOrder, statusOrder, subjectCreateOrder, subjectUpdateOrder } from "../config/constants";
+import {
+  doneOrder, failedOrder, messageCreateOrder, messageOrderSuccess,
+  messageUpdateOrder, statusOrder, subjectCreateOrder, subjectUpdateOrder
+} from "../config/constants";
 import Carts from "../models/carts";
 import { vnpayCreate } from "./vnpay";
-import { validateVoucher } from "./vouchers";
 import vouchers from "../models/vouchers";
+
 const checkCancellationTime = (order) => {
   const checkTime = new Date(order.createdAt);
   const currentTime = new Date();
@@ -26,13 +29,11 @@ const checkCancellationTime = (order) => {
 };
 const formatDateTime = (dateTime) => {
   const date = new Date(dateTime);
-
-  const formattedDate = `${date.getDate()}/${date.getMonth() + 1
-    }/${date.getFullYear()}`;
+  const formattedDate = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
   const formattedTime = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
   return `${formattedDate} ${formattedTime}`;
 };
-export const sendMailer = async (email, data) => {
+export const sendMailer = async (email, data, amountReduced) => {
   let subject = null
   let message = null
   if (data.status == "chờ xác nhận") {
@@ -47,15 +48,29 @@ export const sendMailer = async (email, data) => {
   }
   // console.log(email,data);
   let voucher = null
+  let code = null
+  // console.log(data);
   if (data.promotionCode != null) {
     voucher = await vouchers.findOne({ code: data.promotionCode })
   }
-  let code = null
-
-  if (voucher != null) {
-    code = "Voucher đã dùng: " + voucher.code
+  // console.log("voucher", voucher);
+  // return
+  let maxReduce = null
+  if (voucher != null && amountReduced != null) {
+    if (voucher.maxReduce != 0) {
+      maxReduce = "tối đa " + voucher.maxReduce.toLocaleString("vi-VN") + "VND"
+    }
+    code = `
+    <p style="font-weight: bold; margin: 0;">Voucher đã sử dụng: Giảm ${amountReduced.toLocaleString("vi-VN")}VND</p>
+  <div style="display: flex; align-items: center; background-color: #f9f9f9; border: 1px solid #ccc; border-radius: 5px; padding: 5px;">
+    <img src="https://inmauhanoi.com/wp-content/uploads/2019/03/in-voucher-gia-re-lay-ngay-tai-ha-noi.png" alt="Voucher" style="width: 50px; height: 50px; margin-right: 10px;">
+    <div>
+      <p style="margin: 0;">Mã: ${voucher.code}</p>
+      <p style="margin: 0;">Giảm ${voucher.percent}% đơn tối thiểu ${voucher.miniMumOrder.toLocaleString("vi-VN")}VND ${maxReduce}</p>
+    </div>
+  </div>
+`;
   }
-
   await transporter.sendMail({
     from: "namphpmailer@gmail.com",
     to: email,
@@ -82,35 +97,27 @@ export const sendMailer = async (email, data) => {
                     </tr>
                   </thead>
                   <tbody>
-                    ${data.products
-        .map((product, index) =>
-          `
+                    ${data.products.map((product, index) =>
+      `
           <tr style="border-bottom:1px solid #ccc">
             <td style="padding: 10px;">${index + 1}</td>
             <td style="padding: 10px;"><img alt="image" src="${product.images
-          }" style="width: 90px; height: 90px;border-radius:5px">
-            <p>${product.productName}</p>
+      }" style="width: 90px; height: 90px;border-radius:5px">
+            <p>${product.productName} (${product.originName})</p>
             </td>
             <td style="padding: 10px;">${product.weight}kg</td>
             <td style="padding: 10px;">${product.price.toLocaleString(
-            "vi-VN"
-          )}VNĐ</td>
+        "vi-VN"
+      )}VNĐ/kg</td>
           </tr>
        `
-
-        )
-
+    )
         .join("")}
                   </tbody>
                 </table>  
-                <p>${code} </p>
-                  <p style="color: red;font-weight:bold;margin-top:20px">Tổng tiền thanh toán: ${data.totalPayment.toLocaleString(
-          "vi-VN"
-        )}VNĐ</p>
-                  <p>Thanh toán: ${data.pay == false
-        ? "Thanh toán khi nhận hàng"
-        : "Đã thanh toán online"
-      }</p>
+                <h4>Tổng: ${amountReduced != null ? (amountReduced + data.totalPayment).toLocaleString("vi-VN") + "VND" : `${data.totalPayment.toLocaleString("vi-VN")}VND`}</h4> ${code != null ? `<p>${code}</p>` : ""}
+                  <h3 style="color: red;font-weight:bold;margin-top:20px">Tổng tiền thanh toán: ${data.totalPayment.toLocaleString("vi-VN")}VNĐ</h3>
+                  <p>Thanh toán: ${data.pay == false ? "Thanh toán khi nhận hàng" : "Đã thanh toán online"}</p>
                   <p>Trạng thái đơn hàng: ${data.status}</p>
                   </div>
                    <p>Xin cảm ơn quý khách!</p>
@@ -121,7 +128,6 @@ export const sendMailer = async (email, data) => {
 //Tạo mới đơn hàng
 export const CreateOrder = async (req, res) => {
   try {
-
     const { products, paymentMethod } = req.body;
     const { error } = validateCheckout.validate(req.body, {
       abortEarly: false,
@@ -132,16 +138,13 @@ export const CreateOrder = async (req, res) => {
         message: error.details.map((error) => error.message),
       });
     }
-
     if (!products || products.length === 0) {
       return res.status(400).json({
         status: 400,
         message: "Cannot place an order due to empty product",
       });
     }
-
     const errors = [];
-
     for (let item of products) {
       if (item.weight <= 0) {
         errors.push({
@@ -157,12 +160,6 @@ export const CreateOrder = async (req, res) => {
           message: "Invalid data!",
         });
       } else {
-        // if (!new mongoose.Types.ObjectId(item.originId._id).equals(prd.originId)) {
-        //   errors.push({
-        //     productId: item.productId,
-        //     originId: item.originId,
-        //     message: 'Invalid Product Origin!'
-        //   });
 
         if (item.price != prd.price - (prd.price * prd.discount / 100)) {
           errors.push({
@@ -209,15 +206,18 @@ export const CreateOrder = async (req, res) => {
         body: { errors },
       });
     }
-    let totalPayment = null
+    let totalPayment = null    //--- tổng thanh toán -------//
+    let amountReduced = null    //----- số tiền đã giảm------  //
     for (let item of products) {
       const prd = await Product.findById(item.productId);
       totalPayment += (prd.price - (prd.price * prd.discount / 100)) * item.weight
     }
+    //KH đăng nhập
     if (req.user != null) {
       req.body["userId"] = req.user._id;
-
+      //Nếu dùng mã voucher
       if (req.body.code) {
+        //Ktra mã có tồn tại ko 
         const voucherExist = await vouchers.findOne({ code: req.body.code })
         if (!voucherExist) {
           return res.status(404).json({
@@ -256,41 +256,38 @@ export const CreateOrder = async (req, res) => {
           });
         }
         //Chưa đạt yc với tối thiểu đơn hàng
-        if (voucherExist.miniMumOrder > totalPayment) {
+        if (voucherExist.miniMumOrder > 0 && voucherExist.miniMumOrder > totalPayment) {
           return res.status(400).json({
             status: 400,
             message: "Orders are not satisfactory!",
-
           });
         }
+
         //Check xem user đã dùng voucher này chưa
         const userExist = await vouchers.findOne({ code: req.body.code, "users.userId": req.body.userId })
-
         if (userExist) {
           return res.status(400).json({
             status: 400,
             message: "This voucher code has already been used. Please enter a different code!",
-
           });
         }
 
-
-
-        // đơn hàng 10k giảm 50% tối đa 8k
         // tính số tiền giảm:
         const amount = totalPayment * voucherExist.percent / 100
-
         // nếu sô tiền giảm vượt quá tối đa cho phép thì trừ đi số tiền tối đa
         if (voucherExist.maxReduce > 0) {
           if (amount > voucherExist.maxReduce) {
             totalPayment = totalPayment - voucherExist.maxReduce
+            amountReduced = voucherExist.maxReduce
           } else {
             totalPayment = totalPayment - (totalPayment * voucherExist.percent / 100)
+            amountReduced = (totalPayment * voucherExist.percent / 100)
           }
         } else {
           totalPayment = totalPayment - (totalPayment * voucherExist.percent / 100)
+          amountReduced = (totalPayment * voucherExist.percent / 100)
         }
-
+        //Check tổng tiền thanh toán
         if (req.body.totalPayment !== totalPayment) {
           return res.status(400).json({
             status: 400,
@@ -299,13 +296,9 @@ export const CreateOrder = async (req, res) => {
             false: req.body.totalPayment
           });
         }
-
       }
-
-
     }
-
-
+    //Check tổng tiền thanh toán
     if (req.body.totalPayment !== totalPayment) {
       return res.status(400).json({
         status: 400,
@@ -314,10 +307,8 @@ export const CreateOrder = async (req, res) => {
         false: req.body.totalPayment
       });
     }
-
-
+    //Lặp qua mảng products gửi lên 
     for (let item of products) {
-
       const prd = await Product.findById(item.productId);
       // Update sold +
       await Product.findByIdAndUpdate(item.productId, {
@@ -327,12 +318,21 @@ export const CreateOrder = async (req, res) => {
       })
       let itemWeight = item.weight;
       if (itemWeight != 0 || currentTotalWeight != 0) {
+        //Lặp qua từng lô 1 trong bảng products
         for (let shipment of prd.shipments) {
           if (itemWeight == 0) {
             break;
           }
-          //TH1: Nếu số lượng mua lớn hơn só lượng trong lô hàng hiện tại
+          //===========================================================//
+          // - Táo có lô:
+          //  A(30kg),
+          //  B(50kg),
+          // - Mua 50kg táo => xóa lô A đi và trừ 20kg ở lô B thì 
+          // - Mua 10kg táo => trừ 20kg táo ở lô A
+          //===========================================================//
+          //TH1: Nếu số lượng mua lớn hơn số lượng trong lô hàng hiện tại
           if (shipment.weight - itemWeight <= 0) {
+            //Xóa sp nếu đó là sp thanh lý
             if (prd.isSale) {
               await Product.findByIdAndDelete(prd._id)
             } else {
@@ -382,16 +382,23 @@ export const CreateOrder = async (req, res) => {
           }
         }
       }
+      //Lưu lại mã lô hàng đầu tiên của sp
       if (prd.shipments.length > 0) {
         const firstShipment = prd.shipments[0];
         item.shipmentId = firstShipment.idShipment;
         // item["shipmentId"] = firstShipment.idShipment;
       }
-
+      const origin = await Origin.findById(item.originId)
+      delete item.originId
+      item.originName = origin.name
+      //nếu là sp thanh lý thì lấy lại id sp gốc
+      if (prd.originalID != null) {
+        item.productId = prd.originalID
+      }
     }
-    console.log(req.body.products);
-    //  return
-    const data = await Order.create(req.body);
+    // console.log(req.body.products);
+
+    let data = await Order.create(req.body);
 
     // nếu đăng nhập thì xóa hết sp (.) cart
     if (req.user) {
@@ -400,12 +407,12 @@ export const CreateOrder = async (req, res) => {
       })
       if (req.body.code) {
         //lưu mã voucher vào đơn hàng
-        await Order.findOneAndUpdate({ _id: data._id }, {
+        data = await Order.findOneAndUpdate({ _id: data._id }, {
           $set: {
             promotionCode: req.body.code
           },
 
-        })
+        }, { new: true })
         const voucherExist = await vouchers.findOne({ code: req.body.code })
         //Trừ 1 vé voucher và thêm id user
         await vouchers.findOneAndUpdate({ code: req.body.code }, {
@@ -422,10 +429,11 @@ export const CreateOrder = async (req, res) => {
     }
     let url = ''
     // kiểm tra phương thức thanh toán là momo
+    console.log(amountReduced);
     if (paymentMethod === "vnpay") {
       url = await vnpayCreate(req, data._id)
     } else {
-      await sendMailer(req.body.email, data);
+      await sendMailer(req.body.email, data, amountReduced);
     }
 
     return res.status(201).json({
@@ -698,7 +706,6 @@ export const OrderDetail = async (req, res) => {
     let voucher = null
     if (data.promotionCode != null) {
       voucher = await vouchers.findOne({ code: data.promotionCode })
-
     }
 
     if (!data) {
@@ -817,13 +824,13 @@ export const ConfirmOrder = async (req, res) => {
     if (!data) {
       return res.status(400).json({
         status: 400,
-        message: "cofirm failed",
+        message: "confirm failed",
       });
     }
     return res.status(201).json({
       body: { data },
       status: 201,
-      message: "cofirm successfully",
+      message: "confirm successfully",
     });
   } catch (error) {
     return res.status(500).json({
