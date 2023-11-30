@@ -239,22 +239,22 @@ export const updateVoucher = async (req, res) => {
     }
 }
 export const getVoucherUser = async (req, res) => {
-  try {
-    const { miniMumOrder } = req.body;
-    if (!miniMumOrder && typeof miniMumOrder !== "number") {
-      return res.status(400).json({
-        status: 400,
-        message: "miniMumOrder is required!",
-      });
-    }
+    try {
+        const { miniMumOrder, userId } = req.body;
+        if (!miniMumOrder && typeof miniMumOrder !== "number") {
+            return res.status(400).json({
+                status: 400,
+                message: "miniMumOrder is required!",
+            });
+        }
 
     const data = await Voucher.find();
     const vouchers = [];
     const dateNow = new Date();
 
-    for (let item of data) {
-      let exist = true;
-      let active = true;
+        for (let item of data) {
+            let exist = true;
+            let active = true;
 
       // Hết số lượng
       if (item.quantity == 0) {
@@ -265,39 +265,33 @@ export const getVoucherUser = async (req, res) => {
         exist = false;
       }
 
-      // Voucher đã hết hạn
-      if (item.dateEnd < dateNow) {
-        exist = false;
-      }
-      // Voucher chưa cho phép dùng
-      if (item.dateStart > dateNow) {
-        exist = false;
-      }
-      // Kiểm tra xem người dùng đã sử dụng voucher chưa
-      const userExist = item.users.find(
-        (user) => user.userId.toString() === req.user._id.toString()
-      );
-      if (userExist) {
-        exist = false;
-      }
-      //
+            // Voucher đã hết hạn
+            if (item.dateEnd < dateNow) {
+                exist = false;
+            }
+            // Voucher chưa cho phép dùng
+            if (item.dateStart > dateNow) {
+                exist = false;
+            }
+            // Kiểm tra xem người dùng đã sử dụng voucher chưa
+            if (userId) {
+                const userExist = item.users.find(user => user.userId.toString() === userId.toString());
+                if (userExist) {
+                    exist = false;
+                }
+            }
+            //
+            if (exist) {
+                // Chưa đạt yêu cầu với tối thiểu đơn hàng
+                if (item.miniMumOrder > 0 && item.miniMumOrder > miniMumOrder) {
+                    active = false;
+                }
+                item = item.toObject();
+                item.active = active;
+                vouchers.push(item);
+            }
 
-      if (exist) {
-        console.log(item.id,miniMumOrder);
-        // Chưa đạt yêu cầu với tối thiểu đơn hàng
-        if (item.miniMumOrder > miniMumOrder) {
-          active = true;
-        } else {
-          active = false;
         }
-      } else {
-        console.log(item.id,"error");
-        active = false;
-      }
-      item = item.toObject();
-      item.active = active;
-      vouchers.push(item);
-    }
 
     return res.status(200).json({
       status: 200,
