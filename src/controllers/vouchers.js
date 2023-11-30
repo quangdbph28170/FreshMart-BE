@@ -1,56 +1,56 @@
 import Joi from "joi";
-import Voucher from "../models/vouchers"
-import User from "../models/user"
+import Voucher from "../models/vouchers";
+import User from "../models/user";
 import voucherValid from "../validation/vouchers";
 
 const voucherSchema = Joi.object({
-    code: Joi.string().required(),
-    miniMumOrder: Joi.number().required(),
-    userId: Joi.string().required(),
-})
+  code: Joi.string().required(),
+  miniMumOrder: Joi.number().required(),
+  userId: Joi.string().required(),
+});
 
 export const validateVoucher = async (req, res) => {
-    try {
-        const { error } = voucherSchema.validate(req.body, { abortEarly: false })
+  try {
+    const { error } = voucherSchema.validate(req.body, { abortEarly: false });
 
-        if (error) {
-            return res.status(401).json({
-                status: 401,
-                message: error.details.map((error) => error.message),
-            });
-        }
-        const { code, miniMumOrder, userId } = req.body
-        const voucherExist = await Voucher.findOne({ code })
-        const user = await User.findById(userId)
+    if (error) {
+      return res.status(401).json({
+        status: 401,
+        message: error.details.map((error) => error.message),
+      });
+    }
+    const { code, miniMumOrder, userId } = req.body;
+    const voucherExist = await Voucher.findOne({ code });
+    const user = await User.findById(userId);
 
-        //Id user 
-        if (!user) {
-            return res.status(404).json({
-                status: 404,
-                message: "User not found!",
-            });
-        }
-        //Mã ko hợp lệ
-        if (!voucherExist) {
-            return res.status(404).json({
-                status: 404,
-                message: "Voucher does not exist!",
-            });
-        }
-        //Hết số lượng
-        if (voucherExist.quantity == 0) {
-            return res.status(400).json({
-                status: 400,
-                message: "Voucher is out of quantity!",
-            });
-        }
-        //Voucher ko còn hoạt động
-        if (voucherExist.status == false) {
-            return res.status(400).json({
-                status: 400,
-                message: "Voucher does not work!",
-            });
-        }
+    //Id user
+    if (!user) {
+      return res.status(404).json({
+        status: 404,
+        message: "User not found!",
+      });
+    }
+    //Mã ko hợp lệ
+    if (!voucherExist) {
+      return res.status(404).json({
+        status: 404,
+        message: "Voucher does not exist!",
+      });
+    }
+    //Hết số lượng
+    if (voucherExist.quantity == 0) {
+      return res.status(400).json({
+        status: 400,
+        message: "Voucher is out of quantity!",
+      });
+    }
+    //Voucher ko còn hoạt động
+    if (voucherExist.status == false) {
+      return res.status(400).json({
+        status: 400,
+        message: "Voucher does not work!",
+      });
+    }
 
         const dateNow = new Date()
         //Voucher đã hết hạn
@@ -68,7 +68,7 @@ export const validateVoucher = async (req, res) => {
             });
         }
         //Chưa đạt yc với tối thiểu đơn hàng
-        if (voucherExist.miniMumOrder > miniMumOrder) {
+        if (voucherExist.miniMumOrder > 0 && voucherExist.miniMumOrder > miniMumOrder) {
             return res.status(400).json({
                 status: 400,
                 message: "Orders are not satisfactory!",
@@ -99,95 +99,100 @@ export const validateVoucher = async (req, res) => {
     }
 }
 export const createVoucher = async (req, res) => {
-    try {
-        const { error } = voucherValid.validate(req.body, { abortEarly: false });
-        if (error) {
-            return res.status(401).json({
-                status: 401,
-                message: error.details.map((error) => error.message),
-            });
-        }
-        const voucherExist = await Voucher.findOne({ code: req.body.code })
-        if (voucherExist) {
-            return res.status(400).json({
-                status: 400,
-                message: "This code has existed!"
-            })
-        }
-        if (new Date(req.body.dateStart) > new Date(req.body.dateEnd)) {
-            return res.status(400).json({
-                status: 400,
-                message: "Date invalid",
-
-            })
-        }
-        const data = await Voucher.create(req.body)
-        return res.status(201).json({
-            status: 201,
-            message: "success",
-            body: { data }
-        })
-    } catch (error) {
-        return res.status(500).json({
-            status: 500,
-            message: error.message,
-        });
+  try {
+    const { error } = voucherValid.validate(req.body, { abortEarly: false });
+    if (error) {
+      return res.status(401).json({
+        status: 401,
+        message: error.details.map((error) => error.message),
+      });
     }
-}
+    const voucherExist = await Voucher.findOne({ code: req.body.code });
+    if (voucherExist) {
+      return res.status(400).json({
+        status: 400,
+        message: "This code has existed!",
+      });
+    }
+    if (new Date(req.body.dateStart) > new Date(req.body.dateEnd)) {
+      return res.status(400).json({
+        status: 400,
+        message: "Date invalid",
+      });
+    }
+    const data = await Voucher.create(req.body);
+    return res.status(201).json({
+      status: 201,
+      message: "success",
+      body: { data },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
+};
 export const getVoucher = async (req, res) => {
-    try {
-        const data = await Voucher.findById(req.params.id)
-        if (!data) {
-            return res.status(404).json({
-                status: 404,
-                message: "Voucher not found!",
-            });
-        }
-        return res.status(201).json({
-            status: 201,
-            message: "success",
-            body: { data }
-        })
-    } catch (error) {
-        return res.status(500).json({
-            status: 500,
-            message: error.message,
-        });
+  try {
+    const data = await Voucher.findById(req.params.id);
+    if (!data) {
+      return res.status(404).json({
+        status: 404,
+        message: "Voucher not found!",
+      });
     }
-}
+    return res.status(201).json({
+      status: 201,
+      message: "success",
+      body: { data },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
+};
 export const getAllVoucher = async (req, res) => {
-    try {
-        const data = await Voucher.find()
-        return res.status(201).json({
-            status: 201,
-            message: "success",
-            body: { data }
-        })
-    } catch (error) {
-        return res.status(500).json({
-            status: 500,
-            message: error.message,
-        });
-    }
-}
+  try {
+    const data = await Voucher.find();
+    return res.status(201).json({
+      status: 201,
+      message: "success",
+      body: { data },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
+};
 export const removeVoucher = async (req, res) => {
-    try {
-        const data = await Voucher.findByIdAndDelete(req.params.id)
-        return res.status(201).json({
-            status: 201,
-            message: "Voucher deleted",
-        })
-    } catch (error) {
-        return res.status(500).json({
-            status: 500,
-            message: error.message,
-        });
-    }
-}
+  try {
+    const data = await Voucher.findByIdAndDelete(req.params.id);
+    return res.status(201).json({
+      status: 201,
+      message: "Voucher deleted",
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
+};
 export const updateVoucher = async (req, res) => {
     try {
-        const { quantity, status } = req.body
+        const { quantity, status, code } = req.body
         const voucher = await Voucher.findById(req.params.id)
+        if (voucher.code == code) {
+            return res.status(400).json({
+                status: 400,
+                message: "Invalid Code",
+            });
+        }
         const dateStart = new Date(voucher.dateStart)
         const dateEnd = new Date(voucher.dateStart)
         const date_end = new Date(req.body.dateEnd)
@@ -235,7 +240,7 @@ export const updateVoucher = async (req, res) => {
 }
 export const getVoucherUser = async (req, res) => {
     try {
-        const { miniMumOrder } = req.body;
+        const { miniMumOrder, userId } = req.body;
         if (!miniMumOrder && typeof miniMumOrder !== "number") {
             return res.status(400).json({
                 status: 400,
@@ -243,22 +248,22 @@ export const getVoucherUser = async (req, res) => {
             });
         }
 
-        const data = await Voucher.find();
-        const vouchers = [];
-        const dateNow = new Date();
+    const data = await Voucher.find();
+    const vouchers = [];
+    const dateNow = new Date();
 
         for (let item of data) {
             let exist = true;
-            let active = false;
+            let active = true;
 
-            // Hết số lượng
-            if (item.quantity == 0) {
-                exist = false;
-            }
-            // Voucher không còn hoạt động
-            if (item.status === false) {
-                exist = false;
-            }
+      // Hết số lượng
+      if (item.quantity == 0) {
+        exist = false;
+      }
+      // Voucher không còn hoạt động
+      if (item.status === false) {
+        exist = false;
+      }
 
             // Voucher đã hết hạn
             if (item.dateEnd < dateNow) {
@@ -269,16 +274,17 @@ export const getVoucherUser = async (req, res) => {
                 exist = false;
             }
             // Kiểm tra xem người dùng đã sử dụng voucher chưa
-            const userExist = item.users.find(user => user.userId.toString() === req.user._id.toString());
-            if (userExist) {
-                exist = false;
+            if (userId) {
+                const userExist = item.users.find(user => user.userId.toString() === userId.toString());
+                if (userExist) {
+                    exist = false;
+                }
             }
             //
-
             if (exist) {
                 // Chưa đạt yêu cầu với tối thiểu đơn hàng
-                if (item.miniMumOrder > miniMumOrder) {
-                    active = true;
+                if (item.miniMumOrder > 0 && item.miniMumOrder > miniMumOrder) {
+                    active = false;
                 }
                 item = item.toObject();
                 item.active = active;
@@ -287,15 +293,15 @@ export const getVoucherUser = async (req, res) => {
 
         }
 
-        return res.status(200).json({
-            status: 200,
-            message: "Get voucher success",
-            body: { data: vouchers },
-        });
-    } catch (error) {
-        return res.status(500).json({
-            status: 500,
-            message: error.message,
-        });
-    }
+    return res.status(200).json({
+      status: 200,
+      message: "Get voucher success",
+      body: { data: vouchers },
+    });
+  } catch (error) {
+    return res.status(500).json({
+      status: 500,
+      message: error.message,
+    });
+  }
 };
