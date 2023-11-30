@@ -84,13 +84,13 @@ cron.schedule("1-59 * * * *", async () => {
 })
 
 //Thống kê lại dữ liệu sau mỗi 24h 
-cron.schedule("* 0 * * *", async () => {
+cron.schedule("*/1 * * * *", async () => {
   try {
     //Lấy ra tất cả sản phẩm (ko lấy sp thanh lý/thất thoát)
     const products = await Product.find({ isSale: false });
 
     //lấy ra tất cả đơn hàng đã hoàn thành
-    const orders = await Orders.find({ status: 'đơn hàng hoàn thành' }).populate('products.productId');
+    const orders = await Orders.find({ status: 'đơn hàng hoàn thành' }).populate(['products.productId', 'products.shipmentId']);
 
     //lấy ra tất cả tài khoản của người dùng (not admin)
     const users = await User.find({ role: 'member' })
@@ -110,6 +110,35 @@ cron.schedule("* 0 * * *", async () => {
 
     // Tính trung bình tổng số tiền đã thanh toán
     const averageTransactionPrice = salesRevenue > 0 && (orders && orders.length > 0) ? Number((salesRevenue / orders.length).toFixed(2)) : 0;
+
+    // Tổng giá nhập hàng theo lô của từng sản phẩm trong order
+    let totalImportPrice = 0;
+    const uniqueProducts = new Set();
+
+    if (orders && orders.length > 0) {
+      for (const order of orders) {
+        for (const product of order.products) {
+          if (product?.shipmentId?.products) {
+            for (const productOfShipment of product.shipmentId.products) {
+              const productKey = `${product.productId?._id}-${productOfShipment?.idProduct}`;
+
+              // Check if the product combination has been added already
+              if (!uniqueProducts.has(productKey)) {
+                if (product.productId?._id && productOfShipment?.idProduct && product.productId?._id.equals(productOfShipment?.idProduct)) {
+                  totalImportPrice += productOfShipment.originPrice;
+
+                  // Add the product combination to the set
+                  uniqueProducts.add(productKey);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    
+    // Tính lợi nhuận
+    const profit = salesRevenue - totalImportPrice
 
     // Lấy ra top 5 sản phẩm có số lượng bán ra nhiều nhất
     let topFiveProductsSold = []
@@ -235,6 +264,7 @@ cron.schedule("* 0 * * *", async () => {
     const dataToUpload = {
       salesRevenue,
       customers,
+      profit,
       averageTransactionPrice,
       topFiveProductsSold,
       topFiveCategoryByRevenue,
