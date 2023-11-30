@@ -68,7 +68,7 @@ export const validateVoucher = async (req, res) => {
             });
         }
         //Chưa đạt yc với tối thiểu đơn hàng
-        if (voucherExist.miniMumOrder > miniMumOrder) {
+        if (voucherExist.miniMumOrder > 0 && voucherExist.miniMumOrder > miniMumOrder) {
             return res.status(400).json({
                 status: 400,
                 message: "Orders are not satisfactory!",
