@@ -397,7 +397,6 @@ cron.schedule("*/1 * * * *", async () => {
             },
             { new: true }
           );
-          console.log("Update succes: ", productUnsold);
         } else {
           // nếu chưa có thì tạo mới sp thất thoát (sp ế)
           const data = await UnSoldProduct.create({
@@ -411,7 +410,6 @@ cron.schedule("*/1 * * * *", async () => {
               },
             ],
           });
-          console.log(data);
         }
         //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
         if (product.isSale) {
