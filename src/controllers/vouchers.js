@@ -52,54 +52,52 @@ export const validateVoucher = async (req, res) => {
       });
     }
 
-    const dateNow = new Date();
-    //Voucher đã hết hạn
-    if (voucherExist.dateEnd < dateNow) {
-      return res.status(400).json({
-        status: 400,
-        message: "Voucher is out of date",
-      });
+        const dateNow = new Date()
+        //Voucher đã hết hạn
+        if (voucherExist.dateEnd < dateNow) {
+            return res.status(400).json({
+                status: 400,
+                message: "Voucher is out of date",
+            });
+        }
+        //Voucher chưa được bắt đầu sử dụng
+        if (voucherExist.dateStart > dateNow) {
+            return res.status(400).json({
+                status: 400,
+                message: "Sorry, this voucher is not yet available for use!",
+            });
+        }
+        //Chưa đạt yc với tối thiểu đơn hàng
+        if (voucherExist.miniMumOrder > 0 && voucherExist.miniMumOrder > miniMumOrder) {
+            return res.status(400).json({
+                status: 400,
+                message: "Orders are not satisfactory!",
+                miniMumOrder: voucherExist.miniMumOrder
+            });
+        }
+        // user Đã dùng rồi
+        const userExist = await Voucher.findOne({ code: req.body.code, "users.userId": req.body.userId })
+        if (userExist) {
+            return res.status(400).json({
+                status: 400,
+                message: "This voucher code has already been used. Please enter a different code!",
+
+            });
+        }
+        // Hợp lệ
+        return res.status(200).json({
+            status: 200,
+            message: "Valid",
+            body: { data: voucherExist }
+        });
+
+    } catch (error) {
+        return res.status(500).json({
+            status: 500,
+            message: error.message,
+        });
     }
-    //Voucher chưa được bắt đầu sử dụng
-    if (voucherExist.dateStart > dateNow) {
-      return res.status(400).json({
-        status: 400,
-        message: "Sorry, this voucher is not yet available for use!",
-      });
-    }
-    //Chưa đạt yc với tối thiểu đơn hàng
-    if (voucherExist.miniMumOrder > miniMumOrder) {
-      return res.status(400).json({
-        status: 400,
-        message: "Orders are not satisfactory!",
-        miniMumOrder: voucherExist.miniMumOrder,
-      });
-    }
-    // user Đã dùng rồi
-    const userExist = await Voucher.findOne({
-      code: req.body.code,
-      "users.userId": req.body.userId,
-    });
-    if (userExist) {
-      return res.status(400).json({
-        status: 400,
-        message:
-          "This voucher code has already been used. Please enter a different code!",
-      });
-    }
-    // Hợp lệ
-    return res.status(200).json({
-      status: 200,
-      message: "Valid",
-      body: { data: voucherExist },
-    });
-  } catch (error) {
-    return res.status(500).json({
-      status: 500,
-      message: error.message,
-    });
-  }
-};
+}
 export const createVoucher = async (req, res) => {
   try {
     const { error } = voucherValid.validate(req.body, { abortEarly: false });
@@ -186,56 +184,60 @@ export const removeVoucher = async (req, res) => {
   }
 };
 export const updateVoucher = async (req, res) => {
-  try {
-    const { quantity, status } = req.body;
-    const voucher = await Voucher.findById(req.params.id);
-    const dateStart = new Date(voucher.dateStart);
-    const dateEnd = new Date(voucher.dateStart);
-    const date_end = new Date(req.body.dateEnd);
-    const date_start = new Date(req.body.dateStart);
-    let error = false;
-    if (date_end < date_start) {
-      error = true;
+    try {
+        const { quantity, status, code } = req.body
+        const voucher = await Voucher.findById(req.params.id)
+        if (voucher.code == code) {
+            return res.status(400).json({
+                status: 400,
+                message: "Invalid Code",
+            });
+        }
+        const dateStart = new Date(voucher.dateStart)
+        const dateEnd = new Date(voucher.dateStart)
+        const date_end = new Date(req.body.dateEnd)
+        const date_start = new Date(req.body.dateStart)
+        let error = false
+        if (date_end < date_start) {
+            error = true
+        }
+        if (dateEnd < date_start) {
+            error = true
+        }
+        if (date_end < dateStart) {
+            error = true
+        }
+        if (error) {
+            return res.status(400).json({
+                status: 400,
+                message: "Date invalid!"
+            });
+        }
+        const values = {
+            quantity,
+            dateEnd: req.body.dateEnd,
+            status,
+            dateStart: req.body.dateStart
+        }
+        const data = await Voucher.findByIdAndUpdate(req.params.id, values, { new: true })
+        if (!data) {
+            return res.status(404).json({
+                status: 404,
+                message: "Voucher update failed!",
+            });
+        }
+        return res.status(201).json({
+            status: 201,
+            message: "Voucher update success",
+            body: { data }
+        })
+    } catch (error) {
+        return res.status(500).json({
+            status: 500,
+            message: error.message,
+        });
     }
-    if (dateEnd < date_start) {
-      error = true;
-    }
-    if (date_end < dateStart) {
-      error = true;
-    }
-    if (error) {
-      return res.status(400).json({
-        status: 400,
-        message: "Date invalid!",
-      });
-    }
-    const values = {
-      quantity,
-      dateEnd: req.body.dateEnd,
-      status,
-      dateStart: req.body.dateStart,
-    };
-    const data = await Voucher.findByIdAndUpdate(req.params.id, values, {
-      new: true,
-    });
-    if (!data) {
-      return res.status(404).json({
-        status: 404,
-        message: "Voucher update failed!",
-      });
-    }
-    return res.status(201).json({
-      status: 201,
-      message: "Voucher update success",
-      body: { data },
-    });
-  } catch (error) {
-    return res.status(500).json({
-      status: 500,
-      message: error.message,
-    });
-  }
-};
+}
 export const getVoucherUser = async (req, res) => {
   try {
     const { miniMumOrder } = req.body;
