@@ -28,12 +28,12 @@ import User from "./models/user";
 import Shipment from "./models/shipment";
 import Category from "./models/categories";
 import voucherRouter from "./routers/vouchers";
-import session from 'express-session';
-import { connectToGoogle } from './config/googleOAuth';
+import session from "express-session";
+import { connectToGoogle } from "./config/googleOAuth";
 import { months } from "./config/constants";
 import { uploadData } from "./controllers/statistics";
-import UnSoldProduct from "./models/unsoldProducts"
-import routerUnSoldProduct from "./routers/unsoldProducts"
+import UnSoldProduct from "./models/unsoldProducts";
+import routerUnSoldProduct from "./routers/unsoldProducts";
 
 const app = express();
 const httpServer = createServer(app);
@@ -48,68 +48,88 @@ const io = new Server(httpServer, { cors: "*" });
 //kiểm tra nếu đơn hàng có phương thức thanh toán là vnpay/momo mà chưa thanh toán sau 20 phút sẽ hủy đơn hàng
 cron.schedule("1-59 * * * *", async () => {
   const tweentyMinutesInMilliseconds = 20 * 60 * 1000; // 20 phút tính bằng mili giây
-  const orders = await Orders.find({ $or: [{ paymentMethod: 'vnpay' }, { paymentMethod: 'momo' }], pay: false, createdAt: { $lte: new Date(Date.now() - tweentyMinutesInMilliseconds) } })
+  const orders = await Orders.find({
+    $or: [{ paymentMethod: "vnpay" }, { paymentMethod: "momo" }],
+    pay: false,
+    createdAt: { $lte: new Date(Date.now() - tweentyMinutesInMilliseconds) },
+  });
 
   for (const order of orders) {
     await Orders.findByIdAndUpdate(order._id, {
-      status: 'đã hủy'
-    })
+      status: "đã hủy",
+    });
     for (let item of order.products) {
-
-      const product = await Product.findById(item.productId)
+      const product = await Product.findById(item.productId);
       // update lại sold
       await Product.findByIdAndUpdate(item.productId, {
         $set: {
-          sold: product.sold - 1
-        }
-      })
+          sold: product.sold - 1,
+        },
+      });
       for (let shipment of product.shipments) {
         // Trả lại cân ở bảng products
-        await Product.findOneAndUpdate({ _id: product._id, "shipments.idShipment": shipment.idShipment }, {
-          $set: {
-            "shipments.$.weight": shipment.weight + item.weight
-          }
-        }, { new: true })
+        await Product.findOneAndUpdate(
+          { _id: product._id, "shipments.idShipment": shipment.idShipment },
+          {
+            $set: {
+              "shipments.$.weight": shipment.weight + item.weight,
+            },
+          },
+          { new: true }
+        );
 
         //Bảng shipment
-        await Shipment.findOneAndUpdate({ _id: shipment.idShipment, "products.idProduct": product._id }, {
-          $set: {
-            "products.$.weight": shipment.weight + item.weight
-          }
-        }, { new: true })
-
+        await Shipment.findOneAndUpdate(
+          { _id: shipment.idShipment, "products.idProduct": product._id },
+          {
+            $set: {
+              "products.$.weight": shipment.weight + item.weight,
+            },
+          },
+          { new: true }
+        );
       }
     }
   }
-})
+});
 
-//Thống kê lại dữ liệu sau mỗi 24h 
+//Thống kê lại dữ liệu sau mỗi 24h (dev: 30p)
 cron.schedule("*/30 * * * *", async () => {
   try {
     //Lấy ra tất cả sản phẩm (ko lấy sp thanh lý/thất thoát)
     const products = await Product.find({ isSale: false });
 
     //lấy ra tất cả đơn hàng đã hoàn thành
-    const orders = await Orders.find({ status: 'đơn hàng hoàn thành' }).populate(['products.productId', 'products.shipmentId']);
+    const orders = await Orders.find({
+      status: "đơn hàng hoàn thành",
+    }).populate(["products.productId", "products.shipmentId"]);
 
     //lấy ra tất cả tài khoản của người dùng (not admin)
-    const users = await User.find({ role: 'member' })
+    const users = await User.find({ role: "member" });
 
     //Lấy ra tất cả danh mục (not type default)
-    const categories = await Category.find({ type: 'normal' })
+    const categories = await Category.find({ type: "normal" });
 
     /*console.log('data: ', products, orders, users, categories)*/
 
     /*==================*/
 
     // Tính tổng doanh thu theo đơn hàng đã hoàn thành
-    const salesRevenue = orders ? orders.reduce((accumulator, order) => accumulator + order.totalPayment, 0) : 0;
+    const salesRevenue = orders
+      ? orders.reduce(
+          (accumulator, order) => accumulator + order.totalPayment,
+          0
+        )
+      : 0;
 
     // Tổng khách hàng đã đăng ký tài khoản
-    const customers = users ? users?.length : 0
+    const customers = users ? users?.length : 0;
 
     // Tính trung bình tổng số tiền đã thanh toán
-    const averageTransactionPrice = salesRevenue > 0 && (orders && orders.length > 0) ? Number((salesRevenue / orders.length).toFixed(2)) : 0;
+    const averageTransactionPrice =
+      salesRevenue > 0 && orders && orders.length > 0
+        ? Number((salesRevenue / orders.length).toFixed(2))
+        : 0;
 
     // Tổng giá nhập hàng theo lô của từng sản phẩm trong order
     let totalImportPrice = 0;
@@ -124,7 +144,11 @@ cron.schedule("*/30 * * * *", async () => {
 
               // Check if the product combination has been added already
               if (!uniqueProducts.has(productKey)) {
-                if (product.productId?._id && productOfShipment?.idProduct && product.productId?._id.equals(productOfShipment?.idProduct)) {
+                if (
+                  product.productId?._id &&
+                  productOfShipment?.idProduct &&
+                  product.productId?._id.equals(productOfShipment?.idProduct)
+                ) {
                   totalImportPrice += productOfShipment.originPrice;
 
                   // Add the product combination to the set
@@ -136,19 +160,22 @@ cron.schedule("*/30 * * * *", async () => {
         }
       }
     }
-    
+
     // Tính lợi nhuận
-    const profit = salesRevenue - totalImportPrice
+    const profit = salesRevenue - totalImportPrice;
 
     // Lấy ra top 5 sản phẩm có số lượng bán ra nhiều nhất
-    let topFiveProductsSold = []
+    let topFiveProductsSold = [];
     if (products.length > 0 && orders.length > 0) {
       for (const product of products) {
-        let totalWeight = 0
+        let totalWeight = 0;
         for (const order of orders) {
           for (const productOfOrder of order.products) {
-            if (productOfOrder.productId?._id && product._id.equals(productOfOrder.productId._id)) {
-              totalWeight += productOfOrder.weight
+            if (
+              productOfOrder.productId?._id &&
+              product._id.equals(productOfOrder.productId._id)
+            ) {
+              totalWeight += productOfOrder.weight;
             }
           }
         }
@@ -156,20 +183,26 @@ cron.schedule("*/30 * * * *", async () => {
           productId: product._id,
           productName: product.productName,
           totalWeight: totalWeight,
-        })
+        });
       }
     }
-    topFiveProductsSold = topFiveProductsSold?.sort((a, b) => b?.totalWeight - a?.totalWeight).slice(0, 5) || []
+    topFiveProductsSold =
+      topFiveProductsSold
+        ?.sort((a, b) => b?.totalWeight - a?.totalWeight)
+        .slice(0, 5) || [];
 
     // Lấy ra top 5 danh mục có tổng doanh thu cao nhất
-    let topFiveCategoryByRevenue = []
+    let topFiveCategoryByRevenue = [];
     if (categories.length > 0 && orders.length > 0) {
       for (const category of categories) {
-        let totalPrice = 0
+        let totalPrice = 0;
         for (const order of orders) {
           for (const productOfOrder of order.products) {
-            if (productOfOrder.productId?.categoryId && category._id.equals(productOfOrder.productId.categoryId)) {
-              totalPrice += productOfOrder.price * productOfOrder.weight
+            if (
+              productOfOrder.productId?.categoryId &&
+              category._id.equals(productOfOrder.productId.categoryId)
+            ) {
+              totalPrice += productOfOrder.price * productOfOrder.weight;
             }
           }
         }
@@ -177,27 +210,36 @@ cron.schedule("*/30 * * * *", async () => {
           categoryId: category._id,
           categoryName: category.cateName,
           totalPrice: totalPrice,
-        })
+        });
       }
     }
-    topFiveCategoryByRevenue = topFiveCategoryByRevenue?.sort((a, b) => b?.totalPrice - a?.totalPrice).slice(0, 5) || []
+    topFiveCategoryByRevenue =
+      topFiveCategoryByRevenue
+        ?.sort((a, b) => b?.totalPrice - a?.totalPrice)
+        .slice(0, 5) || [];
 
     // Lấy tổng số người và tổng số đơn hàng trong 1 tháng trong năm
-    const totalCustomerAndTransactions = []
+    const totalCustomerAndTransactions = [];
     for (const month of months) {
-      let customers = 0
-      let transactions = 0
-      const currentYear = new Date().getFullYear()
+      let customers = 0;
+      let transactions = 0;
+      const currentYear = new Date().getFullYear();
       for (const user of users) {
-        const targetUserDate = new Date(user.createdAt)
-        if (month == targetUserDate.getMonth() + 1 && currentYear == targetUserDate.getFullYear()) {
-          customers += 1
+        const targetUserDate = new Date(user.createdAt);
+        if (
+          month == targetUserDate.getMonth() + 1 &&
+          currentYear == targetUserDate.getFullYear()
+        ) {
+          customers += 1;
         }
       }
       for (const order of orders) {
-        const targetOrderDate = new Date(order.createdAt)
-        if (month == targetOrderDate.getMonth() + 1 && currentYear == targetOrderDate.getFullYear()) {
-          transactions += 1
+        const targetOrderDate = new Date(order.createdAt);
+        if (
+          month == targetOrderDate.getMonth() + 1 &&
+          currentYear == targetOrderDate.getFullYear()
+        ) {
+          transactions += 1;
         }
       }
       totalCustomerAndTransactions.push({
@@ -205,61 +247,63 @@ cron.schedule("*/30 * * * *", async () => {
         transactions,
         month,
         year: currentYear,
-      })
+      });
     }
 
     // Lấy tổng số người và tổng số đơn hàng trong 1 tháng trong năm
-    const averagePriceAndUnitsPerTransaction = []
+    const averagePriceAndUnitsPerTransaction = [];
     for (const month of months) {
-      let pricePerTransaction = 0
-      let ordersInOnOneMonth = 0
-      let unitsPerTransaction = 0
-      const currentYear = new Date().getFullYear()
+      let pricePerTransaction = 0;
+      let ordersInOnOneMonth = 0;
+      let unitsPerTransaction = 0;
+      const currentYear = new Date().getFullYear();
       for (const order of orders) {
-        const targetOrderDate = new Date(order.createdAt)
-        if (month == targetOrderDate.getMonth() + 1 && currentYear == targetOrderDate.getFullYear()) {
-          ordersInOnOneMonth += 1
-          pricePerTransaction += order.totalPayment
-          unitsPerTransaction += order.products.length
+        const targetOrderDate = new Date(order.createdAt);
+        if (
+          month == targetOrderDate.getMonth() + 1 &&
+          currentYear == targetOrderDate.getFullYear()
+        ) {
+          ordersInOnOneMonth += 1;
+          pricePerTransaction += order.totalPayment;
+          unitsPerTransaction += order.products.length;
         }
       }
-      pricePerTransaction = pricePerTransaction / ordersInOnOneMonth || 0
-      unitsPerTransaction = unitsPerTransaction / ordersInOnOneMonth || 0
+      pricePerTransaction = pricePerTransaction / ordersInOnOneMonth || 0;
+      unitsPerTransaction = unitsPerTransaction / ordersInOnOneMonth || 0;
       averagePriceAndUnitsPerTransaction.push({
         pricePerTransaction,
         unitsPerTransaction,
         month,
         year: currentYear,
-      })
+      });
     }
 
     // Thống kế doanh thu theo ngày
-    const salesRevenueByDay = []
+    const salesRevenueByDay = [];
     const mapOrders = (array) => {
       for (const order of array) {
-        const targetDate = new Date(order.createdAt)
-        let totalPriceOfDay = 0
-        const ordersLeft = []
+        const targetDate = new Date(order.createdAt);
+        let totalPriceOfDay = 0;
+        const ordersLeft = [];
         // Lấy ra tất cả order cùng ngày tháng năm
         for (const odr of array) {
-          const filterDate = new Date(odr.createdAt)
-          if (targetDate.getDate() == filterDate.getDate() && targetDate.getMonth() + 1 == filterDate.getMonth() + 1 && targetDate.getFullYear() == filterDate.getFullYear()) {
-            totalPriceOfDay += odr.totalPayment
+          const filterDate = new Date(odr.createdAt);
+          if (
+            targetDate.getDate() == filterDate.getDate() &&
+            targetDate.getMonth() + 1 == filterDate.getMonth() + 1 &&
+            targetDate.getFullYear() == filterDate.getFullYear()
+          ) {
+            totalPriceOfDay += odr.totalPayment;
           } else {
-            ordersLeft.push(odr)
+            ordersLeft.push(odr);
           }
         }
-        salesRevenueByDay.push([
-          targetDate.getTime(),
-          totalPriceOfDay
-
-        ])
-        mapOrders(ordersLeft)
-        return
+        salesRevenueByDay.push([targetDate.getTime(), totalPriceOfDay]);
+        mapOrders(ordersLeft);
+        return;
       }
-    }
-    mapOrders(orders)
-
+    };
+    mapOrders(orders);
 
     const dataToUpload = {
       salesRevenue,
@@ -270,18 +314,16 @@ cron.schedule("*/30 * * * *", async () => {
       topFiveCategoryByRevenue,
       totalCustomerAndTransactions,
       averagePriceAndUnitsPerTransaction,
-      salesRevenueByDay
-    }
+      salesRevenueByDay,
+    };
     /*==================*/
-    uploadData(dataToUpload)
+    uploadData(dataToUpload);
 
     // console.log(salesRevenueByDay.map((sale) => sale.salesRevenueData));
-
   } catch (error) {
     console.log(error.message);
   }
-})
-
+});
 
 //Chạy 24h 1 lần kiểm tra những đơn hàng đã giao hàng thành công sau 3 ngày tự động chuyển thành trạng thái thành công
 cron.schedule("* */24 * * *", async () => {
@@ -300,10 +342,7 @@ cron.schedule("* */24 * * *", async () => {
       await addNotification({
         userId: order.userId,
         title: "Thông báo",
-        message:
-          "Đơn hàng (#)" +
-          order.invoiceId +
-          "  của bạn đã hoàn thành",
+        message: "Đơn hàng (#)" + order.invoiceId + "  của bạn đã hoàn thành",
         link: "/my-order/" + order._id,
         type: "client",
       });
@@ -316,9 +355,9 @@ cron.schedule("* */24 * * *", async () => {
         // Update sold +
         await Product.findByIdAndUpdate(item.productId, {
           $set: {
-            sold: prd.sold + 1
-          }
-        })
+            sold: prd.sold + 1,
+          },
+        });
       }
     }
   }
@@ -328,36 +367,37 @@ cron.schedule("* */24 * * *", async () => {
 
 cron.schedule("*/1 * * * *", async () => {
   // Lấy ra tất cả sp
-  const products = await Product.find()
+  const products = await Product.find();
 
-  let originalID = null
+  let originalID = null;
   //Kiểm tra để lấy id của sp gốc
   for (let product of products) {
     if (!product.isSale) {
-      originalID = product._id
+      originalID = product._id;
     } else {
-      originalID = product.originalID
+      originalID = product.originalID;
     }
-
 
     for (let shipment of product.shipments) {
       // lấy ra sp hết hạn mà vẫn còn hàng
       if (shipment.willExpire == 2 && shipment.weight > 0) {
-
         //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
-        const unsoldExist = await UnSoldProduct.findOne({ originalID })
+        const unsoldExist = await UnSoldProduct.findOne({ originalID });
         if (unsoldExist) {
-          const productUnsold = await UnSoldProduct.findOneAndUpdate({ originalID }, {
-            $push: {
-              shipments: {
-                shipmentId: shipment.idShipment,
-                purchasePrice: product.price,
-                weight: shipment.weight
-              }
-            }
-          }, { new: true })
+          const productUnsold = await UnSoldProduct.findOneAndUpdate(
+            { originalID },
+            {
+              $push: {
+                shipments: {
+                  shipmentId: shipment.idShipment,
+                  purchasePrice: product.price,
+                  weight: shipment.weight,
+                },
+              },
+            },
+            { new: true }
+          );
           console.log("Update succes: ", productUnsold);
-
         } else {
           // nếu chưa có thì tạo mới sp thất thoát (sp ế)
           const data = await UnSoldProduct.create({
@@ -367,33 +407,34 @@ cron.schedule("*/1 * * * *", async () => {
               {
                 shipmentId: shipment.idShipment,
                 purchasePrice: product.price,
-                weight: shipment.weight
-              }
-            ]
-          })
-          console.log(data)
-
-
+                weight: shipment.weight,
+              },
+            ],
+          });
+          console.log(data);
         }
         //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
         if (product.isSale) {
-          const remove = await Product.findByIdAndDelete(product._id)
+          const remove = await Product.findByIdAndDelete(product._id);
           if (remove) {
-            console.log("Đã xóa sp thanh lý ")
+            console.log("Đã xóa sp thanh lý ");
           } else {
-            console.log("xóa sp thanh lý thất bại ")
+            console.log("xóa sp thanh lý thất bại ");
           }
         } else {
-          const data = await Product.findByIdAndUpdate(product._id, {
-            shipments: []
-          }, { new: true })
-          console.log("Shipments empty ", data)
+          const data = await Product.findByIdAndUpdate(
+            product._id,
+            {
+              shipments: [],
+            },
+            { new: true }
+          );
+          console.log("Shipments empty ", data);
         }
-
       }
     }
   }
-})
+});
 io.of("/admin").on("connection", (socket) => {
   cron.schedule("* 0,12 * * *", async () => {
     const response = [];
@@ -425,7 +466,7 @@ io.of("/admin").on("connection", (socket) => {
                 "products.$.willExpire": 2,
               },
             }
-          )
+          );
           await addNotification({
             title: `Thông báo: Sản phẩm ${product.productName} đã hết Hạn`,
             message: `Hãy xem xét và cập nhật thông tin của các sản phẩm này`,
@@ -442,7 +483,11 @@ io.of("/admin").on("connection", (socket) => {
         // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 3 ngày không
         const isWithinThreeDays = targetDate - currentDate < threeDaysInMillis;
 
-        if (isWithinThreeDays && targetDate - currentDate > 0 && shipment.willExpire != 1) {
+        if (
+          isWithinThreeDays &&
+          targetDate - currentDate > 0 &&
+          shipment.willExpire != 1
+        ) {
           await Product.findOneAndUpdate(
             { _id: product._id, "shipments.idShipment": shipment.idShipment },
             {
@@ -458,7 +503,7 @@ io.of("/admin").on("connection", (socket) => {
                 "products.$.willExpire": 1,
               },
             }
-          )
+          );
           const totalMilliseconds =
             threeDaysInMillis - (targetDate - currentDate);
           const totalSeconds = Math.floor(totalMilliseconds / 1000);
@@ -549,7 +594,7 @@ io.on("connection", (socket) => {
       type: "admin",
     });
 
-    io.of('/admin').emit("adminStatusNotification", {
+    io.of("/admin").emit("adminStatusNotification", {
       data: { ...notification._doc, status: socketData.status },
     });
   });
@@ -574,11 +619,11 @@ app.use(
   session({
     resave: false,
     saveUninitialized: true,
-    secret: 'SECRET',
-  }),
+    secret: "SECRET",
+  })
 );
 
-connectToGoogle()
+connectToGoogle();
 app.use("/api", categoryRouter);
 app.use("/api", productRouter);
 app.use("/api", uploadRouter);
