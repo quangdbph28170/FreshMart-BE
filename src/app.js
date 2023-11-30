@@ -84,7 +84,7 @@ cron.schedule("1-59 * * * *", async () => {
 })
 
 //Thống kê lại dữ liệu sau mỗi 24h 
-cron.schedule("*/1 * * * *", async () => {
+cron.schedule("*/30 * * * *", async () => {
   try {
     //Lấy ra tất cả sản phẩm (ko lấy sp thanh lý/thất thoát)
     const products = await Product.find({ isSale: false });
