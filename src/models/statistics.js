@@ -20,6 +20,13 @@ const statisticsSchema = new mongoose.Schema(
             required: true,
         },
         /**
+         Lợi nhuận
+        */
+        profit: {
+            type: Number,
+            required: true,
+        },
+        /**
          Trung bình tổng số tiền đã thanh toán
         */
         averageTransactionPrice: {
@@ -116,13 +123,9 @@ const statisticsSchema = new mongoose.Schema(
         salesRevenueByDay: [
             [
                 {
-                    type: Date,
-                    required: true,
-                },
-                {
                     type: Number,
                     required: true,
-                },
+                }
             ]
         ]
         // .... Còn nữa 

@@ -107,13 +107,11 @@ export const getIsRatedByProductId = async (req, res) => {
         sort: {
             [_sort]: _order === "desc" ? -1 : 1,
         },
+        populate: ['userId']
     };
     try {
         const query = { productId: req.params.id }
         const data = await Evaluation.paginate(query, options)
-        if (data.userId != null) {
-            data.populate("userId")
-        }
         if (!data) {
             return res.status(404).json({
                 status: 404,
