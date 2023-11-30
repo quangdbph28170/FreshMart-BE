@@ -117,9 +117,9 @@ cron.schedule("*/30 * * * *", async () => {
     // Tính tổng doanh thu theo đơn hàng đã hoàn thành
     const salesRevenue = orders
       ? orders.reduce(
-          (accumulator, order) => accumulator + order.totalPayment,
-          0
-        )
+        (accumulator, order) => accumulator + order.totalPayment,
+        0
+      )
       : 0;
 
     // Tổng khách hàng đã đăng ký tài khoản
@@ -363,7 +363,28 @@ cron.schedule("* */24 * * *", async () => {
   }
 });
 
-//Xử lý sp thất thoát (SP Ế) - 1p chạy lại 1 lần
+//============== DISABLE lô hàng đó nếu tất cả sp trong lô hết hạn - 12h chạy 1 lần ==============//
+cron.schedule("* */12 * * *", async () => {
+  const shipments = await Shipment.find()
+  //Lặp qua tất cả lô hàng
+  for (let item of shipments) {
+    let willExpire = true
+    //lặp qua tất cả sp trong lô hàng đó
+    for (let product of item.products) {
+      //check xem còn sp còn hạn ko
+      if (product.willExpire != 2) {
+        willExpire = false
+      }
+    }
+    if (willExpire && !item.isDisable) {
+      const shipment = await Shipment.findByIdAndUpdate(item._id, { isDisable: true }, { new: true })
+      console.log("shipment is disabled ", shipment);
+    }
+  }
+
+})
+
+//===========Xử lý sp thất thoát (SP Ế) - 1p chạy lại 1 lần=================//
 
 cron.schedule("*/1 * * * *", async () => {
   // Lấy ra tất cả sp
