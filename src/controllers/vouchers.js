@@ -241,7 +241,7 @@ export const updateVoucher = async (req, res) => {
 }
 export const getVoucherUser = async (req, res) => {
     try {
-        const { miniMumOrder } = req.body;
+        const { miniMumOrder, userId } = req.body;
         if (!miniMumOrder && typeof miniMumOrder !== "number") {
             return res.status(400).json({
                 status: 400,
@@ -255,7 +255,7 @@ export const getVoucherUser = async (req, res) => {
 
         for (let item of data) {
             let exist = true;
-            let active = false;
+            let active = true;
 
             // Hết số lượng
             if (item.quantity == 0) {
@@ -275,16 +275,17 @@ export const getVoucherUser = async (req, res) => {
                 exist = false;
             }
             // Kiểm tra xem người dùng đã sử dụng voucher chưa
-            const userExist = item.users.find(user => user.userId.toString() === req.user._id.toString());
-            if (userExist) {
-                exist = false;
+            if (userId) {
+                const userExist = item.users.find(user => user.userId.toString() === userId.toString());
+                if (userExist) {
+                    exist = false;
+                }
             }
             //
-
             if (exist) {
                 // Chưa đạt yêu cầu với tối thiểu đơn hàng
-                if (item.miniMumOrder > miniMumOrder) {
-                    active = true;
+                if (item.miniMumOrder > 0 && item.miniMumOrder > miniMumOrder) {
+                    active = false;
                 }
                 item = item.toObject();
                 item.active = active;
