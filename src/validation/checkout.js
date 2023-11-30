@@ -40,10 +40,10 @@ export const validateCheckout = joi.object({
     )
     .required(),
   totalPayment: joi.number().required(),
-  note: joi.string().trim(),
+  note: joi.string(),
   pay: joi.boolean(),
   paymentMethod: joi.string().valid("cod", "momo", "vnpay").required(),
-  code:joi.string().allow()
+  code: joi.string().allow(),
 });
 
 export const validatePhoneAndMail = joi
