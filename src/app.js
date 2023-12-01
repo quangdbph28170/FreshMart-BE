@@ -571,6 +571,12 @@ io.of("/admin").on("connection", (socket) => {
       data: { ...notification._doc, status: socketData.status },
     });
   });
+
+  socket.on("AdminSendMessage", async (data) => {
+    const socketData = JSON.parse(data);
+    io.of("/admin").emit("refetchMessage")
+    io.to(socketData.roomChatId).emit("updatemess");
+  });
 });
 
 io.on("connection", (socket) => {
@@ -591,6 +597,12 @@ io.on("connection", (socket) => {
         data: notification,
       });
     }
+
+    socket.on("ClientSendMessage", async (data) => {
+      const socketData = JSON.parse(data);
+      io.of("/admin").emit("messageNotification", { data: socketData.roomChatId });
+      io.of("/admin").emit("updatemess", { data: socketData.roomChatId });
+    });
 
     const adminNotification = await addNotification({
       title: "Thông báo",
