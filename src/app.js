@@ -443,14 +443,18 @@ cron.schedule("*/1 * * * *", async () => {
             console.log("xóa sp thanh lý thất bại ");
           }
         } else {
-          const data = await Product.findByIdAndUpdate(
-            product._id,
-            {
-              shipments: [],
-            },
+          //update lại bảng products, xóa lô đó đi
+          const data = await Product.findOneAndUpdate(
+            { _id: product._id, "shipments.idShipment": shipment.idShipment }, {
+            $pull: {
+              shipments: {
+                idShipment: shipment.idShipment
+              }
+            }
+          },
             { new: true }
           );
-          console.log("Shipments empty ", data);
+          console.log("Shipments ", data);
         }
       }
     }
