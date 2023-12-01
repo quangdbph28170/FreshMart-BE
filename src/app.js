@@ -411,8 +411,9 @@ cron.schedule("*/1 * * * *", async () => {
               $push: {
                 shipments: {
                   shipmentId: shipment.idShipment,
-                  purchasePrice: product.price,
+                  purchasePrice: shipment.originPrice,
                   weight: shipment.weight,
+                  date: shipment.date
                 },
               },
             },
@@ -426,8 +427,9 @@ cron.schedule("*/1 * * * *", async () => {
             shipments: [
               {
                 shipmentId: shipment.idShipment,
-                purchasePrice: product.price,
+                purchasePrice: shipment.originPrice,
                 weight: shipment.weight,
+                date: shipment.date
               },
             ],
           });

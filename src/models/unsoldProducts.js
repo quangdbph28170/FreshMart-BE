@@ -25,6 +25,10 @@ const unsoldProductSchema = new mongoose.Schema(
         weight: {
           type: Number,
           required: true,
+        },
+        date:{
+          type: String,
+          required: true,
         }
       }
     ],
