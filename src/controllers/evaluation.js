@@ -166,7 +166,7 @@ export const getIsRatedDetail = async (req, res) => {
 //Admin Lấy toàn bộ đánh giá
 export const getAllRating = async (req, res) => {
     try {
-        const data = await Evaluation.find().populate("userId")
+        const data = await Evaluation.find().populate("userId").populate("productId")
         // const highestRatedProduct = await Evaluation.aggregate([
         //     { $group: { _id: "$productId", averageRating: { $avg: "$rate" } } },
         //     { $sort: { averageRating: -1 } },
