@@ -452,7 +452,19 @@ cron.schedule("*/1 * * * *", async () => {
   try {
     // check roomChatId là của admin bên client thì xóa
     const chats = await Chat.find().populate('roomChatId')
+    const sevenDayInAMiliSeconds = 7 * 24 * 60 * 60 * 1000;
     for (const chat of chats) {
+      const messageInSevenDay = []
+      for (const message of chat.messages) {
+        const targetDate = new Date(message.day)
+        const currentDate = new Date()
+        if (currentDate - targetDate < sevenDayInAMiliSeconds) {
+          messageInSevenDay.push(message)
+        }
+      }
+      await Chat.findOneAndUpdate({ roomChatId: chat.roomChatId?._id }, {
+        messages: messageInSevenDay
+      })
       if (chat.roomChatId?.role && chat.roomChatId.role == 'admin') {
         await Chat.findOneAndDelete({ roomChatId: chat.roomChatId?._id })
       }
@@ -682,12 +694,6 @@ io.on("connection", (socket) => {
       });
     }
 
-    socket.on("ClientSendMessage", async (data) => {
-      const socketData = JSON.parse(data);
-      io.of("/admin").emit("messageNotification", { data: socketData.roomChatId });
-      io.of("/admin").emit("updatemess", { data: socketData.roomChatId });
-    });
-
     const adminNotification = await addNotification({
       title: "Thông báo",
       message: "Có đơn hàng mới đang chờ xử lý",
@@ -714,6 +720,13 @@ io.on("connection", (socket) => {
     io.of("/admin").emit("adminStatusNotification", {
       data: { ...notification._doc, status: socketData.status },
     });
+
+  });
+
+  socket.on("ClientSendMessage", async (data) => {
+    const socketData = JSON.parse(data);
+    io.of("/admin").emit("messageNotification", { data: socketData.roomChatId });
+    io.of("/admin").emit("updatemess", { data: socketData.roomChatId });
   });
 
   socket.on("joinClientRoom", (userId) => {
