@@ -25,6 +25,7 @@ import { addNotification } from "./controllers/notification";
 import evaluationRouter from "./routers/evaluation";
 import Orders from "./models/orders";
 import User from "./models/user";
+import Chat from "./models/chat";
 import Shipment from "./models/shipment";
 import Category from "./models/categories";
 import voucherRouter from "./routers/vouchers";
@@ -387,6 +388,13 @@ cron.schedule("* */12 * * *", async () => {
 //===========Xử lý sp thất thoát (SP Ế) - 1p chạy lại 1 lần=================//
 
 cron.schedule("*/1 * * * *", async () => {
+  // check roomChatId là của admin bên client thì xóa
+  const chats = Chat.find().populate('roomChatId')
+  for (const chat of chats) {
+    if (chat.roomChatId?.role && chat.roomChatId.role == 'admin') {
+      await Chat.findOneAndDelete({ roomChatId: chat.roomChatId?._id })
+    }
+  }
   // Lấy ra tất cả sp
   const products = await Product.find();
 

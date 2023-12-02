@@ -1,5 +1,6 @@
 import { typeRequestMw } from '../middleware/configResponse';
 import User from '../models/user';
+import Chat from '../models/chat';
 import { userSchema } from '../validation/auth';
 import bcrypt from 'bcrypt';
 
@@ -98,6 +99,9 @@ export const updateUser = async (req, res, next) => {
       }
       const { id } = req.params;
       const user = await User.findById(id);
+      if(user.role === 'admin') {
+         await Chat.findOneAndDelete({ roomChatId: user._id })
+      }
       if (!user) {
          req[RESPONSE_STATUS] = 500;
          req[RESPONSE_MESSAGE] = `Form error: User not available to update`;
