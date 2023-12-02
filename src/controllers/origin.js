@@ -12,7 +12,7 @@ export const createOrigin = async (req, res) => {
         }
         const origin = await Origin.create(req.body)
 
-        if(!origin) {
+        if (!origin) {
             return res.status(401).json({
                 status: 400,
                 message: "Create origin failed",
@@ -35,10 +35,30 @@ export const createOrigin = async (req, res) => {
 }
 
 export const findAll = async (req, res) => {
-    try {
-        const origin = await Origin.find()
+    const {
+        _page = 1,
+        _order = "asc",
+        _limit = 9999,
+        _sort = "createdAt",
+        _q = "",
+    } = req.query;
+    const options = {
+        page: _page,
+        limit: _limit,
+        sort: {
+            [_sort]: _order === "desc" ? -1 : 1,
+        },
+    };
+    const query = {};
 
-        if(!origin) {
+    if (_q) {
+        query.name = { $regex: _q, $options: "i" };
+    }
+
+    try {
+        const origin = await Origin.paginate(query, options)
+
+        if (!origin) {
             return res.status(401).json({
                 status: 400,
                 message: "No Origins found",
@@ -47,7 +67,7 @@ export const findAll = async (req, res) => {
 
         return res.status(200).json({
             body: {
-                data: origin
+                data: origin.docs
             },
             status: 200,
             message: "Origin found",
@@ -66,7 +86,7 @@ export const findOne = async (req, res) => {
 
         const origin = await Origin.findById(id)
 
-        if(!origin) {
+        if (!origin) {
             return res.status(401).json({
                 status: 400,
                 message: "No origin found",
@@ -90,7 +110,7 @@ export const findOne = async (req, res) => {
 
 export const updateOrigin = async (req, res) => {
     try {
-        const { id } = req.params 
+        const { id } = req.params
         const { error } = originSchema.validate(req.body, { abortEarly: false });
         if (error) {
             return res.status(401).json({
@@ -100,7 +120,7 @@ export const updateOrigin = async (req, res) => {
         }
         const origin = await Origin.findByIdAndUpdate(id, req.body, { new: true })
 
-        if(!origin) {
+        if (!origin) {
             return res.status(401).json({
                 status: 400,
                 message: "Update origin failed",
