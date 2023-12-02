@@ -36,6 +36,7 @@ import { months } from "./config/constants";
 import { uploadData } from "./controllers/statistics";
 import UnSoldProduct from "./models/unsoldProducts";
 import routerUnSoldProduct from "./routers/unsoldProducts";
+import Evaluation from "./models/evaluation";
 
 const app = express();
 const httpServer = createServer(app);
@@ -165,6 +166,27 @@ cron.schedule("*/1 * * * *", async () => {
 
     // Tính lợi nhuận
     const profit = salesRevenue - totalImportPrice;
+
+    // Lấy ra sản phẩm yêu thích nhất và kém yêu thích nhất theo số sao được đánh giá
+    let productsWithRate = []
+    for (const product of products) {
+      let starCount = 0
+      const evaluations = await Evaluation.find({ productId: product._id })
+      for (const evaluation of evaluations) {
+        starCount += evaluation.rate
+      }
+      productsWithRate.push({
+        product: product._id,
+        productName: product.productName,
+        starCount: starCount
+      })
+    }
+    productsWithRate = productsWithRate?.sort((a, b) => b?.starCount - a?.starCount) || [];
+
+    const favoriteProductAndLessFavoriteProduct = {
+      favoriteProduct: productsWithRate[0],
+      lessFavoriteProduct: productsWithRate[productsWithRate.length - 1],
+    }
 
     // Lấy ra top 5 sản phẩm có số lượng bán ra nhiều nhất
     let topFiveProductsSold = [];
@@ -316,6 +338,7 @@ cron.schedule("*/1 * * * *", async () => {
       topFiveCategoryByRevenue,
       totalCustomerAndTransactions,
       averagePriceAndUnitsPerTransaction,
+      favoriteProductAndLessFavoriteProduct,
       salesRevenueByDay,
     };
     /*==================*/
@@ -516,7 +539,7 @@ cron.schedule("*/1 * * * *", async () => {
               ],
             }
             )
-            if(data){
+            if (data) {
               console.log("Đã tạo sp thất thoát", data);
             }
           }
