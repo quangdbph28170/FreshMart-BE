@@ -14,6 +14,7 @@ import authRouter from "./routers/auth";
 import userRouter from "./routers/user";
 import vnpayRouter from "./routers/vnpay";
 import statistic from "./routers/statistics";
+import chatRouter from "./routers/chat";
 import notificationRouter from "./routers/notification";
 import momoRouter from "./routers/momo-pay";
 import { createServer } from "http";
@@ -379,7 +380,7 @@ cron.schedule("* */12 * * *", async () => {
     }
     if (willExpire && !item.isDisable) {
       const shipment = await Shipment.findByIdAndUpdate(item._id, { isDisable: true }, { new: true })
-      console.log("shipment is disabled ", shipment);
+      // console.log("shipment is disabled ", shipment);
     }
   }
 
@@ -388,46 +389,63 @@ cron.schedule("* */12 * * *", async () => {
 //===========Xử lý sp thất thoát (SP Ế) - 1p chạy lại 1 lần=================//
 
 cron.schedule("*/1 * * * *", async () => {
-
-  // check roomChatId là của admin bên client thì xóa
-  const chats = Chat.find().populate('roomChatId')
-  for (const chat of chats) {
-    if (chat.roomChatId?.role && chat.roomChatId.role == 'admin') {
-      await Chat.findOneAndDelete({ roomChatId: chat.roomChatId?._id })
+  try {
+    // check roomChatId là của admin bên client thì xóa
+    const chats = await Chat.find().populate('roomChatId')
+    for (const chat of chats) {
+      if (chat.roomChatId?.role && chat.roomChatId.role == 'admin') {
+        await Chat.findOneAndDelete({ roomChatId: chat.roomChatId?._id })
+      }
     }
-  }
-  // Lấy ra tất cả sp
-  const products = await Product.find();
+    // Lấy ra tất cả sp
+    const products = await Product.find();
 
-  let originalID = null;
-  //Kiểm tra để lấy id của sp gốc
-  for (let product of products) {
-    if (!product.isSale) {
-      originalID = product._id;
-    } else {
-      originalID = product.originalID;
-    }
+    let originalID = null;
+    //Kiểm tra để lấy id của sp gốc
+    for (let product of products) {
+      if (!product.isSale) {
+        originalID = product._id;
+      } else {
+        originalID = product.originalID;
+      }
 
-    for (let shipment of product.shipments) {
-      // lấy ra sp hết hạn mà vẫn còn hàng
-      if (shipment.willExpire == 2 && shipment.weight > 0) {
-        //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
-        const unsoldExist = await UnSoldProduct.findOne({ originalID });
-        if (unsoldExist) {
-          const productUnsold = await UnSoldProduct.findOneAndUpdate(
-            { originalID },
-            {
-              $push: {
-                shipments: {
+      for (let shipment of product.shipments) {
+        // lấy ra sp hết hạn mà vẫn còn hàng
+        if (shipment.willExpire == 2 && shipment.weight > 0) {
+          //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
+          const unsoldExist = await UnSoldProduct.findOne({ originalID });
+          if (unsoldExist) {
+            const productUnsold = await UnSoldProduct.findOneAndUpdate(
+              { originalID },
+              {
+                $push: {
+                  shipments: {
+                    shipmentId: shipment.idShipment,
+                    purchasePrice: shipment.originPrice,
+                    weight: shipment.weight,
+                    date: shipment.date
+                  },
+                },
+              },
+              { new: true }
+            );
+          } else {
+            // nếu chưa có thì tạo mới sp thất thoát (sp ế)
+            const data = await UnSoldProduct.create({
+              originalID,
+              productName: product.productName,
+              shipments: [
+                {
                   shipmentId: shipment.idShipment,
                   purchasePrice: shipment.originPrice,
                   weight: shipment.weight,
                   date: shipment.date
                 },
-              },
+              ],
             },
-            { new: true }
-          );
+              { new: true }
+            )
+          }
         } else {
           console.log(product.productName)
           // nếu chưa có thì tạo mới sp thất thoát (sp ế)
@@ -469,6 +487,9 @@ cron.schedule("*/1 * * * *", async () => {
         console.log("xóa sp thanh lý thất bại ");
       }
     }
+
+  } catch (error) {
+    console.log(error.message);
   }
 });
 io.of("/admin").on("connection", (socket) => {
@@ -688,6 +709,7 @@ app.use("/api", notificationRouter);
 app.use("/api", evaluationRouter);
 app.use("/api", voucherRouter);
 app.use("/api", statistic);
+app.use("/api", chatRouter);
 app.use("/api", routerUnSoldProduct);
 mongoose
   .connect(MONGO_URL)
