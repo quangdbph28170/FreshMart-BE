@@ -32,7 +32,7 @@ export const uploadData = async (data) => {
         if(!statistic || statistic.length == 0) {
             await Statistic.create(data)
         } else {
-            await Statistic.findById(statistic[0]._id ,data)
+            await Statistic.findByIdAndUpdate(statistic[statistic.length-1]._id ,data)
         }
     } catch (error) {
         console.log({
