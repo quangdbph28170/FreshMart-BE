@@ -390,83 +390,78 @@ cron.schedule("* */24 * * *", async () => {
 
 //============== DISABLE lô hàng đó nếu tất cả sp trong lô hết hạn - 12h chạy 1 lần ==============//
 cron.schedule("*/1 * * * *", async () => {
-  try {
-    const shipments = await Shipment.find()
-    //Lặp qua tất cả lô hàng
-    for (let item of shipments) {
-      let willExpire = true
-      //lặp qua tất cả sp trong lô hàng đó
-      for (let product of item.products) {
-        //check xem còn sp còn hạn ko
-        if (product.willExpire != 2) {
-          willExpire = false
-        }
+  const shipments = await Shipment.find()
+  //Lặp qua tất cả lô hàng
+  for (let item of shipments) {
+    let willExpire = true
+    //lặp qua tất cả sp trong lô hàng đó
+    for (let product of item.products) {
+      //check xem còn sp còn hạn ko
+      if (product.willExpire != 2) {
+        willExpire = false
       }
-      if (willExpire && !item.isDisable) {
-        const shipment = await Shipment.findByIdAndUpdate(item._id, { isDisable: true }, { new: true })
-        // console.log("shipment is disabled ", shipment);
-        const products = await Product.find()
-        for (let product of products) {
-          //Xóa shipment trong bảng products
-          await Product.findOneAndUpdate({ _id: product._id, "shipments.idShipment": item._id }, {
-            $pull: {
-              shipments: {
-                idShipment: item._id
-              }
+    }
+    if (willExpire && !item.isDisable) {
+      const shipment = await Shipment.findByIdAndUpdate(item._id, { isDisable: true }, { new: true })
+      // console.log("shipment is disabled ", shipment);
+      const products = await Product.find()
+      for (let product of products) {
+        //Xóa shipment trong bảng products
+        await Product.findOneAndUpdate({ _id: product._id, "shipments.idShipment": item._id }, {
+          $pull: {
+            shipments: {
+              idShipment: item._id
             }
-          })
+          }
+        })
 
-        }
-        //Chuyển tất cả sp trong lô đó sang hàng thất thoát (sp ế)
+      }
+      //Chuyển tất cả sp trong lô đó sang hàng thất thoát (sp ế)
 
-        for (let item of shipment.products) {
-          const product = await Product.findById(item.idProduct)
-          const originalID = product._id
-          //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
-          const unsoldExist = await UnSoldProduct.findOne({ originalID });
-          if (unsoldExist) {
-            console.log("running: ", shipment)
-            const unsold = await UnSoldProduct.findOneAndUpdate(
-              { originalID },
-              {
-                $push: {
-                  shipments: {
-                    shipmentId: shipment._id,
-                    purchasePrice: item.originPrice,
-                    weight: item.weight,
-                    date: item.date
-                  },
-                },
-              },
-              { new: true }
-            )
-            console.log("Đã push shipment vào...", unsold)
-
-          } else {
-            const data = await UnSoldProduct.create({
-              originalID,
-              productName: product.productName,
-              shipments: [
-                {
+      for (let item of shipment.products) {
+        const product = await Product.findById(item.idProduct)
+        const originalID = product._id
+        //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
+        const unsoldExist = await UnSoldProduct.findOne({ originalID });
+        if (unsoldExist) {
+          console.log("running: ", shipment)
+          const unsold = await UnSoldProduct.findOneAndUpdate(
+            { originalID },
+            {
+              $push: {
+                shipments: {
                   shipmentId: shipment._id,
                   purchasePrice: item.originPrice,
                   weight: item.weight,
                   date: item.date
                 },
-              ],
-            }
-            )
-            console.log("Create: ", data)
+              },
+            },
+            { new: true }
+          )
+          console.log("Đã push shipment vào...", unsold)
+
+        } else {
+          const data = await UnSoldProduct.create({
+            originalID,
+            productName: product.productName,
+            shipments: [
+              {
+                shipmentId: shipment._id,
+                purchasePrice: item.originPrice,
+                weight: item.weight,
+                date: item.date
+              },
+            ],
           }
-
+          )
+          console.log("Create: ", data)
         }
+
       }
-
     }
-  } catch (error) {
-    console.log(error.message)
-  }
 
+  }
 })
 
 //===========Xử lý sp thất thoát (SP Ế) - 1p chạy lại 1 lần=================//
