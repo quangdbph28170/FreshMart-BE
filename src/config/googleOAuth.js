@@ -22,7 +22,6 @@ export const connectToGoogle = () => {
                   userName: profile.displayName,
                   picture: profile.photos[0].value,
                });
-
                delete user.password;
 
                const refreshToken = jwt.sign({ _id: user._id }, process.env.SERECT_REFRESHTOKEN_KEY, {
@@ -39,7 +38,7 @@ export const connectToGoogle = () => {
                   data: user,
                });
             } catch (error) {
-               console.log(error.message);
+               console.log('1',error.message);
             }
          },
       ),
