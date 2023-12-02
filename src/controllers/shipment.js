@@ -144,6 +144,7 @@ export const updateShipment = async (req, res) => {
       req.body,
       { new: true }
     );
+    
     const productsOfShipment = shipmentUpdate.products;
     for (let product of productsOfShipment) {
       await Products.findByIdAndUpdate(
