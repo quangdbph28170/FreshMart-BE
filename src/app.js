@@ -475,7 +475,7 @@ cron.schedule("*/1 * * * *", async () => {
           //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
           const unsoldExist = await UnSoldProduct.findOne({ originalID });
           if (unsoldExist) {
-            const productUnsold = await UnSoldProduct.findOneAndUpdate(
+            await UnSoldProduct.findOneAndUpdate(
               { originalID },
               {
                 $push: {
@@ -502,9 +502,11 @@ cron.schedule("*/1 * * * *", async () => {
                   date: shipment.date
                 },
               ],
-            },
-              { new: true }
+            }
             )
+            if(data){
+              console.log("Đã tạo sp thất thoát", data);
+            }
           }
           //update lại bảng products, xóa lô đó đi
           const data = await Product.findOneAndUpdate(
@@ -518,25 +520,8 @@ cron.schedule("*/1 * * * *", async () => {
             { new: true }
           );
           console.log("Shipments ", data);
-        } else {
-          console.log(product.productName)
-          // nếu chưa có thì tạo mới sp thất thoát (sp ế)
-          const data = await UnSoldProduct.create({
-            originalID,
-            productName: product.productName,
-            shipments: [
-              {
-                shipmentId: shipment.idShipment,
-                purchasePrice: shipment.originPrice,
-                weight: shipment.weight,
-                date: shipment.date
-              },
-            ],
-          });
-          console.log("data", data)
+
         }
-
-
       }
       //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
       if (product.isSale && product.shipments.length == 0) {
@@ -547,6 +532,7 @@ cron.schedule("*/1 * * * *", async () => {
           console.log("xóa sp thanh lý thất bại ");
         }
       }
+
     }
 
 
