@@ -477,16 +477,17 @@ cron.schedule("*/1 * * * *", async () => {
         );
         console.log("Shipments ", data);
       }
-    }
-    //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
-    if (product.isSale && product.shipments.length == 0) {
-      const remove = await Product.findByIdAndDelete(product._id);
-      if (remove) {
-        console.log("Đã xóa sp thanh lý ");
-      } else {
-        console.log("xóa sp thanh lý thất bại ");
+      //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
+      if (product.isSale && product.shipments.length == 0) {
+        const remove = await Product.findByIdAndDelete(product._id);
+        if (remove) {
+          console.log("Đã xóa sp thanh lý ");
+        } else {
+          console.log("xóa sp thanh lý thất bại ");
+        }
       }
     }
+
 
   } catch (error) {
     console.log(error.message);
