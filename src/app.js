@@ -97,7 +97,7 @@ cron.schedule("1-59 * * * *", async () => {
 });
 
 //Thống kê lại dữ liệu sau mỗi 24h (dev: 30p)
-cron.schedule("*/30 * * * *", async () => {
+cron.schedule("*/1 * * * *", async () => {
   try {
     //Lấy ra tất cả sản phẩm (ko lấy sp thanh lý/thất thoát)
     const products = await Product.find({ isSale: false });
@@ -389,7 +389,7 @@ cron.schedule("* */24 * * *", async () => {
 });
 
 //============== DISABLE lô hàng đó nếu tất cả sp trong lô hết hạn - 12h chạy 1 lần ==============//
-cron.schedule("*/30 * * * *", async () => {
+cron.schedule("*/1 * * * *", async () => {
   try {
     const shipments = await Shipment.find()
     //Lặp qua tất cả lô hàng
@@ -471,7 +471,7 @@ cron.schedule("*/30 * * * *", async () => {
 
 //===========Xử lý sp thất thoát (SP Ế) - 1p chạy lại 1 lần=================//
 
-cron.schedule("*/30 * * * *", async () => {
+cron.schedule("*/1 * * * *", async () => {
   try {
     // check roomChatId là của admin bên client thì xóa
     const chats = await Chat.find().populate('roomChatId')

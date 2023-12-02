@@ -26,7 +26,7 @@ export const vnpayCreate = async (req, orderId) => {
     var amount = req.body.totalPayment;
     var bankCode = '';
 
-    var orderInfo = req.body.note || '';
+    var orderInfo = req.body.note.trim() == '' || !req.body.note ? 'Thanh toan' : req.body.note.trim();
     var orderType = 'other';
     var locale = 'vn';
     if (locale === null || locale === '') {

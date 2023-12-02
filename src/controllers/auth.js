@@ -12,7 +12,7 @@ const { RESPONSE_MESSAGE, RESPONSE_STATUS, RESPONSE_OBJ } = typeRequestMw;
 export const validateUser = async (detail) => {
    const user = await User.findOne({ email: detail.email });
 
-   if(!user) {
+   if(user) {
       await Chat.create({
          roomChatId: user._id,
          messages: [{
@@ -35,7 +35,7 @@ export const validateUser = async (detail) => {
       avatar: detail.picture,
       password: hashedPassword,
    });
-
+   
    const chatExist = await Chat.findOne({ roomChatId: newUser._id })
       
    if(!chatExist) {
