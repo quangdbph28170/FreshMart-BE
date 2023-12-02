@@ -446,6 +446,18 @@ cron.schedule("*/1 * * * *", async () => {
               { new: true }
             )
           }
+          //update lại bảng products, xóa lô đó đi
+          const data = await Product.findOneAndUpdate(
+            { _id: product._id, "shipments.idShipment": shipment.idShipment }, {
+            $pull: {
+              shipments: {
+                idShipment: shipment.idShipment
+              }
+            }
+          },
+            { new: true }
+          );
+          console.log("Shipments ", data);
         } else {
           console.log(product.productName)
           // nếu chưa có thì tạo mới sp thất thoát (sp ế)
@@ -464,18 +476,7 @@ cron.schedule("*/1 * * * *", async () => {
           console.log("data", data)
         }
 
-        //update lại bảng products, xóa lô đó đi
-        const data = await Product.findOneAndUpdate(
-          { _id: product._id, "shipments.idShipment": shipment.idShipment }, {
-          $pull: {
-            shipments: {
-              idShipment: shipment.idShipment
-            }
-          }
-        },
-          { new: true }
-        );
-        console.log("Shipments ", data);
+
       }
       //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
       if (product.isSale && product.shipments.length == 0) {
