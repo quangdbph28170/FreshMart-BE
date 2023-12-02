@@ -15,6 +15,7 @@ export const getUnsoldProducts = async (req, res) => {
             [_sort]: _order === "desc" ? -1 : 1,
             "shipments.price": _order === "desc" ? -1 : 1,
         },
+        populate:"shipments.shipmentId"
 
     };
 
