@@ -14,6 +14,7 @@ import authRouter from "./routers/auth";
 import userRouter from "./routers/user";
 import vnpayRouter from "./routers/vnpay";
 import statistic from "./routers/statistics";
+import chatRouter from "./routers/chat";
 import notificationRouter from "./routers/notification";
 import momoRouter from "./routers/momo-pay";
 import { createServer } from "http";
@@ -379,7 +380,7 @@ cron.schedule("* */12 * * *", async () => {
     }
     if (willExpire && !item.isDisable) {
       const shipment = await Shipment.findByIdAndUpdate(item._id, { isDisable: true }, { new: true })
-      console.log("shipment is disabled ", shipment);
+      // console.log("shipment is disabled ", shipment);
     }
   }
 
@@ -388,15 +389,14 @@ cron.schedule("* */12 * * *", async () => {
 //===========Xử lý sp thất thoát (SP Ế) - 1p chạy lại 1 lần=================//
 
 cron.schedule("*/1 * * * *", async () => {
-
-  // check roomChatId là của admin bên client thì xóa
-  const chats = Chat.find().populate('roomChatId')
-  for (const chat of chats) {
-    if (chat.roomChatId?.role && chat.roomChatId.role == 'admin') {
-      await Chat.findOneAndDelete({ roomChatId: chat.roomChatId?._id })
-    }
-  }
   try {
+    // check roomChatId là của admin bên client thì xóa
+    const chats = await Chat.find().populate('roomChatId')
+    for (const chat of chats) {
+      if (chat.roomChatId?.role && chat.roomChatId.role == 'admin') {
+        await Chat.findOneAndDelete({ roomChatId: chat.roomChatId?._id })
+      }
+    }
     // Lấy ra tất cả sp
     const products = await Product.find();
 
@@ -430,7 +430,6 @@ cron.schedule("*/1 * * * *", async () => {
               { new: true }
             );
           } else {
-            console.log(product.productName)
             // nếu chưa có thì tạo mới sp thất thoát (sp ế)
             const data = await UnSoldProduct.create({
               originalID,
@@ -443,23 +442,40 @@ cron.schedule("*/1 * * * *", async () => {
                   date: shipment.date
                 },
               ],
-            });
-            console.log("data", data)
+            },
+              { new: true }
+            )
           }
-
-          //update lại bảng products, xóa lô đó đi
-          const data = await Product.findOneAndUpdate(
-            { _id: product._id, "shipments.idShipment": shipment.idShipment }, {
-            $pull: {
-              shipments: {
-                idShipment: shipment.idShipment
-              }
-            }
-          },
-            { new: true }
-          );
-          console.log("Shipments ", data);
+        } else {
+          console.log(product.productName)
+          // nếu chưa có thì tạo mới sp thất thoát (sp ế)
+          const data = await UnSoldProduct.create({
+            originalID,
+            productName: product.productName,
+            shipments: [
+              {
+                shipmentId: shipment.idShipment,
+                purchasePrice: shipment.originPrice,
+                weight: shipment.weight,
+                date: shipment.date
+              },
+            ],
+          });
+          console.log("data", data)
         }
+
+        //update lại bảng products, xóa lô đó đi
+        const data = await Product.findOneAndUpdate(
+          { _id: product._id, "shipments.idShipment": shipment.idShipment }, {
+          $pull: {
+            shipments: {
+              idShipment: shipment.idShipment
+            }
+          }
+        },
+          { new: true }
+        );
+        console.log("Shipments ", data);
       }
       //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
       if (product.isSale && product.shipments.length == 0) {
@@ -471,8 +487,10 @@ cron.schedule("*/1 * * * *", async () => {
         }
       }
     }
+
+
   } catch (error) {
-    console.log(error.message)
+    console.log(error.message);
   }
 });
 io.of("/admin").on("connection", (socket) => {
@@ -692,6 +710,7 @@ app.use("/api", notificationRouter);
 app.use("/api", evaluationRouter);
 app.use("/api", voucherRouter);
 app.use("/api", statistic);
+app.use("/api", chatRouter);
 app.use("/api", routerUnSoldProduct);
 mongoose
   .connect(MONGO_URL)
