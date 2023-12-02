@@ -28,7 +28,12 @@ export const getStatistic = async (req, res) => {
 
 export const uploadData = async (data) => {
     try {
-        await Statistic.create(data)
+        const statistic = await Statistic.find()
+        if(!statistic || statistic.length == 0) {
+            await Statistic.create(data)
+        } else {
+            await Statistic.findByIdAndUpdate(statistic[statistic.length-1]._id ,data)
+        }
     } catch (error) {
         console.log({
             status: 400,
