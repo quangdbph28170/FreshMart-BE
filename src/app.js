@@ -387,6 +387,7 @@ cron.schedule("* */12 * * *", async () => {
 //===========Xử lý sp thất thoát (SP Ế) - 1p chạy lại 1 lần=================//
 
 cron.schedule("*/1 * * * *", async () => {
+
   // Lấy ra tất cả sp
   const products = await Product.find();
 
@@ -420,6 +421,7 @@ cron.schedule("*/1 * * * *", async () => {
             { new: true }
           );
         } else {
+          console.log(product.productName)
           // nếu chưa có thì tạo mới sp thất thoát (sp ế)
           const data = await UnSoldProduct.create({
             originalID,
@@ -433,29 +435,30 @@ cron.schedule("*/1 * * * *", async () => {
               },
             ],
           });
+          console.log("data", data)
         }
-        //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
-        if (product.isSale) {
-          const remove = await Product.findByIdAndDelete(product._id);
-          if (remove) {
-            console.log("Đã xóa sp thanh lý ");
-          } else {
-            console.log("xóa sp thanh lý thất bại ");
-          }
-        } else {
-          //update lại bảng products, xóa lô đó đi
-          const data = await Product.findOneAndUpdate(
-            { _id: product._id, "shipments.idShipment": shipment.idShipment }, {
-            $pull: {
-              shipments: {
-                idShipment: shipment.idShipment
-              }
+
+        //update lại bảng products, xóa lô đó đi
+        const data = await Product.findOneAndUpdate(
+          { _id: product._id, "shipments.idShipment": shipment.idShipment }, {
+          $pull: {
+            shipments: {
+              idShipment: shipment.idShipment
             }
-          },
-            { new: true }
-          );
-          console.log("Shipments ", data);
-        }
+          }
+        },
+          { new: true }
+        );
+        console.log("Shipments ", data);
+      }
+    }
+    //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
+    if (product.isSale && product.shipments.length == 0) {
+      const remove = await Product.findByIdAndDelete(product._id);
+      if (remove) {
+        console.log("Đã xóa sp thanh lý ");
+      } else {
+        console.log("xóa sp thanh lý thất bại ");
       }
     }
   }
