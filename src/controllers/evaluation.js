@@ -165,30 +165,33 @@ export const getIsRatedDetail = async (req, res) => {
 }
 //Admin Lấy toàn bộ đánh giá
 export const getAllRating = async (req, res) => {
-    try {
-        const data = await Evaluation.find().populate(["userId", "productId"])
-        // const highestRatedProduct = await Evaluation.aggregate([
-        //     { $group: { _id: "$productId", averageRating: { $avg: "$rate" } } },
-        //     { $sort: { averageRating: -1 } },
-        //     { $limit: 1 },
-        //     { $project: { _id: 0, productId: "$_id" } }
-        // ]);
+    const {
+        _page = 1,
+        _order = "asc",
+        _limit = 9999,
+        _sort = "createdAt",
+        _rate
+    } = req.query;
+    const options = {
+        page: _page,
+        limit: _limit,
+        sort: {
+            [_sort]: _order === "desc" ? -1 : 1,
+        },
+        populate: ["userId", "productId"]
 
-        // const lowestRatedProduct = await Evaluation.aggregate([
-        //     { $group: { _id: "$productId", averageRating: { $avg: "$rate" } } },
-        //     { $sort: { averageRating: 1 } },
-        //     { $limit: 1 },
-        //     { $project: { _id: 0, productId: "$_id" } }
-        // // ]);
-        // console.log(highestRatedProduct);
-        // console.log(lowestRatedProduct);
+    };
+    try {
+        const query = {}
+        if (_rate) {
+            query.rate = _rate
+        }
+        const data = await Evaluation.paginate(query, options)
         return res.status(200).json({
             status: 200,
             message: "success",
             body: {
-                data,
-                // highestRatedProductId: highestRatedProduct[0].productId,
-                // lowestRatedProductId: lowestRatedProduct[0].productId
+                data: data.docs
             }
         });
     } catch (error) {
