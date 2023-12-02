@@ -314,6 +314,7 @@ export const removeProduct = async (req, res) => {
     });
   }
 };
+//Xủ lý sp thanh lý
 export const productClearance = async (req, res) => {
   try {
     const { productId, shipmentId, discount, productName } = req.body
@@ -391,12 +392,12 @@ export const productClearance = async (req, res) => {
       }
     }, { new: true })
 
-    //Cập nhật lại trong bảng shipment id sp CẦN_THANH_LÝ => is sp THANH_LÝ
-    await Shipment.findOneAndUpdate({ _id: shipmentId, "products.idProduct": productId }, {
-      $set: {
-        "products.$.idProduct": data._id
-      }
-    }, { new: true })
+    // //Cập nhật lại trong bảng shipment id sp CẦN_THANH_LÝ => is sp THANH_LÝ
+    // await Shipment.findOneAndUpdate({ _id: shipmentId, "products.idProduct": productId }, {
+    //   $set: {
+    //     "products.$.idProduct": data._id
+    //   }
+    // }, { new: true })
 
     //push vào danh mục
     await Categories.findByIdAndUpdate(cateIsSale._id, {
