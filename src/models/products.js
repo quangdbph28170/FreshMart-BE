@@ -69,15 +69,6 @@ const productSchema = new mongoose.Schema(
       type: mongoose.Types.ObjectId,
       ref: "Origin",
     },
-    comments: {
-      type: [
-        {
-          type: mongoose.Types.ObjectId,
-          // ref:"Comment",
-        },
-      ],
-      default: [],
-    },
     isSale: {
       type: Boolean,
       default: false,

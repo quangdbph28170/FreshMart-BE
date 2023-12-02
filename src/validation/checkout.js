@@ -26,21 +26,24 @@ export const validateCheckout = joi.object({
     "string.required": "ShippingAddress is required",
     "string.empty": "ShippingAddress is not empty!",
   }),
-  products: joi.array().items(
-    joi.object({
-      productId: joi.string().required().trim(),
-      originId: joi.string().required().trim(),
-      productName: joi.string().required().trim(),
-      images: joi.string().required().trim(),
-      price: joi.number().required(),
-      weight: joi.number().required(),
-    })
-  ).required(),
+  products: joi
+    .array()
+    .items(
+      joi.object({
+        productId: joi.string().required().trim(),
+        originId: joi.string().required().trim(),
+        productName: joi.string().required().trim(),
+        images: joi.string().required().trim(),
+        price: joi.number().required(),
+        weight: joi.number().required(),
+      })
+    )
+    .required(),
   totalPayment: joi.number().required(),
-  note: joi.string().trim(),
+  note: joi.string(),
   pay: joi.boolean(),
   paymentMethod: joi.string().valid("cod", "momo", "vnpay").required(),
-  code:joi.string().allow()
+  code: joi.string().allow(),
 });
 
 export const validatePhoneAndMail = joi

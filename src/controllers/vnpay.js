@@ -1,6 +1,6 @@
-import config from 'config';
-import dateFormat from 'dateformat';
-import querystring from 'qs';
+import config from "config";
+import dateFormat from "dateformat";
+import querystring from "qs";
 import crypto from "crypto";
 import Orders from '../models/orders';
 import { sendMailer } from './orders';
@@ -9,17 +9,18 @@ export const vnpayCreate = async (req, orderId) => {
     //Gửi req body gồm ammount dữ liệu là string, bankCode là "" (chuỗi rỗng), orderDescription cứ lấy từ trường note khi tạo order  
     process.env.TZ = 'Asia/Ho_Chi_Minh';
 
-    var ipAddr = req.headers['x-forwarded-for'] ||
-        req.connection.remoteAddress ||
-        req.socket.remoteAddress ||
-        req.connection.socket.remoteAddress;
+  var ipAddr =
+    req.headers["x-forwarded-for"] ||
+    req.connection.remoteAddress ||
+    req.socket.remoteAddress ||
+    req.connection.socket.remoteAddress;
 
-    var tmnCode = "X5NX5EN5";
-    var secretKey = "RNRIQQQUPZTWBTBBTAXZEHQFRYMKOVII";
-    var vnpUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
-    var returnUrl = "http://localhost:5173/vnpay_return";
+  var tmnCode = "X5NX5EN5";
+  var secretKey = "RNRIQQQUPZTWBTBBTAXZEHQFRYMKOVII";
+  var vnpUrl = "https://sandbox.vnpayment.vn/paymentv2/vpcpay.html";
+  var returnUrl = "http://localhost:5173/vnpay_return";
 
-    var date = new Date();
+  var date = new Date();
 
     var createDate = dateFormat(date, 'yyyymmddHHmmss');
     var amount = req.body.totalPayment;
@@ -50,30 +51,29 @@ export const vnpayCreate = async (req, orderId) => {
         vnp_Params['vnp_BankCode'] = bankCode;
     }
 
-    vnp_Params = sortObject(vnp_Params);
+  vnp_Params = sortObject(vnp_Params);
 
-    var signData = querystring.stringify(vnp_Params, { encode: false });
-    var hmac = crypto.createHmac("sha512", secretKey);
-    var signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex");
-    vnp_Params['vnp_SecureHash'] = signed;
-    vnpUrl += '?' + querystring.stringify(vnp_Params, { encode: false });
+  var signData = querystring.stringify(vnp_Params, { encode: false });
+  var hmac = crypto.createHmac("sha512", secretKey);
+  var signed = hmac.update(new Buffer(signData, "utf-8")).digest("hex");
+  vnp_Params["vnp_SecureHash"] = signed;
+  vnpUrl += "?" + querystring.stringify(vnp_Params, { encode: false });
 
     return vnpUrl;
 }
 
 export const vnpayIpn = async (req, res) => {
-    var vnp_Params = req.query;
-    var secureHash = vnp_Params['vnp_SecureHash'];
+  var vnp_Params = req.query;
+  var secureHash = vnp_Params["vnp_SecureHash"];
 
-    delete vnp_Params['vnp_SecureHash'];
-    delete vnp_Params['vnp_SecureHashType'];
+  delete vnp_Params["vnp_SecureHash"];
+  delete vnp_Params["vnp_SecureHashType"];
 
-    vnp_Params = sortObject(vnp_Params);
-    var secretKey = "RNRIQQQUPZTWBTBBTAXZEHQFRYMKOVII";
-    var signData = querystring.stringify(vnp_Params, { encode: false });
-    var hmac = crypto.createHmac("sha512", secretKey);
-    var signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex");
-
+  vnp_Params = sortObject(vnp_Params);
+  var secretKey = "RNRIQQQUPZTWBTBBTAXZEHQFRYMKOVII";
+  var signData = querystring.stringify(vnp_Params, { encode: false });
+  var hmac = crypto.createHmac("sha512", secretKey);
+  var signed = hmac.update(new Buffer(signData, "utf-8")).digest("hex");
 
     if (secureHash === signed) {
         var orderId = vnp_Params['vnp_TxnRef'];
@@ -92,43 +92,43 @@ export const vnpayIpn = async (req, res) => {
 }
 
 export const vnpayReturn = (req, res) => {
-    var vnp_Params = req.query;
+  var vnp_Params = req.query;
 
-    var secureHash = vnp_Params['vnp_SecureHash'];
+  var secureHash = vnp_Params["vnp_SecureHash"];
 
-    delete vnp_Params['vnp_SecureHash'];
-    delete vnp_Params['vnp_SecureHashType'];
+  delete vnp_Params["vnp_SecureHash"];
+  delete vnp_Params["vnp_SecureHashType"];
 
-    vnp_Params = sortObject(vnp_Params);
+  vnp_Params = sortObject(vnp_Params);
 
-    var tmnCode = 'X5NX5EN5';
-    var secretKey = 'RNRIQQQUPZTWBTBBTAXZEHQFRYMKOVII';
+  var tmnCode = "X5NX5EN5";
+  var secretKey = "RNRIQQQUPZTWBTBBTAXZEHQFRYMKOVII";
 
-    var signData = querystring.stringify(vnp_Params, { encode: false });
-    var hmac = crypto.createHmac("sha512", secretKey);
-    var signed = hmac.update(new Buffer(signData, 'utf-8')).digest("hex");
+  var signData = querystring.stringify(vnp_Params, { encode: false });
+  var hmac = crypto.createHmac("sha512", secretKey);
+  var signed = hmac.update(new Buffer(signData, "utf-8")).digest("hex");
 
-    if (secureHash === signed) {
-        //Kiem tra xem du lieu trong db co hop le hay khong va thong bao ket qua
+  if (secureHash === signed) {
+    //Kiem tra xem du lieu trong db co hop le hay khong va thong bao ket qua
 
-        res.render('success', { code: vnp_Params['vnp_ResponseCode'] })
-    } else {
-        res.render('success', { code: '97' })
-    }
-}
+    res.render("success", { code: vnp_Params["vnp_ResponseCode"] });
+  } else {
+    res.render("success", { code: "97" });
+  }
+};
 
 function sortObject(obj) {
-    let sorted = {};
-    let str = [];
-    let key;
-    for (key in obj) {
-        if (obj.hasOwnProperty(key)) {
-            str.push(encodeURIComponent(key));
-        }
+  let sorted = {};
+  let str = [];
+  let key;
+  for (key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      str.push(encodeURIComponent(key));
     }
-    str.sort();
-    for (key = 0; key < str.length; key++) {
-        sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, "+");
-    }
-    return sorted;
+  }
+  str.sort();
+  for (key = 0; key < str.length; key++) {
+    sorted[str[key]] = encodeURIComponent(obj[str[key]]).replace(/%20/g, "+");
+  }
+  return sorted;
 }

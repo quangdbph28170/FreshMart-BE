@@ -1,8 +1,9 @@
 import Products from "../models/products";
+import Evaluation from "../models/evaluation";
 import Shipment from "../models/shipment";
 import Categories from "../models/categories";
 import { validateProduct, validateProductClearance } from "../validation/products";
-import mongoose from "mongoose";
+
 export const getProducts = async (req, res) => {
   const {
     _page = 1,
@@ -245,7 +246,7 @@ export const updateProduct = async (req, res) => {
       });
     }
     const prd = await Products.findById(req.params.id)
-    const product = await Products.findByIdAndUpdate(req.params.id, req.body,{new:true});
+    const product = await Products.findByIdAndUpdate(req.params.id, req.body, { new: true });
     if (!product) {
       return res.status(404).json({
         status: 404,
@@ -287,12 +288,20 @@ export const removeProduct = async (req, res) => {
       });
     }
     const { categoryId } = product;
-
+    // Xóa sp có trong danh mục
     await Categories.findByIdAndUpdate(categoryId, {
       $pull: {
         products: req.params.id,
       },
     });
+    // Xóa đánh giá của sp
+    const rating = await Evaluation.find({ productId: req.params.id })
+    for (let item of rating) {
+      await Evaluation.findOneAndDelete({ productId: item.productId })
+    }
+    // console.log(rating);
+    // return
+    //Xóa sp
     await Products.findByIdAndDelete(req.params.id);
     return res.status(201).json({
       status: 201,
@@ -347,18 +356,18 @@ export const productClearance = async (req, res) => {
     console.log("no")
     // Tìm danh mục thanh lý
     const cateIsSale = await Categories.findOne({ isSale: true })
-   if(!cateIsSale){
-    return res.status(400).json({
-      status: 400,
-      message: "Phải tạo danh mục thanh lý trước!",
-    });
-   }
+    if (!cateIsSale) {
+      return res.status(400).json({
+        status: 400,
+        message: "Phải tạo danh mục thanh lý trước!",
+      });
+    }
     const data = await Products.create({
       ...productExist.toObject(),
       categoryId: cateIsSale._id,
       _id: undefined,
       productName,
-      originalID:productExist._id,
+      originalID: productExist._id,
       shipments: [
         {
           idShipment: shipmentExist.idShipment,
