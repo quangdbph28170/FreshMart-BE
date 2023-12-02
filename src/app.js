@@ -396,79 +396,83 @@ cron.schedule("*/1 * * * *", async () => {
       await Chat.findOneAndDelete({ roomChatId: chat.roomChatId?._id })
     }
   }
-  // Lấy ra tất cả sp
-  const products = await Product.find();
+  try {
+    // Lấy ra tất cả sp
+    const products = await Product.find();
 
-  let originalID = null;
-  //Kiểm tra để lấy id của sp gốc
-  for (let product of products) {
-    if (!product.isSale) {
-      originalID = product._id;
-    } else {
-      originalID = product.originalID;
-    }
+    let originalID = null;
+    //Kiểm tra để lấy id của sp gốc
+    for (let product of products) {
+      if (!product.isSale) {
+        originalID = product._id;
+      } else {
+        originalID = product.originalID;
+      }
 
-    for (let shipment of product.shipments) {
-      // lấy ra sp hết hạn mà vẫn còn hàng
-      if (shipment.willExpire == 2 && shipment.weight > 0) {
-        //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
-        const unsoldExist = await UnSoldProduct.findOne({ originalID });
-        if (unsoldExist) {
-          const productUnsold = await UnSoldProduct.findOneAndUpdate(
-            { originalID },
-            {
-              $push: {
-                shipments: {
+      for (let shipment of product.shipments) {
+        // lấy ra sp hết hạn mà vẫn còn hàng
+        if (shipment.willExpire == 2 && shipment.weight > 0) {
+          //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
+          const unsoldExist = await UnSoldProduct.findOne({ originalID });
+          if (unsoldExist) {
+            const productUnsold = await UnSoldProduct.findOneAndUpdate(
+              { originalID },
+              {
+                $push: {
+                  shipments: {
+                    shipmentId: shipment.idShipment,
+                    purchasePrice: shipment.originPrice,
+                    weight: shipment.weight,
+                    date: shipment.date
+                  },
+                },
+              },
+              { new: true }
+            );
+          } else {
+            console.log(product.productName)
+            // nếu chưa có thì tạo mới sp thất thoát (sp ế)
+            const data = await UnSoldProduct.create({
+              originalID,
+              productName: product.productName,
+              shipments: [
+                {
                   shipmentId: shipment.idShipment,
                   purchasePrice: shipment.originPrice,
                   weight: shipment.weight,
                   date: shipment.date
                 },
-              },
-            },
+              ],
+            });
+            console.log("data", data)
+          }
+
+          //update lại bảng products, xóa lô đó đi
+          const data = await Product.findOneAndUpdate(
+            { _id: product._id, "shipments.idShipment": shipment.idShipment }, {
+            $pull: {
+              shipments: {
+                idShipment: shipment.idShipment
+              }
+            }
+          },
             { new: true }
           );
-        } else {
-          console.log(product.productName)
-          // nếu chưa có thì tạo mới sp thất thoát (sp ế)
-          const data = await UnSoldProduct.create({
-            originalID,
-            productName: product.productName,
-            shipments: [
-              {
-                shipmentId: shipment.idShipment,
-                purchasePrice: shipment.originPrice,
-                weight: shipment.weight,
-                date: shipment.date
-              },
-            ],
-          });
-          console.log("data", data)
+          console.log("Shipments ", data);
         }
-
-        //update lại bảng products, xóa lô đó đi
-        const data = await Product.findOneAndUpdate(
-          { _id: product._id, "shipments.idShipment": shipment.idShipment }, {
-          $pull: {
-            shipments: {
-              idShipment: shipment.idShipment
-            }
-          }
-        },
-          { new: true }
-        );
-        console.log("Shipments ", data);
+      }
+      //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
+      if (product.isSale && product.shipments.length == 0) {
+        const remove = await Product.findByIdAndDelete(product._id);
+        if (remove) {
+          console.log("Đã xóa sp thanh lý ");
+        } else {
+          console.log("xóa sp thanh lý thất bại ");
+        }
       }
     }
-    //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
-    if (product.isSale && product.shipments.length == 0) {
-      const remove = await Product.findByIdAndDelete(product._id);
-      if (remove) {
-        console.log("Đã xóa sp thanh lý ");
-      } else {
-        console.log("xóa sp thanh lý thất bại ");
-      }
-    }
+  } catch (error) {
+    console.log(error.message)
   }
 });
 io.of("/admin").on("connection", (socket) => {
