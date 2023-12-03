@@ -69,7 +69,6 @@ export const sendMailer = async (email, data, amountReduced) => {
       maxReduce = "tối đa " + voucher.maxReduce.toLocaleString("vi-VN") + "VND";
     }
     code = `
-<<<<<<< HEAD
     <p style="font-weight: bold; margin: 0;">Voucher đã sử dụng: Giảm ${amountReduced.toLocaleString("vi-VN")}VND</p>
     <div style="display: flex; align-items: center; background-color: #f9f9f9; border: 1px solid #ccc; border-radius: 5px; padding: 5px;">
       <img src="https://inmauhanoi.com/wp-content/uploads/2019/03/in-voucher-gia-re-lay-ngay-tai-ha-noi.png" alt="Voucher" style="width: 50px; height: 50px; margin-right: 10px;">
@@ -77,20 +76,6 @@ export const sendMailer = async (email, data, amountReduced) => {
         <p style="margin: 0;">Mã: ${voucher.code}</p>
         <p style="margin: 0;">Giảm ${voucher.percent}% đơn ${voucher.miniMumOrder > 0 ? `tối thiểu ${voucher.miniMumOrder.toLocaleString("vi-VN")}VND` : ""} ${maxReduce != null ? maxReduce : ""}</p>
       </div>
-=======
-    <p style="font-weight: bold; margin: 0;">Voucher đã sử dụng: Giảm ${amountReduced.toLocaleString(
-      "vi-VN"
-    )}VND</p>
-  <div style="display: flex; align-items: center; background-color: #f9f9f9; border: 1px solid #ccc; border-radius: 5px; padding: 5px;">
-    <img src="https://inmauhanoi.com/wp-content/uploads/2019/03/in-voucher-gia-re-lay-ngay-tai-ha-noi.png" alt="Voucher" style="width: 50px; height: 50px; margin-right: 10px;">
-    <div>
-      <p style="margin: 0;">Mã: ${voucher.code}</p>
-      <p style="margin: 0;">Giảm ${
-        voucher.percent
-      }% đơn tối thiểu ${voucher.miniMumOrder.toLocaleString(
-      "vi-VN"
-    )}VND ${maxReduce}</p>
->>>>>>> c6477464aa7165f227a65fff86629092d7ee1dc0
     </div>
   `;
   }
