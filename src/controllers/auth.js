@@ -13,14 +13,18 @@ export const validateUser = async (detail) => {
    const user = await User.findOne({ email: detail.email });
 
    if(user) {
-      await Chat.create({
-         roomChatId: user._id,
-         messages: [{
-            content: "Chào mừng bạn đến với Fresh Mart",
-            sender: "admin",
-            isRead: "false"
-         }]
-      })
+      const chatExist = await Chat.findOne({ roomChatId: user._id })
+
+      if (!chatExist) {
+         await Chat.create({
+            roomChatId: user._id,
+            messages: [{
+               content: "Chào mừng bạn đến với Fresh Mart",
+               sender: "admin",
+               isRead: "false"
+            }]
+         })
+      }
    }
 
    if (user) return user;
