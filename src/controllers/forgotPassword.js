@@ -103,13 +103,13 @@ export const forgotPassword = async (req, res) => {
         }
         // console.log(userExist);
         const hashPassword = await bcrypt.hash(req.body.password, 10);
-        const validPass = await bcrypt.compare(req.body.password, userExist.password);
-        if (validPass) {
-            return res.status(401).json({
-                status: 401,
-                message: "This password has been used!",
-            })
-        }
+        // const validPass = await bcrypt.compare(req.body.password, userExist.password);
+        // if (validPass) {
+        //     return res.status(401).json({
+        //         status: 401,
+        //         message: "This password has been used!",
+        //     })
+        // }
         const user = await User.findOneAndUpdate({ email: email }, { password: hashPassword })
         res.clearCookie("email");
         return res.status(200).json({
