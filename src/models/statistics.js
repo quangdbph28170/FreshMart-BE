@@ -46,7 +46,11 @@ const statisticsSchema = new mongoose.Schema(
                     type: String,
                     required: true
                 },
-                startCount: {
+                image: {
+                    type: String,
+                    required: true
+                },
+                starCount: {
                     type: Number,
                     required: true
                 }
@@ -60,7 +64,11 @@ const statisticsSchema = new mongoose.Schema(
                     type: String,
                     required: true
                 },
-                startCount: {
+                image: {
+                    type: String,
+                    required: true
+                },
+                starCount: {
                     type: Number,
                     required: true
                 }

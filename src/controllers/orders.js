@@ -6,8 +6,14 @@ import Shipment from "../models/shipment";
 import { validateCheckout } from "../validation/checkout";
 import { transporter } from "../config/mail";
 import {
-  doneOrder, failedOrder, messageCreateOrder, messageOrderSuccess,
-  messageUpdateOrder, statusOrder, subjectCreateOrder, subjectUpdateOrder
+  doneOrder,
+  failedOrder,
+  messageCreateOrder,
+  messageOrderSuccess,
+  messageUpdateOrder,
+  statusOrder,
+  subjectCreateOrder,
+  subjectUpdateOrder,
 } from "../config/constants";
 import Carts from "../models/carts";
 import { vnpayCreate } from "./vnpay";
@@ -29,38 +35,41 @@ const checkCancellationTime = (order) => {
 };
 const formatDateTime = (dateTime) => {
   const date = new Date(dateTime);
-  const formattedDate = `${date.getDate()}/${date.getMonth() + 1}/${date.getFullYear()}`;
+  const formattedDate = `${date.getDate()}/${
+    date.getMonth() + 1
+  }/${date.getFullYear()}`;
   const formattedTime = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
   return `${formattedDate} ${formattedTime}`;
 };
 export const sendMailer = async (email, data, amountReduced) => {
-  let subject = null
-  let message = null
+  let subject = null;
+  let message = null;
   if (data.status == "chờ xác nhận") {
-    subject = subjectCreateOrder
-    message = messageCreateOrder
+    subject = subjectCreateOrder;
+    message = messageCreateOrder;
   } else if (data.status == "giao hàng thành công") {
-    subject = subjectUpdateOrder
-    message = messageOrderSuccess
+    subject = subjectUpdateOrder;
+    message = messageOrderSuccess;
   } else {
-    subject = subjectUpdateOrder
-    message = messageUpdateOrder
+    subject = subjectUpdateOrder;
+    message = messageUpdateOrder;
   }
   // console.log(email,data);
-  let voucher = null
-  let code = null
+  let voucher = null;
+  let code = null;
   // console.log(data);
   if (data.promotionCode != null) {
-    voucher = await vouchers.findOne({ code: data.promotionCode })
+    voucher = await vouchers.findOne({ code: data.promotionCode });
   }
   // console.log("voucher", voucher);
   // return
-  let maxReduce = null
+  let maxReduce = null;
   if (voucher != null && amountReduced != null) {
     if (voucher.maxReduce != 0) {
-      maxReduce = "tối đa " + voucher.maxReduce.toLocaleString("vi-VN") + "VND"
+      maxReduce = "tối đa " + voucher.maxReduce.toLocaleString("vi-VN") + "VND";
     }
     code = `
+<<<<<<< HEAD
     <p style="font-weight: bold; margin: 0;">Voucher đã sử dụng: Giảm ${amountReduced.toLocaleString("vi-VN")}VND</p>
     <div style="display: flex; align-items: center; background-color: #f9f9f9; border: 1px solid #ccc; border-radius: 5px; padding: 5px;">
       <img src="https://inmauhanoi.com/wp-content/uploads/2019/03/in-voucher-gia-re-lay-ngay-tai-ha-noi.png" alt="Voucher" style="width: 50px; height: 50px; margin-right: 10px;">
@@ -68,6 +77,20 @@ export const sendMailer = async (email, data, amountReduced) => {
         <p style="margin: 0;">Mã: ${voucher.code}</p>
         <p style="margin: 0;">Giảm ${voucher.percent}% đơn ${voucher.miniMumOrder > 0 ? `tối thiểu ${voucher.miniMumOrder.toLocaleString("vi-VN")}VND` : ""} ${maxReduce != null ? maxReduce : ""}</p>
       </div>
+=======
+    <p style="font-weight: bold; margin: 0;">Voucher đã sử dụng: Giảm ${amountReduced.toLocaleString(
+      "vi-VN"
+    )}VND</p>
+  <div style="display: flex; align-items: center; background-color: #f9f9f9; border: 1px solid #ccc; border-radius: 5px; padding: 5px;">
+    <img src="https://inmauhanoi.com/wp-content/uploads/2019/03/in-voucher-gia-re-lay-ngay-tai-ha-noi.png" alt="Voucher" style="width: 50px; height: 50px; margin-right: 10px;">
+    <div>
+      <p style="margin: 0;">Mã: ${voucher.code}</p>
+      <p style="margin: 0;">Giảm ${
+        voucher.percent
+      }% đơn tối thiểu ${voucher.miniMumOrder.toLocaleString(
+      "vi-VN"
+    )}VND ${maxReduce}</p>
+>>>>>>> c6477464aa7165f227a65fff86629092d7ee1dc0
     </div>
   `;
   }
@@ -79,9 +102,13 @@ export const sendMailer = async (email, data, amountReduced) => {
                   <a target="_blank" href="http:localhost:5173">
                     <img src="https://spacingtech.com/html/tm/freozy/freezy-ltr/image/logo/logo.png" style="width:80px;color:#000"/>
                   </a>
-                  <p style="color:#2986cc;">Kính gửi Anh/chị: ${data.customerName} </p> 
+                  <p style="color:#2986cc;">Kính gửi Anh/chị: ${
+                    data.customerName
+                  } </p> 
                   <p>${message} </p>
-                  <p style="font-weight:bold">Hóa đơn được tạo lúc: ${formatDateTime(data.createdAt)}</p>
+                  <p style="font-weight:bold">Hóa đơn được tạo lúc: ${formatDateTime(
+                    data.createdAt
+                  )}</p>
                   <div style="border:1px solid #ccc;border-radius:10px; padding:10px 20px;width: max-content">
                   <p>Mã hóa đơn: ${data.invoiceId}</p>
                   <p>Khách hàng: ${data.customerName}</p>
@@ -97,27 +124,42 @@ export const sendMailer = async (email, data, amountReduced) => {
                     </tr>
                   </thead>
                   <tbody>
-                    ${data.products.map((product, index) =>
-      `
+                    ${data.products
+                      .map(
+                        (product, index) =>
+                          `
           <tr style="border-bottom:1px solid #ccc">
             <td style="padding: 10px;">${index + 1}</td>
-            <td style="padding: 10px;"><img alt="image" src="${product.images
-      }" style="width: 90px; height: 90px;border-radius:5px">
+            <td style="padding: 10px;"><img alt="image" src="${
+              product.images
+            }" style="width: 90px; height: 90px;border-radius:5px">
             <p>${product.productName} (${product.originName})</p>
             </td>
             <td style="padding: 10px;">${product.weight}kg</td>
             <td style="padding: 10px;">${product.price.toLocaleString(
-        "vi-VN"
-      )}VNĐ/kg</td>
+              "vi-VN"
+            )}VNĐ/kg</td>
           </tr>
        `
-    )
-        .join("")}
+                      )
+                      .join("")}
                   </tbody>
                 </table>  
-                <h4>Tổng: ${amountReduced != null ? (amountReduced + data.totalPayment).toLocaleString("vi-VN") + "VND" : `${data.totalPayment.toLocaleString("vi-VN")}VND`}</h4> ${code != null ? `<p>${code}</p>` : ""}
-                  <h3 style="color: red;font-weight:bold;margin-top:20px">Tổng tiền thanh toán: ${data.totalPayment.toLocaleString("vi-VN")}VNĐ</h3>
-                  <p>Thanh toán: ${data.pay == false ? "Thanh toán khi nhận hàng" : "Đã thanh toán online"}</p>
+                <h4>Tổng: ${
+                  amountReduced != null
+                    ? (amountReduced + data.totalPayment).toLocaleString(
+                        "vi-VN"
+                      ) + "VND"
+                    : `${data.totalPayment.toLocaleString("vi-VN")}VND`
+                }</h4> ${code != null ? `<p>${code}</p>` : ""}
+                  <h3 style="color: red;font-weight:bold;margin-top:20px">Tổng tiền thanh toán: ${data.totalPayment.toLocaleString(
+                    "vi-VN"
+                  )}VNĐ</h3>
+                  <p>Thanh toán: ${
+                    data.pay == false
+                      ? "Thanh toán khi nhận hàng"
+                      : "Đã thanh toán online"
+                  }</p>
                   <p>Trạng thái đơn hàng: ${data.status}</p>
                   </div>
                    <p>Xin cảm ơn quý khách!</p>
@@ -150,7 +192,7 @@ export const CreateOrder = async (req, res) => {
         errors.push({
           productId: item.productId,
           weight: item.weight,
-          message: 'Invalid Product Weight!'
+          message: "Invalid Product Weight!",
         });
       }
       const prd = await Product.findById(item.productId);
@@ -160,30 +202,31 @@ export const CreateOrder = async (req, res) => {
           message: "Invalid data!",
         });
       } else {
-
-        if (item.price != prd.price - (prd.price * prd.discount / 100)) {
+        if (item.price != prd.price - (prd.price * prd.discount) / 100) {
           errors.push({
             productId: item.productId,
-            price: prd.price - (prd.price * prd.discount / 100),
-            message: 'Invalid Product Price!'
+            price: prd.price - (prd.price * prd.discount) / 100,
+            message: "Invalid Product Price!",
           });
         }
         if (item.productName != prd.productName) {
           errors.unshift({
             productId: item.productId,
             productName: prd.productName,
-            message: 'Invalid Product Name!'
+            message: "Invalid Product Name!",
           });
         }
         if (item.images != prd.images[0].url) {
           errors.push({
             productId: item.productId,
             images: prd.images[0].url,
-            message: 'Invalid Product Image!'
+            message: "Invalid Product Image!",
           });
         }
         const currentTotalWeight = prd.shipments.reduce(
-          (accumulator, shipment) => accumulator + shipment.weight, 0);
+          (accumulator, shipment) => accumulator + shipment.weight,
+          0
+        );
         if (prd.shipments.length === 0) {
           errors.push({
             productId: item.productId,
@@ -196,7 +239,6 @@ export const CreateOrder = async (req, res) => {
             maxWeight: currentTotalWeight,
           });
         }
-
       }
     }
     if (errors.length > 0) {
@@ -206,19 +248,20 @@ export const CreateOrder = async (req, res) => {
         body: { errors },
       });
     }
-    let totalPayment = null    //--- tổng thanh toán -------//
-    let amountReduced = null    //----- số tiền đã giảm------  //
+    let totalPayment = null; //--- tổng thanh toán -------//
+    let amountReduced = null; //----- số tiền đã giảm------  //
     for (let item of products) {
       const prd = await Product.findById(item.productId);
-      totalPayment += (prd.price - (prd.price * prd.discount / 100)) * item.weight
+      totalPayment +=
+        (prd.price - (prd.price * prd.discount) / 100) * item.weight;
     }
     //KH đăng nhập
     if (req.user != null) {
       req.body["userId"] = req.user._id;
       //Nếu dùng mã voucher
       if (req.body.code) {
-        //Ktra mã có tồn tại ko 
-        const voucherExist = await vouchers.findOne({ code: req.body.code })
+        //Ktra mã có tồn tại ko
+        const voucherExist = await vouchers.findOne({ code: req.body.code });
         if (!voucherExist) {
           return res.status(404).json({
             status: 404,
@@ -241,7 +284,7 @@ export const CreateOrder = async (req, res) => {
         }
 
         //Voucher đã hết hạn
-        const dateNow = new Date()
+        const dateNow = new Date();
         if (voucherExist.dateEnd < dateNow) {
           return res.status(400).json({
             status: 400,
@@ -256,7 +299,10 @@ export const CreateOrder = async (req, res) => {
           });
         }
         //Chưa đạt yc với tối thiểu đơn hàng
-        if (voucherExist.miniMumOrder > 0 && voucherExist.miniMumOrder > totalPayment) {
+        if (
+          voucherExist.miniMumOrder > 0 &&
+          voucherExist.miniMumOrder > totalPayment
+        ) {
           return res.status(400).json({
             status: 400,
             message: "Orders are not satisfactory!",
@@ -264,28 +310,34 @@ export const CreateOrder = async (req, res) => {
         }
 
         //Check xem user đã dùng voucher này chưa
-        const userExist = await vouchers.findOne({ code: req.body.code, "users.userId": req.body.userId })
+        const userExist = await vouchers.findOne({
+          code: req.body.code,
+          "users.userId": req.body.userId,
+        });
         if (userExist) {
           return res.status(400).json({
             status: 400,
-            message: "This voucher code has already been used. Please enter a different code!",
+            message:
+              "This voucher code has already been used. Please enter a different code!",
           });
         }
 
         // tính số tiền giảm:
-        const amount = totalPayment * voucherExist.percent / 100
+        const amount = (totalPayment * voucherExist.percent) / 100;
         // nếu sô tiền giảm vượt quá tối đa cho phép thì trừ đi số tiền tối đa
         if (voucherExist.maxReduce > 0) {
           if (amount > voucherExist.maxReduce) {
-            totalPayment = totalPayment - voucherExist.maxReduce
-            amountReduced = voucherExist.maxReduce
+            totalPayment = totalPayment - voucherExist.maxReduce;
+            amountReduced = voucherExist.maxReduce;
           } else {
-            totalPayment = totalPayment - (totalPayment * voucherExist.percent / 100)
-            amountReduced = (totalPayment * voucherExist.percent / 100)
+            totalPayment =
+              totalPayment - (totalPayment * voucherExist.percent) / 100;
+            amountReduced = (totalPayment * voucherExist.percent) / 100;
           }
         } else {
-          totalPayment = totalPayment - (totalPayment * voucherExist.percent / 100)
-          amountReduced = (totalPayment * voucherExist.percent / 100)
+          totalPayment =
+            totalPayment - (totalPayment * voucherExist.percent) / 100;
+          amountReduced = (totalPayment * voucherExist.percent) / 100;
         }
         //Check tổng tiền thanh toán
         if (req.body.totalPayment !== totalPayment) {
@@ -293,7 +345,7 @@ export const CreateOrder = async (req, res) => {
             status: 400,
             message: "Invalid totalPayment!",
             true: totalPayment,
-            false: req.body.totalPayment
+            false: req.body.totalPayment,
           });
         }
       }
@@ -304,18 +356,18 @@ export const CreateOrder = async (req, res) => {
         status: 400,
         message: "Invalid totalPayment!",
         true: totalPayment,
-        false: req.body.totalPayment
+        false: req.body.totalPayment,
       });
     }
-    //Lặp qua mảng products gửi lên 
+    //Lặp qua mảng products gửi lên
     for (let item of products) {
       const prd = await Product.findById(item.productId);
       // Update sold +
       await Product.findByIdAndUpdate(item.productId, {
         $set: {
-          sold: prd.sold + 1
-        }
-      })
+          sold: prd.sold + 1,
+        },
+      });
       let itemWeight = item.weight;
       if (itemWeight != 0 || currentTotalWeight != 0) {
         //Lặp qua từng lô 1 trong bảng products
@@ -327,14 +379,14 @@ export const CreateOrder = async (req, res) => {
           // - Táo có lô:
           //  A(30kg),
           //  B(50kg),
-          // - Mua 50kg táo => xóa lô A đi và trừ 20kg ở lô B thì 
+          // - Mua 50kg táo => xóa lô A đi và trừ 20kg ở lô B thì
           // - Mua 10kg táo => trừ 20kg táo ở lô A
           //===========================================================//
           //TH1: Nếu số lượng mua lớn hơn số lượng trong lô hàng hiện tại
           if (shipment.weight - itemWeight <= 0) {
             //Xóa sp nếu đó là sp thanh lý
             if (prd.isSale) {
-              await Product.findByIdAndDelete(prd._id)
+              await Product.findByIdAndDelete(prd._id);
             } else {
               // xóa lô hàng hiện tại trong record của sản phẩm hiện tại
               await Product.findOneAndUpdate(
@@ -388,12 +440,12 @@ export const CreateOrder = async (req, res) => {
         item.shipmentId = firstShipment.idShipment;
         // item["shipmentId"] = firstShipment.idShipment;
       }
-      const origin = await Origin.findById(item.originId)
-      delete item.originId
-      item.originName = origin.name
+      const origin = await Origin.findById(item.originId);
+      delete item.originId;
+      item.originName = origin.name;
       //nếu là sp thanh lý thì lấy lại id sp gốc
       if (prd.originalID != null) {
-        item.productId = prd.originalID
+        item.productId = prd.originalID;
       }
     }
     // console.log(req.body.products);
@@ -402,36 +454,45 @@ export const CreateOrder = async (req, res) => {
 
     // nếu đăng nhập thì xóa hết sp (.) cart
     if (req.user) {
-      await Carts.findOneAndUpdate({ userId: req.user._id }, {
-        products: []
-      })
+      await Carts.findOneAndUpdate(
+        { userId: req.user._id },
+        {
+          products: [],
+        }
+      );
       if (req.body.code) {
         //lưu mã voucher vào đơn hàng
-        data = await Order.findOneAndUpdate({ _id: data._id }, {
-          $set: {
-            promotionCode: req.body.code
+        data = await Order.findOneAndUpdate(
+          { _id: data._id },
+          {
+            $set: {
+              promotionCode: req.body.code,
+            },
           },
-
-        }, { new: true })
-        const voucherExist = await vouchers.findOne({ code: req.body.code })
+          { new: true }
+        );
+        const voucherExist = await vouchers.findOne({ code: req.body.code });
         //Trừ 1 vé voucher và thêm id user
-        await vouchers.findOneAndUpdate({ code: req.body.code }, {
-          $set: {
-            quantity: voucherExist.quantity - 1
-          },
-          $push: {
-            users: {
-              userId: req.body.userId
-            }
+        await vouchers.findOneAndUpdate(
+          { code: req.body.code },
+          {
+            $set: {
+              quantity: voucherExist.quantity - 1,
+            },
+            $push: {
+              users: {
+                userId: req.body.userId,
+              },
+            },
           }
-        })
+        );
       }
     }
-    let url = ''
+    let url = "";
     // kiểm tra phương thức thanh toán là momo
     console.log(amountReduced);
     if (paymentMethod === "vnpay") {
-      url = await vnpayCreate(req, data._id)
+      url = await vnpayCreate(req, data._id);
     } else {
       await sendMailer(req.body.email, data, amountReduced);
     }
@@ -475,11 +536,11 @@ export const GetAllOrders = async (req, res) => {
     }
     const data = await Order.paginate(query, options);
     if (_invoiceId) {
-      const data = await Order.findOne({ invoiceId: _invoiceId });
+      const data = await Order.find({ invoiceId: _invoiceId });
       if (!data) {
         return res.status(404).json({
           body: {
-            data: {},
+            data: [],
           },
           status: 404,
           message: "Order not found!",
@@ -622,7 +683,6 @@ export const filterOrderDay = async (data, day, res, from, to) => {
         filterData.push(item);
       }
     }
-
   }
   // console.log(today, dayOfPast, filterData);
   if (filterData.length == 0) {
@@ -703,9 +763,9 @@ export const OrderDetail = async (req, res) => {
   try {
     const orderId = req.params.id;
     let data = await Order.findById(orderId);
-    let voucher = null
+    let voucher = null;
     if (data.promotionCode != null) {
-      voucher = await vouchers.findOne({ code: data.promotionCode })
+      voucher = await vouchers.findOne({ code: data.promotionCode });
     }
 
     if (!data) {
@@ -756,29 +816,35 @@ export const CanceledOrder = async (req, res) => {
       }
 
       for (let item of order.products) {
-
-        const product = await Product.findById(item.productId)
+        const product = await Product.findById(item.productId);
         // update lại sold
         await Product.findByIdAndUpdate(item.productId, {
           $set: {
-            sold: product.sold - 1
-          }
-        })
+            sold: product.sold - 1,
+          },
+        });
         for (let shipment of product.shipments) {
           // Trả lại cân ở bảng products
-          await Product.findOneAndUpdate({ _id: product._id, "shipments.idShipment": shipment.idShipment }, {
-            $set: {
-              "shipments.$.weight": shipment.weight + item.weight
-            }
-          }, { new: true })
+          await Product.findOneAndUpdate(
+            { _id: product._id, "shipments.idShipment": shipment.idShipment },
+            {
+              $set: {
+                "shipments.$.weight": shipment.weight + item.weight,
+              },
+            },
+            { new: true }
+          );
 
           //Bảng shipment
-          await Shipment.findOneAndUpdate({ _id: shipment.idShipment, "products.idProduct": product._id }, {
-            $set: {
-              "products.$.weight": shipment.weight + item.weight
-            }
-          }, { new: true })
-
+          await Shipment.findOneAndUpdate(
+            { _id: shipment.idShipment, "products.idProduct": product._id },
+            {
+              $set: {
+                "products.$.weight": shipment.weight + item.weight,
+              },
+            },
+            { new: true }
+          );
         }
       }
       return res.status(201).json({
@@ -807,7 +873,7 @@ export const ConfirmOrder = async (req, res) => {
       orderId,
       {
         status: doneOrder,
-        pay: true
+        pay: true,
       },
       { new: true }
     );
@@ -816,9 +882,9 @@ export const ConfirmOrder = async (req, res) => {
       // Update sold +
       await Product.findByIdAndUpdate(item.productId, {
         $set: {
-          sold: prd.sold + 1
-        }
-      })
+          sold: prd.sold + 1,
+        },
+      });
     }
 
     if (!data) {
@@ -878,7 +944,7 @@ export const UpdateOrder = async (req, res) => {
       }
     );
 
-    sendMailer(data.email, data)
+    sendMailer(data.email, data);
     return res.status(201).json({
       body: { data },
       status: 201,

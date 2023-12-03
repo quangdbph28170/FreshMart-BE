@@ -178,7 +178,8 @@ cron.schedule("*/1 * * * *", async () => {
       productsWithRate.push({
         product: product._id,
         productName: product.productName,
-        starCount: starCount / (evaluations.length || 0)
+        image: product.images[0].url,
+        starCount: evaluations.length == 0 ? 0 : (starCount / evaluations.length).toFixed(1)
       })
     }
     productsWithRate = productsWithRate?.sort((a, b) => b?.starCount - a?.starCount) || [];
