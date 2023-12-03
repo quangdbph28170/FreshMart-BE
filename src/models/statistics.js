@@ -34,6 +34,39 @@ const statisticsSchema = new mongoose.Schema(
             required: true,
         },
         /**
+           Sản phẩm yêu thích và kém yêu thích nhất theo số sao đánh giá
+        */
+        favoriteProductAndLessFavoriteProduct: {
+            favoriteProduct: {
+                product: {
+                    type: mongoose.Types.ObjectId,
+                    required: true
+                },
+                productName: {
+                    type: String,
+                    required: true
+                },
+                startCount: {
+                    type: Number,
+                    required: true
+                }
+            },
+            lessFavoriteProduct: {
+                product: {
+                    type: mongoose.Types.ObjectId,
+                    required: true
+                },
+                productName: {
+                    type: String,
+                    required: true
+                },
+                startCount: {
+                    type: Number,
+                    required: true
+                }
+            }
+        },
+        /**
            Top 5 tổng tiền thu được theo sản phẩm bán đã bán
         */
         topFiveProductsSold: [

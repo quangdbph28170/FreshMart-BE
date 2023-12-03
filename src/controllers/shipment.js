@@ -1,4 +1,5 @@
 import Products from "../models/products";
+import UnSoldProduct from "../models/unsoldProducts";
 import Shipment from "../models/shipment";
 import {
   validateShipment,
@@ -144,7 +145,64 @@ export const updateShipment = async (req, res) => {
       req.body,
       { new: true }
     );
-    
+    if (shipmentUpdate.isDisable) {
+      const products = await Products.find()
+      for (let product of products) {
+        //Xóa shipment trong bảng products
+        await Products.findOneAndUpdate({ _id: product._id, "shipments.idShipment": shipmentUpdate._id }, {
+          $pull: {
+            shipments: {
+              idShipment: shipmentUpdate._id
+            }
+          }
+        })
+
+      }
+      //Chuyển tất cả sp trong lô đó sang hàng thất thoát (sp ế)
+
+      for (let item of shipmentUpdate.products) {
+        const product = await Products.findById(item.idProduct)
+        const originalID = product._id
+        //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
+        const unsoldExist = await UnSoldProduct.findOne({ originalID });
+        if (unsoldExist) {
+          console.log("running: ", shipment)
+          const unsold = await UnSoldProduct.findOneAndUpdate(
+            { originalID },
+            {
+              $push: {
+                shipments: {
+                  shipmentId: shipment._id,
+                  purchasePrice: item.originPrice,
+                  weight: item.weight,
+                  date: item.date
+                },
+              },
+            },
+            { new: true }
+          )
+          console.log("Đã push shipment vào...", unsold)
+
+        } else {
+          const data = await UnSoldProduct.create({
+            originalID,
+            productName: product.productName,
+            shipments: [
+              {
+                shipmentId: shipment._id,
+                purchasePrice: item.originPrice,
+                weight: item.weight,
+                date: item.date
+              },
+            ],
+          }
+          )
+          console.log("Create: ", data)
+        }
+
+      }
+    }
+    //======================================================================//
     const productsOfShipment = shipmentUpdate.products;
     for (let product of productsOfShipment) {
       await Products.findByIdAndUpdate(

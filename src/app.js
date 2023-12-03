@@ -36,6 +36,7 @@ import { months } from "./config/constants";
 import { uploadData } from "./controllers/statistics";
 import UnSoldProduct from "./models/unsoldProducts";
 import routerUnSoldProduct from "./routers/unsoldProducts";
+import Evaluation from "./models/evaluation";
 
 const app = express();
 const httpServer = createServer(app);
@@ -165,6 +166,27 @@ cron.schedule("*/1 * * * *", async () => {
 
     // Tính lợi nhuận
     const profit = salesRevenue - totalImportPrice;
+
+    // Lấy ra sản phẩm yêu thích nhất và kém yêu thích nhất theo số sao được đánh giá
+    let productsWithRate = []
+    for (const product of products) {
+      let starCount = 0
+      const evaluations = await Evaluation.find({ productId: product._id })
+      for (const evaluation of evaluations) {
+        starCount += evaluation.rate
+      }
+      productsWithRate.push({
+        product: product._id,
+        productName: product.productName,
+        starCount: starCount / (evaluations.length || 0)
+      })
+    }
+    productsWithRate = productsWithRate?.sort((a, b) => b?.starCount - a?.starCount) || [];
+
+    const favoriteProductAndLessFavoriteProduct = {
+      favoriteProduct: productsWithRate[0],
+      lessFavoriteProduct: productsWithRate[productsWithRate.length - 1],
+    }
 
     // Lấy ra top 5 sản phẩm có số lượng bán ra nhiều nhất
     let topFiveProductsSold = [];
@@ -316,6 +338,7 @@ cron.schedule("*/1 * * * *", async () => {
       topFiveCategoryByRevenue,
       totalCustomerAndTransactions,
       averagePriceAndUnitsPerTransaction,
+      favoriteProductAndLessFavoriteProduct,
       salesRevenueByDay,
     };
     /*==================*/
@@ -366,22 +389,82 @@ cron.schedule("* */24 * * *", async () => {
 });
 
 //============== DISABLE lô hàng đó nếu tất cả sp trong lô hết hạn - 12h chạy 1 lần ==============//
-cron.schedule("* */12 * * *", async () => {
-  const shipments = await Shipment.find()
-  //Lặp qua tất cả lô hàng
-  for (let item of shipments) {
-    let willExpire = true
-    //lặp qua tất cả sp trong lô hàng đó
-    for (let product of item.products) {
-      //check xem còn sp còn hạn ko
-      if (product.willExpire != 2) {
-        willExpire = false
+cron.schedule("*/1 * * * *", async () => {
+  try {
+    const shipments = await Shipment.find()
+    //Lặp qua tất cả lô hàng
+    for (let item of shipments) {
+      let willExpire = true
+      //lặp qua tất cả sp trong lô hàng đó
+      for (let product of item.products) {
+        //check xem còn sp còn hạn ko
+        if (product.willExpire != 2) {
+          willExpire = false
+        }
       }
+      if (willExpire && !item.isDisable) {
+        const shipment = await Shipment.findByIdAndUpdate(item._id, { isDisable: true }, { new: true })
+        // console.log("shipment is disabled ", shipment);
+        const products = await Product.find()
+        for (let product of products) {
+          //Xóa shipment trong bảng products
+          await Product.findOneAndUpdate({ _id: product._id, "shipments.idShipment": item._id }, {
+            $pull: {
+              shipments: {
+                idShipment: item._id
+              }
+            }
+          })
+
+        }
+        //Chuyển tất cả sp trong lô đó sang hàng thất thoát (sp ế)
+
+        for (let item of shipment.products) {
+          const product = await Product.findById(item.idProduct)
+          const originalID = product._id
+          //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
+          const unsoldExist = await UnSoldProduct.findOne({ originalID });
+          if (unsoldExist) {
+            console.log("running: ", shipment)
+            const unsold = await UnSoldProduct.findOneAndUpdate(
+              { originalID },
+              {
+                $push: {
+                  shipments: {
+                    shipmentId: shipment._id,
+                    purchasePrice: item.originPrice,
+                    weight: item.weight,
+                    date: item.date
+                  },
+                },
+              },
+              { new: true }
+            )
+            console.log("Đã push shipment vào...", unsold)
+
+          } else {
+            const data = await UnSoldProduct.create({
+              originalID,
+              productName: product.productName,
+              shipments: [
+                {
+                  shipmentId: shipment._id,
+                  purchasePrice: item.originPrice,
+                  weight: item.weight,
+                  date: item.date
+                },
+              ],
+            }
+            )
+            console.log("Create: ", data)
+          }
+
+        }
+      }
+
     }
-    if (willExpire && !item.isDisable) {
-      const shipment = await Shipment.findByIdAndUpdate(item._id, { isDisable: true }, { new: true })
-      // console.log("shipment is disabled ", shipment);
-    }
+  } catch (error) {
+    console.log(error.message)
   }
 
 })
@@ -392,7 +475,19 @@ cron.schedule("*/1 * * * *", async () => {
   try {
     // check roomChatId là của admin bên client thì xóa
     const chats = await Chat.find().populate('roomChatId')
+    const sevenDayInAMiliSeconds = 7 * 24 * 60 * 60 * 1000;
     for (const chat of chats) {
+      const messageInSevenDay = []
+      for (const message of chat.messages) {
+        const targetDate = new Date(message.day)
+        const currentDate = new Date()
+        if (currentDate - targetDate < sevenDayInAMiliSeconds) {
+          messageInSevenDay.push(message)
+        }
+      }
+      await Chat.findOneAndUpdate({ roomChatId: chat.roomChatId?._id }, {
+        messages: messageInSevenDay
+      })
       if (chat.roomChatId?.role && chat.roomChatId.role == 'admin') {
         await Chat.findOneAndDelete({ roomChatId: chat.roomChatId?._id })
       }
@@ -415,7 +510,7 @@ cron.schedule("*/1 * * * *", async () => {
           //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
           const unsoldExist = await UnSoldProduct.findOne({ originalID });
           if (unsoldExist) {
-            const productUnsold = await UnSoldProduct.findOneAndUpdate(
+            await UnSoldProduct.findOneAndUpdate(
               { originalID },
               {
                 $push: {
@@ -442,9 +537,11 @@ cron.schedule("*/1 * * * *", async () => {
                   date: shipment.date
                 },
               ],
-            },
-              { new: true }
+            }
             )
+            if (data) {
+              console.log("Đã tạo sp thất thoát", data);
+            }
           }
           //update lại bảng products, xóa lô đó đi
           const data = await Product.findOneAndUpdate(
@@ -458,25 +555,8 @@ cron.schedule("*/1 * * * *", async () => {
             { new: true }
           );
           console.log("Shipments ", data);
-        } else {
-          console.log(product.productName)
-          // nếu chưa có thì tạo mới sp thất thoát (sp ế)
-          const data = await UnSoldProduct.create({
-            originalID,
-            productName: product.productName,
-            shipments: [
-              {
-                shipmentId: shipment.idShipment,
-                purchasePrice: shipment.originPrice,
-                weight: shipment.weight,
-                date: shipment.date
-              },
-            ],
-          });
-          console.log("data", data)
+
         }
-
-
       }
       //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
       if (product.isSale && product.shipments.length == 0) {
@@ -487,6 +567,7 @@ cron.schedule("*/1 * * * *", async () => {
           console.log("xóa sp thanh lý thất bại ");
         }
       }
+
     }
 
 
@@ -636,12 +717,6 @@ io.on("connection", (socket) => {
       });
     }
 
-    socket.on("ClientSendMessage", async (data) => {
-      const socketData = JSON.parse(data);
-      io.of("/admin").emit("messageNotification", { data: socketData.roomChatId });
-      io.of("/admin").emit("updatemess", { data: socketData.roomChatId });
-    });
-
     const adminNotification = await addNotification({
       title: "Thông báo",
       message: "Có đơn hàng mới đang chờ xử lý",
@@ -668,6 +743,13 @@ io.on("connection", (socket) => {
     io.of("/admin").emit("adminStatusNotification", {
       data: { ...notification._doc, status: socketData.status },
     });
+
+  });
+
+  socket.on("ClientSendMessage", async (data) => {
+    const socketData = JSON.parse(data);
+    io.of("/admin").emit("messageNotification", { data: socketData.roomChatId });
+    io.of("/admin").emit("updatemess", { data: socketData.roomChatId });
   });
 
   socket.on("joinClientRoom", (userId) => {
