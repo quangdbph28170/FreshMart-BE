@@ -373,6 +373,15 @@ export const productClearance = async (req, res) => {
         message: "Sản phẩm đã không còn trong lô hàng này!",
       });
     }
+
+    // Tìm danh mục thanh lý
+    const cateIsSale = await Categories.findOne({ type: "isSale" })
+    if (!cateIsSale) {
+      return res.status(400).json({
+        status: 400,
+        message: "Phải tạo danh mục thanh lý trước!",
+      });
+    }
     const data = await Products.create({
       ...productExist.toObject(),
       categoryId: cateIsSale._id,
