@@ -93,7 +93,13 @@ export const verifyToken = async (req, res) => {
 export const forgotPassword = async (req, res) => {
     try {
         const email = req.cookies.email
-        const userExist = await User.findOne({ email: email })
+        const Verification = req.cookies.Verification
+        if (!email || !Verification) {
+            return res.status(400).json({
+                status: 400,
+                message: "Please provide emails and confirmation codes!",
+            });
+        }
         const { error } = forgotPasswordSchema.validate(req.body, { abortEarly: false });
         if (error) {
             return res.status(400).json({
