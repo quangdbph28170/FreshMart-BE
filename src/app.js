@@ -178,6 +178,7 @@ cron.schedule("*/1 * * * *", async () => {
       productsWithRate.push({
         product: product._id,
         productName: product.productName,
+        image: product.images[0].url,
         starCount: evaluations.length == 0 ? 0 : starCount / evaluations.length
       })
     }
