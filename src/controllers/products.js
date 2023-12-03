@@ -2,7 +2,10 @@ import Products from "../models/products";
 import Evaluation from "../models/evaluation";
 import Shipment from "../models/shipment";
 import Categories from "../models/categories";
-import { validateProduct, validateProductClearance } from "../validation/products";
+import {
+  validateProduct,
+  validateProductClearance,
+} from "../validation/products";
 
 export const getProducts = async (req, res) => {
   const {
@@ -49,24 +52,24 @@ export const getProducts = async (req, res) => {
   }
 
   if (_originId) {
-    const originIds = _originId.split(",").map(id => id.trim());
+    const originIds = _originId.split(",").map((id) => id.trim());
     query.originId = { $in: originIds };
   }
 
   try {
     const products = await Products.paginate(query, options);
-    const prd = await Products.find()
-    let maxPrice = 0
-    let minPrice = Number.MAX_SAFE_INTEGER
+    const prd = await Products.find();
+    let maxPrice = 0;
+    let minPrice = Number.MAX_SAFE_INTEGER;
 
     for (let item of prd) {
-      maxPrice = Math.max(maxPrice, item.price)
-      minPrice = Math.min(minPrice, item.price)
+      maxPrice = Math.max(maxPrice, item.price);
+      minPrice = Math.min(minPrice, item.price);
     }
 
     if (_willExpire) {
-      checkWillExpire(products, _willExpire, res)
-      return
+      checkWillExpire(products, _willExpire, res);
+      return;
     }
     // console.log(minPrice, maxPrice);
     return res.status(201).json({
@@ -78,7 +81,7 @@ export const getProducts = async (req, res) => {
           totalItems: products.totalDocs,
         },
         maxPrice,
-        minPrice
+        minPrice,
       },
       status: 201,
       message: "Get products successfully",
@@ -93,10 +96,14 @@ export const getProducts = async (req, res) => {
 
 export const checkWillExpire = (products, checkWillExpire, res) => {
   try {
-    const result = []
+    const result = [];
     for (const product of products.docs) {
-      if ((product.shipments[0]?.willExpire == 0 || product.shipments[0]?.willExpire) && product.shipments[0]?.willExpire == checkWillExpire) {
-        result.push(product)
+      if (
+        (product.shipments[0]?.willExpire == 0 ||
+          product.shipments[0]?.willExpire) &&
+        product.shipments[0]?.willExpire == checkWillExpire
+      ) {
+        result.push(product);
       }
     }
 
@@ -113,7 +120,7 @@ export const checkWillExpire = (products, checkWillExpire, res) => {
       message: error.message,
     });
   }
-}
+};
 
 export const getRelatedProducts = async (req, res) => {
   try {
@@ -121,7 +128,9 @@ export const getRelatedProducts = async (req, res) => {
     const relatedProducts = await Products.find({
       categoryId: cate_id,
       _id: { $ne: product_id }, // Loại trừ sản phẩm đang xem
-    }).limit(10).lean()
+    })
+      .limit(10)
+      .lean();
 
     // Random sản phẩm
     const shuffledProducts = relatedProducts.sort(() => 0.5 - Math.random());
@@ -131,9 +140,9 @@ export const getRelatedProducts = async (req, res) => {
 
     // Populate shipments.idShipment và origins cho từng sản phẩm
     const populatedProducts = await Products.populate(selectedProducts, [
-      { path: 'shipments.idShipment' },
-      { path: 'originId' },
-      { path: 'evaluated.evaluatedId' },
+      { path: "shipments.idShipment" },
+      { path: "originId" },
+      { path: "evaluated.evaluatedId" },
     ]);
     if (!populatedProducts) {
       return res.status(404).json({
@@ -158,10 +167,11 @@ export const getRelatedProducts = async (req, res) => {
 };
 export const getProductSold = async (req, res) => {
   try {
-    const products = await Products.find().populate(
-      "categoryId"
-    ).populate("originId").populate("evaluated.evaluatedId")
-    const data = products.sort((a, b) => b.sold - a.sold).slice(0, 10)
+    const products = await Products.find()
+      .populate("categoryId")
+      .populate("originId")
+      .populate("evaluated.evaluatedId");
+    const data = products.sort((a, b) => b.sold - a.sold).slice(0, 10);
     if (!products) {
       return res.status(404).json({
         status: 404,
@@ -170,7 +180,7 @@ export const getProductSold = async (req, res) => {
     }
     return res.status(201).json({
       body: {
-        data
+        data,
       },
       status: 201,
       message: "Get product successfully",
@@ -184,9 +194,10 @@ export const getProductSold = async (req, res) => {
 };
 export const getOneProduct = async (req, res) => {
   try {
-    const product = await Products.findById(req.params.id).populate(
-      "categoryId"
-    ).populate("originId")
+    const product = await Products.findById(req.params.id)
+      .populate("categoryId")
+      .populate("originId")
+      .populate("evaluated.evaluatedId");
     if (!product) {
       return res.status(404).json({
         status: 404,
@@ -246,8 +257,10 @@ export const updateProduct = async (req, res) => {
         message: error.details.map((error) => error.message),
       });
     }
-    const prd = await Products.findById(req.params.id)
-    const product = await Products.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    const prd = await Products.findById(req.params.id);
+    const product = await Products.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+    });
     if (!product) {
       return res.status(404).json({
         status: 404,
@@ -296,9 +309,9 @@ export const removeProduct = async (req, res) => {
       },
     });
     // Xóa đánh giá của sp
-    const rating = await Evaluation.find({ productId: req.params.id })
+    const rating = await Evaluation.find({ productId: req.params.id });
     for (let item of rating) {
-      await Evaluation.findOneAndDelete({ productId: item.productId })
+      await Evaluation.findOneAndDelete({ productId: item.productId });
     }
     // console.log(rating);
     // return
@@ -318,16 +331,17 @@ export const removeProduct = async (req, res) => {
 //Xủ lý sp thanh lý
 export const productClearance = async (req, res) => {
   try {
-    const { productId, shipmentId, discount, productName } = req.body
+    const { productId, shipmentId, discount, productName } = req.body;
 
-    const { error } = validateProductClearance.validate(req.body, { abortEarly: false });
+    const { error } = validateProductClearance.validate(req.body, {
+      abortEarly: false,
+    });
     if (error) {
       return res.status(401).json({
         status: 401,
         message: error.details.map((error) => error.message),
       });
     }
-
 
     // Kiểm tra id sp CẦN_THANH_LÝ
     const productExist = await Products.findById(productId);
@@ -338,7 +352,9 @@ export const productClearance = async (req, res) => {
       });
     }
     //Kiểm tra id shipment
-    const shipmentExist = productExist.shipments.find(item => item.idShipment == shipmentId);
+    const shipmentExist = productExist.shipments.find(
+      (item) => item.idShipment == shipmentId
+    );
     if (!shipmentExist) {
       return res.status(404).json({
         status: 404,
@@ -346,22 +362,15 @@ export const productClearance = async (req, res) => {
       });
     }
 
-    //Kiểm tra xem sp CẦN_THANH_LÝ còn trong lô hàng đó 
-    const checkShipmentId = productExist.shipments.find(item => item.idShipment == shipmentId)
+    //Kiểm tra xem sp CẦN_THANH_LÝ còn trong lô hàng đó
+    const checkShipmentId = productExist.shipments.find(
+      (item) => item.idShipment == shipmentId
+    );
     // console.log(checkShipmentId)
     if (!checkShipmentId) {
       return res.status(404).json({
         status: 404,
         message: "Sản phẩm đã không còn trong lô hàng này!",
-      });
-    }
-    console.log("no")
-    // Tìm danh mục thanh lý
-    const cateIsSale = await Categories.findOne({ isSale: true })
-    if (!cateIsSale) {
-      return res.status(400).json({
-        status: 400,
-        message: "Phải tạo danh mục thanh lý trước!",
       });
     }
     const data = await Products.create({
@@ -377,21 +386,27 @@ export const productClearance = async (req, res) => {
           weight: shipmentExist.weight,
           date: shipmentExist.date,
           originPrice: shipmentExist.originPrice,
-        }
+        },
       ],
-      price: parseInt(productExist.price) - parseInt(discount / 100 * productExist.price),
+      price:
+        parseInt(productExist.price) -
+        parseInt((discount / 100) * productExist.price),
       isSale: true,
-      sold: 0
+      sold: 0,
     });
 
     // Xóa cái lô của sp CẦN_THANH_LÝ ở bảng products
-    await Products.findByIdAndUpdate(productId, {
-      $pull: {
-        shipments: {
-          idShipment: shipmentId,
-        }
-      }
-    }, { new: true })
+    await Products.findByIdAndUpdate(
+      productId,
+      {
+        $pull: {
+          shipments: {
+            idShipment: shipmentId,
+          },
+        },
+      },
+      { new: true }
+    );
 
     // //Cập nhật lại trong bảng shipment id sp CẦN_THANH_LÝ => is sp THANH_LÝ
     // await Shipment.findOneAndUpdate({ _id: shipmentId, "products.idProduct": productId }, {
@@ -401,16 +416,20 @@ export const productClearance = async (req, res) => {
     // }, { new: true })
 
     //push vào danh mục
-    await Categories.findByIdAndUpdate(cateIsSale._id, {
-      $push: {
-        products: data._id
-      }
-    }, { new: true })
+    await Categories.findByIdAndUpdate(
+      cateIsSale._id,
+      {
+        $push: {
+          products: data._id,
+        },
+      },
+      { new: true }
+    );
 
     return res.status(200).json({
       status: 200,
       message: "Đã thanh lý xong <3",
-      body: { data }
+      body: { data },
     });
   } catch (error) {
     return res.status(500).json({
@@ -419,4 +438,3 @@ export const productClearance = async (req, res) => {
     });
   }
 };
-
