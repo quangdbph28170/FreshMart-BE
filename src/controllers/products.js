@@ -25,7 +25,7 @@ export const getProducts = async (req, res) => {
       [_sort]: _order === "desc" ? -1 : 1,
       "shipments.price": _order === "desc" ? -1 : 1,
     },
-    populate: ["originId", "categoryId"],
+    populate: ["originId", "categoryId", "evaluated.evaluatedId"],
   };
   const query = {};
 
@@ -121,7 +121,7 @@ export const getRelatedProducts = async (req, res) => {
     const relatedProducts = await Products.find({
       categoryId: cate_id,
       _id: { $ne: product_id }, // Loại trừ sản phẩm đang xem
-    }).limit(10).lean();
+    }).limit(10).lean()
 
     // Random sản phẩm
     const shuffledProducts = relatedProducts.sort(() => 0.5 - Math.random());
@@ -133,6 +133,7 @@ export const getRelatedProducts = async (req, res) => {
     const populatedProducts = await Products.populate(selectedProducts, [
       { path: 'shipments.idShipment' },
       { path: 'originId' },
+      { path: 'evaluated.evaluatedId' },
     ]);
     if (!populatedProducts) {
       return res.status(404).json({
@@ -159,7 +160,7 @@ export const getProductSold = async (req, res) => {
   try {
     const products = await Products.find().populate(
       "categoryId"
-    ).populate("originId")
+    ).populate("originId").populate("evaluated.evaluatedId")
     const data = products.sort((a, b) => b.sold - a.sold).slice(0, 10)
     if (!products) {
       return res.status(404).json({
