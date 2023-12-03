@@ -93,7 +93,13 @@ export const verifyToken = async (req, res) => {
 export const forgotPassword = async (req, res) => {
     try {
         const email = req.cookies.email
-        const userExist = await User.findOne({ email: email })
+        const Verification = req.cookies.Verification
+        if (!email || !Verification) {
+            return res.status(400).json({
+                status: 400,
+                message: "Please provide emails and confirmation codes!",
+            });
+        }
         const { error } = forgotPasswordSchema.validate(req.body, { abortEarly: false });
         if (error) {
             return res.status(400).json({
@@ -103,13 +109,13 @@ export const forgotPassword = async (req, res) => {
         }
         // console.log(userExist);
         const hashPassword = await bcrypt.hash(req.body.password, 10);
-        const validPass = await bcrypt.compare(req.body.password, userExist.password);
-        if (validPass) {
-            return res.status(401).json({
-                status: 401,
-                message: "This password has been used!",
-            })
-        }
+        // const validPass = await bcrypt.compare(req.body.password, userExist.password);
+        // if (validPass) {
+        //     return res.status(401).json({
+        //         status: 401,
+        //         message: "This password has been used!",
+        //     })
+        // }
         const user = await User.findOneAndUpdate({ email: email }, { password: hashPassword })
         res.clearCookie("email");
         return res.status(200).json({
