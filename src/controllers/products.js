@@ -355,9 +355,9 @@ export const productClearance = async (req, res) => {
         message: "Sản phẩm đã không còn trong lô hàng này!",
       });
     }
-    console.log("no")
+
     // Tìm danh mục thanh lý
-    const cateIsSale = await Categories.findOne({ isSale: true })
+    const cateIsSale = await Categories.findOne({ type: "isSale" })
     if (!cateIsSale) {
       return res.status(400).json({
         status: 400,
