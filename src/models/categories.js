@@ -28,7 +28,7 @@ const categorySchema = new mongoose.Schema(
     },
     type: {
       type: String,
-      enum: ["normal", "default", "isSale"],
+      enum: ["normal", "default"],
       default: "normal",
     },
 
