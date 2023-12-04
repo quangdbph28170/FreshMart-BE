@@ -238,6 +238,7 @@ export const forgotPassword = async (req, res) => {
       res.clearCookie("email");
       res.clearCookie("Verification");
       res.clearCookie("VerificationExpiration");
+      res.clearCookie("exist");
       return res.status(200).json({
          message: "Change password successfully",
          user
