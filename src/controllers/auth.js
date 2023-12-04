@@ -96,14 +96,10 @@ export const signUp = async (req, res, next) => {
       res.cookie('accessToken', accessToken, {
          expires: new Date(Date.now() + 5 * 60 * 1000),
          httpOnly: true,
-         sameSite: 'None',
-         secure: true
       });
       res.cookie('refreshToken', refreshToken, {
          expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
          httpOnly: true,
-         sameSite: 'None',
-         secure: true
       });
       const chatExist = await Chat.findOne({ roomChatId: user._id })
       
@@ -178,14 +174,10 @@ export const signIn = async (req, res, next) => {
       res.cookie('accessToken', accessToken, {
          expires: new Date(Date.now() + 5 * 60 * 1000),
          httpOnly: true,
-         sameSite: 'None',
-         secure: true
       });
       res.cookie('refreshToken', refreshToken, {
          expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
          httpOnly: true,
-         sameSite: 'None',
-         secure: true
       });
 
       const chatExist = await Chat.findOne({ roomChatId: user._id })
@@ -257,8 +249,6 @@ export const refresh = async (req, res, next) => {
             res.cookie('accessToken', accessToken, {
                expires: new Date(Date.now() + 5 * 60 * 1000),
                httpOnly: true,
-               sameSite: 'None',
-               secure: true
             });
             req[RESPONSE_OBJ] = {
                accessToken,
@@ -284,14 +274,8 @@ export const clearToken = async (req, res, next) => {
          return next();
       }
 
-      res.clearCookie('refreshToken', {
-         sameSite: 'None',
-         secure: true
-      });
-      res.clearCookie('accessToken', {
-         sameSite: 'None',
-         secure: true
-      });
+      res.clearCookie('refreshToken');
+      res.clearCookie('accessToken');
 
       req[RESPONSE_MESSAGE] = `Token has been cleared`;
       return next();
