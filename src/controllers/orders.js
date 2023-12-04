@@ -761,8 +761,9 @@ export const OrderDetail = async (req, res) => {
       });
     }
     const { canCancel } = checkCancellationTime(data);
+    data.promotionCode = voucher || null
     return res.status(201).json({
-      body: { data, voucher },
+      body: { data },
       status: 201,
       message: "Get order successfully",
       canCancel,
