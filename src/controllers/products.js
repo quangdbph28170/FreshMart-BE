@@ -374,17 +374,9 @@ export const productClearance = async (req, res) => {
       });
     }
 
-    // Tìm danh mục thanh lý
-    const cateIsSale = await Categories.findOne({ type: "isSale" })
-    if (!cateIsSale) {
-      return res.status(400).json({
-        status: 400,
-        message: "Phải tạo danh mục thanh lý trước!",
-      });
-    }
+ 
     const data = await Products.create({
       ...productExist.toObject(),
-      categoryId: cateIsSale._id,
       _id: undefined,
       productName,
       originalID: productExist._id,
@@ -417,16 +409,9 @@ export const productClearance = async (req, res) => {
       { new: true }
     );
 
-    // //Cập nhật lại trong bảng shipment id sp CẦN_THANH_LÝ => is sp THANH_LÝ
-    // await Shipment.findOneAndUpdate({ _id: shipmentId, "products.idProduct": productId }, {
-    //   $set: {
-    //     "products.$.idProduct": data._id
-    //   }
-    // }, { new: true })
-
     //push vào danh mục
     await Categories.findByIdAndUpdate(
-      cateIsSale._id,
+      productExist.categoryId,
       {
         $push: {
           products: data._id,
