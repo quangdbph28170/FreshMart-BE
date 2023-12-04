@@ -1,8 +1,11 @@
 import express from 'express';
-import { getAllUsers, getOneUser, createUser, updateUser } from '../controllers/user';
+import {
+    getAllUsers, getOneUser, createUser, updateUser,
+    generateVerificationToken, verifyToken, forgotPassword
+} from '../controllers/user';
 import { responseSender } from '../middleware/configResponse';
 import authentication from '../middleware/authentication';
-import { generateVerificationToken, verifyToken, forgotPassword } from '../controllers/forgotPassword';
+
 
 const router = express.Router();
 

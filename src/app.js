@@ -178,7 +178,8 @@ cron.schedule("*/1 * * * *", async () => {
       productsWithRate.push({
         product: product._id,
         productName: product.productName,
-        starCount: starCount / (evaluations.length || 0)
+        image: product.images[0].url,
+        starCount: evaluations.length == 0 ? 0 : (starCount / evaluations.length).toFixed(1)
       })
     }
     productsWithRate = productsWithRate?.sort((a, b) => b?.starCount - a?.starCount) || [];
@@ -558,19 +559,23 @@ cron.schedule("*/1 * * * *", async () => {
 
         }
       }
+      const prd = await Product.findById(product._id)
       //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
       if (product.isSale && product.shipments.length == 0) {
         const remove = await Product.findByIdAndDelete(product._id);
+        //Xóa sp thanh lý (.) danh mục 
+        await Category.findByIdAndUpdate(prd.categoryId, {
+          $pull: {
+            products: product._id
+          }
+        })
         if (remove) {
           console.log("Đã xóa sp thanh lý ");
         } else {
           console.log("xóa sp thanh lý thất bại ");
         }
       }
-
     }
-
-
   } catch (error) {
     console.log(error.message);
   }

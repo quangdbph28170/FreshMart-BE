@@ -167,7 +167,7 @@ export const getIsRatedDetail = async (req, res) => {
 export const getAllRating = async (req, res) => {
     const {
         _page = 1,
-        _order = "asc",
+        _order = "desc",
         _limit = 9999,
         _sort = "createdAt",
         _rate

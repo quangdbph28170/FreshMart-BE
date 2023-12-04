@@ -70,7 +70,7 @@ export const removeCategories = async (req, res, next) => {
       const category = await Category.findOne({ _id: req.params.id });
       // không cho phép xóa danh mục mặc định
       const defaultCategory = await Category.findOne({ type: 'default' });
-      if(!defaultCategory) {
+      if (!defaultCategory) {
          req[RESPONSE_STATUS] = 400;
          req[RESPONSE_MESSAGE] = `Not found default category`;
          return next();

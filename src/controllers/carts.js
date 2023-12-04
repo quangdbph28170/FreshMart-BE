@@ -284,8 +284,8 @@ export const getCart = async (req, res) => {
         }
 
         if (errors.length > 0) {
-            return res.status(201).json({
-                status: 201,
+            return res.status(400).json({
+                status: 400,
                 message: "Errors in the cart",
                 body: { errors, data, totalPrice }
             });
