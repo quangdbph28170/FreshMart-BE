@@ -13,11 +13,6 @@ export const createCategory = async (req, res, next) => {
          req[RESPONSE_MESSAGE] = `Only one default Category`;
          return next();
       }
-      if (defaultCategory && defaultCategory.type == 'isSale') {
-         req[RESPONSE_STATUS] = 500;
-         req[RESPONSE_MESSAGE] = `Only one isSale Category`;
-         return next();
-      }
       const { error } = categorySchema.validate(req.body, { abortEarly: false });
       if (error) {
          req[RESPONSE_STATUS] = 500;
@@ -75,7 +70,7 @@ export const removeCategories = async (req, res, next) => {
       const category = await Category.findOne({ _id: req.params.id });
       // không cho phép xóa danh mục mặc định
       const defaultCategory = await Category.findOne({ type: 'default' });
-      if(!defaultCategory) {
+      if (!defaultCategory) {
          req[RESPONSE_STATUS] = 400;
          req[RESPONSE_MESSAGE] = `Not found default category`;
          return next();
