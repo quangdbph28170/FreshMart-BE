@@ -426,7 +426,6 @@ cron.schedule("*/1 * * * *", async () => {
           //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
           const unsoldExist = await UnSoldProduct.findOne({ originalID });
           if (unsoldExist) {
-            console.log("running: ", shipment)
             const unsold = await UnSoldProduct.findOneAndUpdate(
               { originalID },
               {
@@ -441,7 +440,6 @@ cron.schedule("*/1 * * * *", async () => {
               },
               { new: true }
             )
-            console.log("Đã push shipment vào...", unsold)
 
           } else {
             const data = await UnSoldProduct.create({
@@ -457,7 +455,6 @@ cron.schedule("*/1 * * * *", async () => {
               ],
             }
             )
-            console.log("Create: ", data)
           }
 
         }
@@ -541,7 +538,6 @@ cron.schedule("*/1 * * * *", async () => {
             }
             )
             if (data) {
-              console.log("Đã tạo sp thất thoát", data);
             }
           }
           //update lại bảng products, xóa lô đó đi
@@ -555,7 +551,6 @@ cron.schedule("*/1 * * * *", async () => {
           },
             { new: true }
           );
-          console.log("Shipments ", data);
 
         }
       }
@@ -570,9 +565,7 @@ cron.schedule("*/1 * * * *", async () => {
           }
         })
         if (remove) {
-          console.log("Đã xóa sp thanh lý ");
         } else {
-          console.log("xóa sp thanh lý thất bại ");
         }
       }
     }
@@ -707,7 +700,6 @@ io.on("connection", (socket) => {
   //thông báo cho admin và người dùng đã đăng nhập mua hàng thành công/ có đơn hàng mới
   socket.on("purchase", async (data) => {
     const socketData = JSON.parse(data);
-    console.log(socketData.userId);
     // Gửi thông báo đến trang client nếu người dùng đăng nhập
     if (socketData.userId) {
       const notification = await addNotification({
