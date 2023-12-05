@@ -54,6 +54,7 @@ cron.schedule("1-59 * * * *", async () => {
   const orders = await Orders.find({
     $or: [{ paymentMethod: "vnpay" }, { paymentMethod: "momo" }],
     pay: false,
+    status: "chờ xác nhận",
     createdAt: { $lte: new Date(Date.now() - tweentyMinutesInMilliseconds) },
   });
 
