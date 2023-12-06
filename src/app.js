@@ -400,7 +400,7 @@ cron.schedule("*/1 * * * *", async () => {
       //lặp qua tất cả sp trong lô hàng đó
       for (let product of item.products) {
         //check xem còn sp còn hạn ko
-        if (product.willExpire != 1) {
+        if (product.willExpire != 2) {
           willExpire = false
         }
       }
@@ -504,8 +504,13 @@ cron.schedule("*/1 * * * *", async () => {
       }
 
       for (let shipment of product.shipments) {
-        // lấy ra sp hết hạn mà vẫn còn hàng
-        if (shipment.willExpire == 1 && shipment.weight > 0) {
+
+        // lấy ra sp sắp còn 2 ngày là hết hạn mà vẫn còn hàng
+        const expired = new Date(shipment.date)
+        const now = new Date()
+        const twoDaysInMilliseconds = 2 * 24 * 60 * 60 * 1000;
+        const remainingTime = expired - now;
+        if (remainingTime <= twoDaysInMilliseconds && shipment.weight > 0) {
           //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
           const unsoldExist = await UnSoldProduct.findOne({ originalID });
           if (unsoldExist) {
@@ -538,8 +543,7 @@ cron.schedule("*/1 * * * *", async () => {
               ],
             }
             )
-            if (data) {
-            }
+
           }
           //update lại bảng products, xóa lô đó đi
           const data = await Product.findOneAndUpdate(
