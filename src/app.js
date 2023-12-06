@@ -54,6 +54,7 @@ cron.schedule("1-59 * * * *", async () => {
   const orders = await Orders.find({
     $or: [{ paymentMethod: "vnpay" }, { paymentMethod: "momo" }],
     pay: false,
+    status: "chờ xác nhận",
     createdAt: { $lte: new Date(Date.now() - tweentyMinutesInMilliseconds) },
   });
 
@@ -69,28 +70,70 @@ cron.schedule("1-59 * * * *", async () => {
           sold: product.sold - 1,
         },
       });
-      for (let shipment of product.shipments) {
-        // Trả lại cân ở bảng products
-        await Product.findOneAndUpdate(
-          { _id: product._id, "shipments.idShipment": shipment.idShipment },
-          {
-            $set: {
-              "shipments.$.weight": shipment.weight + item.weight,
-            },
-          },
-          { new: true }
-        );
+      const shipment = await Shipment.findOne({ _id: item.shipmentId })
 
-        //Bảng shipment
-        await Shipment.findOneAndUpdate(
-          { _id: shipment.idShipment, "products.idProduct": product._id },
-          {
-            $set: {
-              "products.$.weight": shipment.weight + item.weight,
-            },
-          },
-          { new: true }
-        );
+      const productHaveShipment = await Product.findOne({ _id: product._id, "shipments.idShipment": item.shipmentId })
+      if (productHaveShipment) {
+        for (const shipmentOnProduct of productHaveShipment.shipments) {
+          if (shipmentOnProduct.idShipment.equals(item.shipmentId)) {
+            // Trả lại cân ở bảng products
+            await Product.findOneAndUpdate(
+              { _id: product._id, "shipments.idShipment": shipmentOnProduct.idShipment },
+              {
+                $set: {
+                  "shipments.$.weight": shipmentOnProduct.weight + item.weight,
+                },
+              },
+              { new: true }
+            );
+            //Bảng shipment
+            await Shipment.findOneAndUpdate(
+              { _id: shipmentOnProduct.idShipment, "products.idProduct": product._id },
+              {
+                $set: {
+                  "products.$.weight": shipmentOnProduct.weight + item.weight,
+                },
+              },
+              { new: true }
+            );
+          }
+        }
+      } else {
+        for (const productOnShipment of shipment.products) {
+          if (productOnShipment.idProduct.equals(product._id)) {
+            // Tạo lại lô hàng cho sản phẩm rồi rả lại cân ở bảng products
+            await Product.findOneAndUpdate(
+              { _id: product._id },
+              {
+                $push: {
+                  shipments: {
+                    $each: [{
+                      idShipment: item.shipmentId,
+                      originWeight: productOnShipment.originWeight,
+                      weight: productOnShipment.weight + item.weight,
+                      date: productOnShipment.date,
+                      originPrice: productOnShipment.originPrice,
+                      price: productOnShipment.price,
+                      willExpire: productOnShipment.willExpire
+                    }],
+                    $position: 0 // Số 0 đại diện cho việc thêm vào đầu mảng
+                  },
+                },
+              },
+              { new: true }
+            );
+            //Bảng shipment
+            await Shipment.findOneAndUpdate(
+              { _id: item.shipmentId, "products.idProduct": product._id },
+              {
+                $set: {
+                  "products.$.weight": productOnShipment.weight + item.weight,
+                },
+              },
+              { new: true }
+            );
+          }
+        }
       }
     }
   }
@@ -426,7 +469,6 @@ cron.schedule("*/1 * * * *", async () => {
           //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
           const unsoldExist = await UnSoldProduct.findOne({ originalID });
           if (unsoldExist) {
-            console.log("running: ", shipment)
             const unsold = await UnSoldProduct.findOneAndUpdate(
               { originalID },
               {
@@ -441,7 +483,6 @@ cron.schedule("*/1 * * * *", async () => {
               },
               { new: true }
             )
-            console.log("Đã push shipment vào...", unsold)
 
           } else {
             const data = await UnSoldProduct.create({
@@ -457,7 +498,6 @@ cron.schedule("*/1 * * * *", async () => {
               ],
             }
             )
-            console.log("Create: ", data)
           }
 
         }
@@ -506,8 +546,13 @@ cron.schedule("*/1 * * * *", async () => {
       }
 
       for (let shipment of product.shipments) {
-        // lấy ra sp hết hạn mà vẫn còn hàng
-        if (shipment.willExpire == 2 && shipment.weight > 0) {
+
+        // lấy ra sp sắp còn 2 ngày là hết hạn mà vẫn còn hàng
+        const expired = new Date(shipment.date)
+        const now = new Date()
+        const twoDaysInMilliseconds = 2 * 24 * 60 * 60 * 1000;
+        const remainingTime = expired - now;
+        if (remainingTime <= twoDaysInMilliseconds && shipment.weight > 0) {
           //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
           const unsoldExist = await UnSoldProduct.findOne({ originalID });
           if (unsoldExist) {
@@ -540,9 +585,7 @@ cron.schedule("*/1 * * * *", async () => {
               ],
             }
             )
-            if (data) {
-              console.log("Đã tạo sp thất thoát", data);
-            }
+
           }
           //update lại bảng products, xóa lô đó đi
           const data = await Product.findOneAndUpdate(
@@ -555,7 +598,6 @@ cron.schedule("*/1 * * * *", async () => {
           },
             { new: true }
           );
-          console.log("Shipments ", data);
 
         }
       }
@@ -570,9 +612,7 @@ cron.schedule("*/1 * * * *", async () => {
           }
         })
         if (remove) {
-          console.log("Đã xóa sp thanh lý ");
         } else {
-          console.log("xóa sp thanh lý thất bại ");
         }
       }
     }
@@ -591,8 +631,8 @@ io.of("/admin").on("connection", (socket) => {
         // Lấy ngày hiện tại
         const currentDate = new Date();
 
-        // Số mili giây trong 3 ngày
-        const threeDaysInMillis = 3 * 24 * 60 * 60 * 1000;
+        // Số mili giây trong 7 ngày
+        const sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000;
 
         //Kiểm tra xem sản phẩm trong lô đã hết hạn chưa
         if (targetDate - currentDate <= 0 && shipment.willExpire != 2) {
@@ -626,10 +666,10 @@ io.of("/admin").on("connection", (socket) => {
         }
 
         // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 3 ngày không
-        const isWithinThreeDays = targetDate - currentDate < threeDaysInMillis;
+        const isWithinSevenDays = targetDate - currentDate < sevenDaysInMillis;
 
         if (
-          isWithinThreeDays &&
+          isWithinSevenDays &&
           targetDate - currentDate > 0 &&
           shipment.willExpire != 1
         ) {
@@ -650,7 +690,7 @@ io.of("/admin").on("connection", (socket) => {
             }
           );
           const totalMilliseconds =
-            threeDaysInMillis - (targetDate - currentDate);
+            sevenDaysInMillis - (targetDate - currentDate);
           const totalSeconds = Math.floor(totalMilliseconds / 1000);
           const hours = Math.floor(totalSeconds / 3600);
 
@@ -707,7 +747,6 @@ io.on("connection", (socket) => {
   //thông báo cho admin và người dùng đã đăng nhập mua hàng thành công/ có đơn hàng mới
   socket.on("purchase", async (data) => {
     const socketData = JSON.parse(data);
-    console.log(socketData.userId);
     // Gửi thông báo đến trang client nếu người dùng đăng nhập
     if (socketData.userId) {
       const notification = await addNotification({

@@ -1,4 +1,5 @@
 import Origin from "../models/origin";
+import Products from "../models/products";
 import { originSchema } from "../validation/origin";
 
 export const createOrigin = async (req, res) => {
@@ -145,8 +146,23 @@ export const updateOrigin = async (req, res) => {
 export const removeOrigin = async (req, res) => {
     try {
         const { id } = req.params
+        let defaultOrigin = await Origin.findOne({ type: 'default' })
 
-        const origin = await Origin.findByIdAndDelete(id)
+        if(!defaultOrigin) {
+            defaultOrigin = await Origin.create({
+                name: 'Chưa cập nhật thông tin xuất xứ',
+                type: 'default'
+            })
+        }
+        const products = await Products.find({ originId: id })
+
+        for(const product of products) {
+            await Products.findByIdAndUpdate(product._id, {
+                originId: defaultOrigin._id,
+            })
+        }
+
+        await Origin.findByIdAndDelete(id)
 
         return res.status(200).json({
             status: 200,
