@@ -7,6 +7,7 @@ const originSchema = new mongoose.Schema(
          required: true,
       },
       type: {
+         type: String,
          enum: ['default', 'normal'],
          default: 'normal'
       }
