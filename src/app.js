@@ -585,8 +585,8 @@ io.of("/admin").on("connection", (socket) => {
         // Lấy ngày hiện tại
         const currentDate = new Date();
 
-        // Số mili giây trong 3 ngày
-        const threeDaysInMillis = 3 * 24 * 60 * 60 * 1000;
+        // Số mili giây trong 7 ngày
+        const sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000;
 
         //Kiểm tra xem sản phẩm trong lô đã hết hạn chưa
         if (targetDate - currentDate <= 0 && shipment.willExpire != 2) {
@@ -620,10 +620,10 @@ io.of("/admin").on("connection", (socket) => {
         }
 
         // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 3 ngày không
-        const isWithinThreeDays = targetDate - currentDate < threeDaysInMillis;
+        const isWithinSevenDays = targetDate - currentDate < sevenDaysInMillis;
 
         if (
-          isWithinThreeDays &&
+          isWithinSevenDays &&
           targetDate - currentDate > 0 &&
           shipment.willExpire != 1
         ) {
@@ -644,7 +644,7 @@ io.of("/admin").on("connection", (socket) => {
             }
           );
           const totalMilliseconds =
-            threeDaysInMillis - (targetDate - currentDate);
+            sevenDaysInMillis - (targetDate - currentDate);
           const totalSeconds = Math.floor(totalMilliseconds / 1000);
           const hours = Math.floor(totalSeconds / 3600);
 
