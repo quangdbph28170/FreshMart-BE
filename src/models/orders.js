@@ -92,12 +92,26 @@ const orderSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum:statusOrder,
+      enum: statusOrder,
       default: "chờ xác nhận",
     },
-    promotionCode: {
-      type: String,
-      default: null
+    voucher: {
+      code: {
+        type: String,
+        default: null,
+      },
+      miniMumOrder: {
+        type: Number,
+        default: null,
+      },
+      maxReduce: {
+        type: Number,
+        default: null,
+      },
+      percent: {
+        type: Number,
+        default: null,
+      },
     }
 
     // orderDate:{
