@@ -6,6 +6,10 @@ const originSchema = new mongoose.Schema(
          type: String,
          required: true,
       },
+      type: {
+         enum: ['default', 'normal'],
+         default: 'normal'
+      }
    },
    { timestamps: true, versionKey: false },
 );
