@@ -16,7 +16,6 @@ import {
 import authentication from "../middleware/authentication";
 import jwt from "jsonwebtoken";
 import { authorization } from "../middleware/authorization";
-import { validateVoucher } from "../controllers/vouchers";
 
 dotenv.config();
 const router = express.Router();

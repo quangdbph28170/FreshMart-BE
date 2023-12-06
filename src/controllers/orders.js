@@ -478,7 +478,6 @@ export const CreateOrder = async (req, res) => {
     }
     let url = "";
     // kiểm tra phương thức thanh toán là momo
-    console.log(amountReduced);
     if (paymentMethod === "vnpay") {
       url = await vnpayCreate(req, data._id);
     } else {
@@ -813,28 +812,70 @@ export const CanceledOrder = async (req, res) => {
             sold: product.sold - 1,
           },
         });
-        for (let shipment of product.shipments) {
-          // Trả lại cân ở bảng products
-          await Product.findOneAndUpdate(
-            { _id: product._id, "shipments.idShipment": shipment.idShipment },
-            {
-              $set: {
-                "shipments.$.weight": shipment.weight + item.weight,
-              },
-            },
-            { new: true }
-          );
+        const shipment = await Shipment.findOne({ _id: item.shipmentId })
 
-          //Bảng shipment
-          await Shipment.findOneAndUpdate(
-            { _id: shipment.idShipment, "products.idProduct": product._id },
-            {
-              $set: {
-                "products.$.weight": shipment.weight + item.weight,
-              },
-            },
-            { new: true }
-          );
+        const productHaveShipment = await Product.findOne({ _id: product._id, "shipments.idShipment": item.shipmentId })
+        if (productHaveShipment) {
+          for (const shipmentOnProduct of productHaveShipment.shipments) {
+            if (shipmentOnProduct.idShipment.equals(item.shipmentId)) {
+              // Trả lại cân ở bảng products
+              await Product.findOneAndUpdate(
+                { _id: product._id, "shipments.idShipment": shipmentOnProduct.idShipment },
+                {
+                  $set: {
+                    "shipments.$.weight": shipmentOnProduct.weight + item.weight,
+                  },
+                },
+                { new: true }
+              );
+              //Bảng shipment
+              await Shipment.findOneAndUpdate(
+                { _id: shipmentOnProduct.idShipment, "products.idProduct": product._id },
+                {
+                  $set: {
+                    "products.$.weight": shipmentOnProduct.weight + item.weight,
+                  },
+                },
+                { new: true }
+              );
+            }
+          }
+        } else {
+          for (const productOnShipment of shipment.products) {
+            if (productOnShipment.idProduct.equals(product._id)) {
+              // Tạo lại lô hàng cho sản phẩm rồi rả lại cân ở bảng products
+              await Product.findOneAndUpdate(
+                { _id: product._id },
+                {
+                  $push: {
+                    shipments: {
+                      $each: [{
+                        idShipment: item.shipmentId,
+                        originWeight: productOnShipment.originWeight,
+                        weight: productOnShipment.weight + item.weight,
+                        date: productOnShipment.date,
+                        originPrice: productOnShipment.originPrice,
+                        price: productOnShipment.price,
+                        willExpire: productOnShipment.willExpire
+                      }],
+                      $position: 0 // Số 0 đại diện cho việc thêm vào đầu mảng
+                    },
+                  },
+                },
+                { new: true }
+              );
+              //Bảng shipment
+              await Shipment.findOneAndUpdate(
+                { _id: item.shipmentId, "products.idProduct": product._id },
+                {
+                  $set: {
+                    "products.$.weight": productOnShipment.weight + item.weight,
+                  },
+                },
+                { new: true }
+              );
+            }
+          }
         }
       }
       return res.status(201).json({
@@ -933,6 +974,83 @@ export const UpdateOrder = async (req, res) => {
         new: true,
       }
     );
+
+    if (status == 'đã hủy') {
+      for (let item of currentOrder.products) {
+        const product = await Product.findById(item.productId);
+        // update lại sold
+        await Product.findByIdAndUpdate(item.productId, {
+          $set: {
+            sold: product.sold - 1,
+          },
+        });
+        const shipment = await Shipment.findOne({ _id: item.shipmentId })
+
+        const productHaveShipment = await Product.findOne({ _id: product._id, "shipments.idShipment": item.shipmentId })
+        if (productHaveShipment) {
+          for (const shipmentOnProduct of productHaveShipment.shipments) {
+            if (shipmentOnProduct.idShipment.equals(item.shipmentId)) {
+              // Trả lại cân ở bảng products
+              await Product.findOneAndUpdate(
+                { _id: product._id, "shipments.idShipment": shipmentOnProduct.idShipment },
+                {
+                  $set: {
+                    "shipments.$.weight": shipmentOnProduct.weight + item.weight,
+                  },
+                },
+                { new: true }
+              );
+              //Bảng shipment
+              await Shipment.findOneAndUpdate(
+                { _id: shipmentOnProduct.idShipment, "products.idProduct": product._id },
+                {
+                  $set: {
+                    "products.$.weight": shipmentOnProduct.weight + item.weight,
+                  },
+                },
+                { new: true }
+              );
+            }
+          }
+        } else {
+          for (const productOnShipment of shipment.products) {
+            if (productOnShipment.idProduct.equals(product._id)) {
+              // Tạo lại lô hàng cho sản phẩm rồi rả lại cân ở bảng products
+              await Product.findOneAndUpdate(
+                { _id: product._id },
+                {
+                  $push: {
+                    shipments: {
+                      $each: [{
+                        idShipment: item.shipmentId,
+                        originWeight: productOnShipment.originWeight,
+                        weight: productOnShipment.weight + item.weight,
+                        date: productOnShipment.date,
+                        originPrice: productOnShipment.originPrice,
+                        price: productOnShipment.price,
+                        willExpire: productOnShipment.willExpire
+                      }],
+                      $position: 0 // Số 0 đại diện cho việc thêm vào đầu mảng
+                    },
+                  },
+                },
+                { new: true }
+              );
+              //Bảng shipment
+              await Shipment.findOneAndUpdate(
+                { _id: item.shipmentId, "products.idProduct": product._id },
+                {
+                  $set: {
+                    "products.$.weight": productOnShipment.weight + item.weight,
+                  },
+                },
+                { new: true }
+              );
+            }
+          }
+        }
+      }
+    }
 
     sendMailer(data.email, data);
     return res.status(201).json({
