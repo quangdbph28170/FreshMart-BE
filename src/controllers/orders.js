@@ -35,9 +35,8 @@ const checkCancellationTime = (order) => {
 };
 const formatDateTime = (dateTime) => {
   const date = new Date(dateTime);
-  const formattedDate = `${date.getDate()}/${
-    date.getMonth() + 1
-  }/${date.getFullYear()}`;
+  const formattedDate = `${date.getDate()}/${date.getMonth() + 1
+    }/${date.getFullYear()}`;
   const formattedTime = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
   return `${formattedDate} ${formattedTime}`;
 };
@@ -55,26 +54,27 @@ export const sendMailer = async (email, data, amountReduced) => {
     message = messageUpdateOrder;
   }
   // console.log(email,data);
-  let voucher = null;
-  let code = null;
-  // console.log(data);
-  if (data.promotionCode != null) {
-    voucher = await vouchers.findOne({ code: data.promotionCode });
-  }
-  // console.log("voucher", voucher);
-  // return
-  let maxReduce = null;
-  if (voucher != null && amountReduced != null) {
-    if (voucher.maxReduce != 0) {
-      maxReduce = "tối đa " + voucher.maxReduce.toLocaleString("vi-VN") + "VND";
+
+  let maxReduce = null
+  let miniMumOrder = null
+  let code = null
+  if (data.voucher != null && amountReduced != null) {
+    maxReduce = data.voucher.maxReduce
+    if (maxReduce > 0) {
+      maxReduce = "tối đa " + maxReduce.toLocaleString("vi-VN") + "VND";
     }
+    miniMumOrder = data.voucher.miniMumOrder
+    if (miniMumOrder > 0) {
+      miniMumOrder = "đơn " + miniMumOrder.toLocaleString("vi-VN") + "VND";
+    }
+    // giảm 50% đơn 50k tối đa 10k
     code = `
     <p style="font-weight: bold; margin: 0;">Voucher đã sử dụng: Giảm ${amountReduced.toLocaleString("vi-VN")}VND</p>
     <div style="display: flex; align-items: center; background-color: #f9f9f9; border: 1px solid #ccc; border-radius: 5px; padding: 5px;">
       <img src="https://inmauhanoi.com/wp-content/uploads/2019/03/in-voucher-gia-re-lay-ngay-tai-ha-noi.png" alt="Voucher" style="width: 50px; height: 50px; margin-right: 10px;">
       <div>
-        <p style="margin: 0;">Mã: ${voucher.code}</p>
-        <p style="margin: 0;">Giảm ${voucher.percent}% đơn ${voucher.miniMumOrder > 0 ? `tối thiểu ${voucher.miniMumOrder.toLocaleString("vi-VN")}VND` : ""} ${maxReduce != null ? maxReduce : ""}</p>
+        <p style="margin: 0;">Mã: ${data.voucher.code}</p>
+        <p style="margin: 0;">Giảm ${data.voucher.percent}% ${miniMumOrder != null ? miniMumOrder : ""} ${maxReduce != null ? maxReduce : ""}</p>
       </div>
     </div>
   `;
@@ -87,13 +87,12 @@ export const sendMailer = async (email, data, amountReduced) => {
                   <a target="_blank" href="http:localhost:5173">
                     <img src="https://spacingtech.com/html/tm/freozy/freezy-ltr/image/logo/logo.png" style="width:80px;color:#000"/>
                   </a>
-                  <p style="color:#2986cc;">Kính gửi Anh/chị: ${
-                    data.customerName
-                  } </p> 
+                  <p style="color:#2986cc;">Kính gửi Anh/chị: ${data.customerName
+      } </p> 
                   <p>${message} </p>
                   <p style="font-weight:bold">Hóa đơn được tạo lúc: ${formatDateTime(
-                    data.createdAt
-                  )}</p>
+        data.createdAt
+      )}</p>
                   <div style="border:1px solid #ccc;border-radius:10px; padding:10px 20px;width: max-content">
                   <p>Mã hóa đơn: ${data.invoiceId}</p>
                   <p>Khách hàng: ${data.customerName}</p>
@@ -110,13 +109,12 @@ export const sendMailer = async (email, data, amountReduced) => {
                   </thead>
                   <tbody>
                     ${data.products
-                      .map(
-                        (product, index) =>
-                          `
+        .map(
+          (product, index) =>
+            `
           <tr style="border-bottom:1px solid #ccc">
             <td style="padding: 10px;">${index + 1}</td>
-            <td style="padding: 10px;"><img alt="image" src="${
-              product.images
+            <td style="padding: 10px;"><img alt="image" src="${product.images
             }" style="width: 90px; height: 90px;border-radius:5px">
             <p>${product.productName} (${product.originName})</p>
             </td>
@@ -126,25 +124,23 @@ export const sendMailer = async (email, data, amountReduced) => {
             )}VNĐ/kg</td>
           </tr>
        `
-                      )
-                      .join("")}
+        )
+        .join("")}
                   </tbody>
                 </table>  
-                <h4>Tổng: ${
-                  amountReduced != null
-                    ? (amountReduced + data.totalPayment).toLocaleString(
-                        "vi-VN"
-                      ) + "VND"
-                    : `${data.totalPayment.toLocaleString("vi-VN")}VND`
-                }</h4> ${code != null ? `<p>${code}</p>` : ""}
+                <h4>Tổng: ${amountReduced != null
+        ? (amountReduced + data.totalPayment).toLocaleString(
+          "vi-VN"
+        ) + "VND"
+        : `${data.totalPayment.toLocaleString("vi-VN")}VND`
+      }</h4> ${code != null ? `<p>${code}</p>` : ""}
                   <h3 style="color: red;font-weight:bold;margin-top:20px">Tổng tiền thanh toán: ${data.totalPayment.toLocaleString(
-                    "vi-VN"
-                  )}VNĐ</h3>
-                  <p>Thanh toán: ${
-                    data.pay == false
-                      ? "Thanh toán khi nhận hàng"
-                      : "Đã thanh toán online"
-                  }</p>
+        "vi-VN"
+      )}VNĐ</h3>
+                  <p>Thanh toán: ${data.pay == false
+        ? "Thanh toán khi nhận hàng"
+        : "Đã thanh toán online"
+      }</p>
                   <p>Trạng thái đơn hàng: ${data.status}</p>
                   </div>
                    <p>Xin cảm ơn quý khách!</p>
@@ -446,17 +442,24 @@ export const CreateOrder = async (req, res) => {
         }
       );
       if (req.body.code) {
+        const voucherExist = await vouchers.findOne({ code: req.body.code });
         //lưu mã voucher vào đơn hàng
+        const voucher = {
+          code: req.body.code,
+          miniMumOrder: voucherExist.miniMumOrder,
+          maxReduce: voucherExist.maxReduce,
+          percent: voucherExist.percent
+        }
         data = await Order.findOneAndUpdate(
           { _id: data._id },
           {
             $set: {
-              promotionCode: req.body.code,
+              voucher: voucher,
             },
           },
           { new: true }
         );
-        const voucherExist = await vouchers.findOne({ code: req.body.code });
+
         //Trừ 1 vé voucher và thêm id user
         await vouchers.findOneAndUpdate(
           { code: req.body.code },
@@ -494,6 +497,7 @@ export const CreateOrder = async (req, res) => {
     });
   }
 };
+
 //Admin lấy tất cả đơn hàng
 export const GetAllOrders = async (req, res) => {
   const {
