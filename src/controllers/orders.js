@@ -950,7 +950,16 @@ export const UpdateOrder = async (req, res) => {
         body: { data: {} },
       });
     }
-
+    let data = null
+    if (currentOrder.status == "chờ xác nhận" && status == failedOrder) {
+      data = await Order.findByIdAndUpdate(
+        orderId,
+        { ...req.body, userId: new mongoose.Types.ObjectId(req.body.userId) },
+        {
+          new: true,
+        }
+      );
+    }
     if (!statusOrder.includes(status)) {
       return res.status(402).json({
         status: 402,
@@ -958,6 +967,7 @@ export const UpdateOrder = async (req, res) => {
         statusOrder,
       });
     }
+
     const currentStatusIndex = statusOrder.indexOf(currentOrder.status);
     const newStatusIndex = statusOrder.indexOf(status);
     if (newStatusIndex != currentStatusIndex + 1) {
@@ -967,7 +977,7 @@ export const UpdateOrder = async (req, res) => {
         statusOrder,
       });
     }
-    const data = await Order.findByIdAndUpdate(
+    data = await Order.findByIdAndUpdate(
       orderId,
       { ...req.body, userId: new mongoose.Types.ObjectId(req.body.userId) },
       {
