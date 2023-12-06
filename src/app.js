@@ -62,7 +62,7 @@ cron.schedule("1-59 * * * *", async () => {
     await Orders.findByIdAndUpdate(order._id, {
       status: "đã hủy",
     });
-    for (let item of currentOrder.products) {
+    for (let item of order.products) {
       const product = await Product.findById(item.productId);
       // update lại sold
       await Product.findByIdAndUpdate(item.productId, {
@@ -70,33 +70,37 @@ cron.schedule("1-59 * * * *", async () => {
           sold: product.sold - 1,
         },
       });
-      //Bảng shipment
-      await Shipment.findOneAndUpdate(
-        { _id: item.shipmentId, "products.idProduct": product._id },
-        {
-          $set: {
-            "products.$.weight": shipment.weight + item.weight,
-          },
-        },
-        { new: true }
-      );
-
-      const shipmentInProduct = await Product.findOne({ _id: product._id, "shipments.idShipment": item.shipmentId })
       const shipment = await Shipment.findOne({ _id: item.shipmentId })
-      if (shipmentInProduct) {
-        // Trả lại cân ở bảng products
-        await Product.findOneAndUpdate(
-          { _id: product._id, "shipments.idShipment": shipmentInProduct._id },
-          {
-            $set: {
-              "shipments.$.weight": shipmentInProduct.weight + item.weight,
-            },
-          },
-          { new: true }
-        );
+
+      const productHaveShipment = await Product.findOne({ _id: product._id, "shipments.idShipment": item.shipmentId })
+      if (productHaveShipment) {
+        for (const shipmentOnProduct of productHaveShipment.shipments) {
+          if (shipmentOnProduct.idShipment.equals(item.shipmentId)) {
+            // Trả lại cân ở bảng products
+            await Product.findOneAndUpdate(
+              { _id: product._id, "shipments.idShipment": shipmentOnProduct.idShipment },
+              {
+                $set: {
+                  "shipments.$.weight": shipmentOnProduct.weight + item.weight,
+                },
+              },
+              { new: true }
+            );
+            //Bảng shipment
+            await Shipment.findOneAndUpdate(
+              { _id: shipmentOnProduct.idShipment, "products.idProduct": product._id },
+              {
+                $set: {
+                  "products.$.weight": shipmentOnProduct.weight + item.weight,
+                },
+              },
+              { new: true }
+            );
+          }
+        }
       } else {
         for (const productOnShipment of shipment.products) {
-          if (productOnShipment.idProduct.equal(product._id)) {
+          if (productOnShipment.idProduct.equals(product._id)) {
             // Tạo lại lô hàng cho sản phẩm rồi rả lại cân ở bảng products
             await Product.findOneAndUpdate(
               { _id: product._id },
@@ -105,8 +109,8 @@ cron.schedule("1-59 * * * *", async () => {
                   shipments: {
                     $each: [{
                       idShipment: item.shipmentId,
-                      originWeight: productOnShipment.weight,
-                      weight: productOnShipment.weight,
+                      originWeight: productOnShipment.originWeight,
+                      weight: productOnShipment.weight + item.weight,
                       date: productOnShipment.date,
                       originPrice: productOnShipment.originPrice,
                       price: productOnShipment.price,
@@ -114,6 +118,16 @@ cron.schedule("1-59 * * * *", async () => {
                     }],
                     $position: 0 // Số 0 đại diện cho việc thêm vào đầu mảng
                   },
+                },
+              },
+              { new: true }
+            );
+            //Bảng shipment
+            await Shipment.findOneAndUpdate(
+              { _id: item.shipmentId, "products.idProduct": product._id },
+              {
+                $set: {
+                  "products.$.weight": productOnShipment.weight + item.weight,
                 },
               },
               { new: true }
