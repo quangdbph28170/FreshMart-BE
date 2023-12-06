@@ -62,7 +62,7 @@ cron.schedule("1-59 * * * *", async () => {
     await Orders.findByIdAndUpdate(order._id, {
       status: "đã hủy",
     });
-    for (let item of order.products) {
+    for (let item of currentOrder.products) {
       const product = await Product.findById(item.productId);
       // update lại sold
       await Product.findByIdAndUpdate(item.productId, {
@@ -70,28 +70,56 @@ cron.schedule("1-59 * * * *", async () => {
           sold: product.sold - 1,
         },
       });
-      for (let shipment of product.shipments) {
+      //Bảng shipment
+      await Shipment.findOneAndUpdate(
+        { _id: item.shipmentId, "products.idProduct": product._id },
+        {
+          $set: {
+            "products.$.weight": shipment.weight + item.weight,
+          },
+        },
+        { new: true }
+      );
+
+      const shipmentInProduct = await Product.findOne({ _id: product._id, "shipments.idShipment": item.shipmentId })
+      const shipment = await Shipment.findOne({ _id: item.shipmentId })
+      if (shipmentInProduct) {
         // Trả lại cân ở bảng products
         await Product.findOneAndUpdate(
-          { _id: product._id, "shipments.idShipment": shipment.idShipment },
+          { _id: product._id, "shipments.idShipment": shipmentInProduct._id },
           {
             $set: {
-              "shipments.$.weight": shipment.weight + item.weight,
+              "shipments.$.weight": shipmentInProduct.weight + item.weight,
             },
           },
           { new: true }
         );
-
-        //Bảng shipment
-        await Shipment.findOneAndUpdate(
-          { _id: shipment.idShipment, "products.idProduct": product._id },
-          {
-            $set: {
-              "products.$.weight": shipment.weight + item.weight,
-            },
-          },
-          { new: true }
-        );
+      } else {
+        for (const productOnShipment of shipment.products) {
+          if (productOnShipment.idProduct.equal(product._id)) {
+            // Tạo lại lô hàng cho sản phẩm rồi rả lại cân ở bảng products
+            await Product.findOneAndUpdate(
+              { _id: product._id },
+              {
+                $push: {
+                  shipments: {
+                    $each: [{
+                      idShipment: item.shipmentId,
+                      originWeight: productOnShipment.weight,
+                      weight: productOnShipment.weight,
+                      date: productOnShipment.date,
+                      originPrice: productOnShipment.originPrice,
+                      price: productOnShipment.price,
+                      willExpire: productOnShipment.willExpire
+                    }],
+                    $position: 0 // Số 0 đại diện cho việc thêm vào đầu mảng
+                  },
+                },
+              },
+              { new: true }
+            );
+          }
+        }
       }
     }
   }

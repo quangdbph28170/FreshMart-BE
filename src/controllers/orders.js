@@ -35,9 +35,8 @@ const checkCancellationTime = (order) => {
 };
 const formatDateTime = (dateTime) => {
   const date = new Date(dateTime);
-  const formattedDate = `${date.getDate()}/${
-    date.getMonth() + 1
-  }/${date.getFullYear()}`;
+  const formattedDate = `${date.getDate()}/${date.getMonth() + 1
+    }/${date.getFullYear()}`;
   const formattedTime = `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
   return `${formattedDate} ${formattedTime}`;
 };
@@ -87,13 +86,12 @@ export const sendMailer = async (email, data, amountReduced) => {
                   <a target="_blank" href="http:localhost:5173">
                     <img src="https://spacingtech.com/html/tm/freozy/freezy-ltr/image/logo/logo.png" style="width:80px;color:#000"/>
                   </a>
-                  <p style="color:#2986cc;">Kính gửi Anh/chị: ${
-                    data.customerName
-                  } </p> 
+                  <p style="color:#2986cc;">Kính gửi Anh/chị: ${data.customerName
+      } </p> 
                   <p>${message} </p>
                   <p style="font-weight:bold">Hóa đơn được tạo lúc: ${formatDateTime(
-                    data.createdAt
-                  )}</p>
+        data.createdAt
+      )}</p>
                   <div style="border:1px solid #ccc;border-radius:10px; padding:10px 20px;width: max-content">
                   <p>Mã hóa đơn: ${data.invoiceId}</p>
                   <p>Khách hàng: ${data.customerName}</p>
@@ -110,13 +108,12 @@ export const sendMailer = async (email, data, amountReduced) => {
                   </thead>
                   <tbody>
                     ${data.products
-                      .map(
-                        (product, index) =>
-                          `
+        .map(
+          (product, index) =>
+            `
           <tr style="border-bottom:1px solid #ccc">
             <td style="padding: 10px;">${index + 1}</td>
-            <td style="padding: 10px;"><img alt="image" src="${
-              product.images
+            <td style="padding: 10px;"><img alt="image" src="${product.images
             }" style="width: 90px; height: 90px;border-radius:5px">
             <p>${product.productName} (${product.originName})</p>
             </td>
@@ -126,25 +123,23 @@ export const sendMailer = async (email, data, amountReduced) => {
             )}VNĐ/kg</td>
           </tr>
        `
-                      )
-                      .join("")}
+        )
+        .join("")}
                   </tbody>
                 </table>  
-                <h4>Tổng: ${
-                  amountReduced != null
-                    ? (amountReduced + data.totalPayment).toLocaleString(
-                        "vi-VN"
-                      ) + "VND"
-                    : `${data.totalPayment.toLocaleString("vi-VN")}VND`
-                }</h4> ${code != null ? `<p>${code}</p>` : ""}
+                <h4>Tổng: ${amountReduced != null
+        ? (amountReduced + data.totalPayment).toLocaleString(
+          "vi-VN"
+        ) + "VND"
+        : `${data.totalPayment.toLocaleString("vi-VN")}VND`
+      }</h4> ${code != null ? `<p>${code}</p>` : ""}
                   <h3 style="color: red;font-weight:bold;margin-top:20px">Tổng tiền thanh toán: ${data.totalPayment.toLocaleString(
-                    "vi-VN"
-                  )}VNĐ</h3>
-                  <p>Thanh toán: ${
-                    data.pay == false
-                      ? "Thanh toán khi nhận hàng"
-                      : "Đã thanh toán online"
-                  }</p>
+        "vi-VN"
+      )}VNĐ</h3>
+                  <p>Thanh toán: ${data.pay == false
+        ? "Thanh toán khi nhận hàng"
+        : "Đã thanh toán online"
+      }</p>
                   <p>Trạng thái đơn hàng: ${data.status}</p>
                   </div>
                    <p>Xin cảm ơn quý khách!</p>
@@ -809,28 +804,56 @@ export const CanceledOrder = async (req, res) => {
             sold: product.sold - 1,
           },
         });
-        for (let shipment of product.shipments) {
+        //Bảng shipment
+        await Shipment.findOneAndUpdate(
+          { _id: item.shipmentId, "products.idProduct": product._id },
+          {
+            $set: {
+              "products.$.weight": shipment.weight + item.weight,
+            },
+          },
+          { new: true }
+        );
+
+        const shipmentInProduct = await Product.findOne({ _id: product._id, "shipments.idShipment": item.shipmentId })
+        const shipment = await Shipment.findOne({ _id: item.shipmentId })
+        if (shipmentInProduct) {
           // Trả lại cân ở bảng products
           await Product.findOneAndUpdate(
-            { _id: product._id, "shipments.idShipment": shipment.idShipment },
+            { _id: product._id, "shipments.idShipment": shipmentInProduct._id },
             {
               $set: {
-                "shipments.$.weight": shipment.weight + item.weight,
+                "shipments.$.weight": shipmentInProduct.weight + item.weight,
               },
             },
             { new: true }
           );
-
-          //Bảng shipment
-          await Shipment.findOneAndUpdate(
-            { _id: shipment.idShipment, "products.idProduct": product._id },
-            {
-              $set: {
-                "products.$.weight": shipment.weight + item.weight,
-              },
-            },
-            { new: true }
-          );
+        } else {
+          for (const productOnShipment of shipment.products) {
+            if (productOnShipment.idProduct.equal(product._id)) {
+              // Tạo lại lô hàng cho sản phẩm rồi rả lại cân ở bảng products
+              await Product.findOneAndUpdate(
+                { _id: product._id },
+                {
+                  $push: {
+                    shipments: {
+                      $each: [{
+                        idShipment: item.shipmentId,
+                        originWeight: productOnShipment.weight,
+                        weight: productOnShipment.weight,
+                        date: productOnShipment.date,
+                        originPrice: productOnShipment.originPrice,
+                        price: productOnShipment.price,
+                        willExpire: productOnShipment.willExpire
+                      }],
+                      $position: 0 // Số 0 đại diện cho việc thêm vào đầu mảng
+                    },
+                  },
+                },
+                { new: true }
+              );
+            }
+          }
         }
       }
       return res.status(201).json({
@@ -929,6 +952,69 @@ export const UpdateOrder = async (req, res) => {
         new: true,
       }
     );
+
+    if (status == 'đã hủy') {
+      for (let item of currentOrder.products) {
+        const product = await Product.findById(item.productId);
+        // update lại sold
+        await Product.findByIdAndUpdate(item.productId, {
+          $set: {
+            sold: product.sold - 1,
+          },
+        });
+        //Bảng shipment
+        await Shipment.findOneAndUpdate(
+          { _id: item.shipmentId, "products.idProduct": product._id },
+          {
+            $set: {
+              "products.$.weight": shipment.weight + item.weight,
+            },
+          },
+          { new: true }
+        );
+
+        const shipmentInProduct = await Product.findOne({ _id: product._id, "shipments.idShipment": item.shipmentId })
+        const shipment = await Shipment.findOne({ _id: item.shipmentId })
+        if (shipmentInProduct) {
+          // Trả lại cân ở bảng products
+          await Product.findOneAndUpdate(
+            { _id: product._id, "shipments.idShipment": shipmentInProduct._id },
+            {
+              $set: {
+                "shipments.$.weight": shipmentInProduct.weight + item.weight,
+              },
+            },
+            { new: true }
+          );
+        } else {
+          for (const productOnShipment of shipment.products) {
+            if (productOnShipment.idProduct.equal(product._id)) {
+              // Tạo lại lô hàng cho sản phẩm rồi rả lại cân ở bảng products
+              await Product.findOneAndUpdate(
+                { _id: product._id },
+                {
+                  $push: {
+                    shipments: {
+                      $each: [{
+                        idShipment: item.shipmentId,
+                        originWeight: productOnShipment.weight,
+                        weight: productOnShipment.weight,
+                        date: productOnShipment.date,
+                        originPrice: productOnShipment.originPrice,
+                        price: productOnShipment.price,
+                        willExpire: productOnShipment.willExpire
+                      }],
+                      $position: 0 // Số 0 đại diện cho việc thêm vào đầu mảng
+                    },
+                  },
+                },
+                { new: true }
+              );
+            }
+          }
+        }
+      }
+    }
 
     sendMailer(data.email, data);
     return res.status(201).json({
