@@ -204,8 +204,9 @@ export const getAllRating = async (req, res) => {
 //Admin ẩn đánh giá
 export const isReviewVisible = async (req, res) => {
     try {
+        const {isReviewVisible} = req.body
         const data = await Evaluation.findByIdAndUpdate(req.params.id, {
-            isReviewVisible: false
+            isReviewVisible
         }, { new: true })
         if (!data) {
             return res.status(404).json({
