@@ -959,8 +959,9 @@ export const UpdateOrder = async (req, res) => {
           new: true,
         }
       );
+      
     }
-    if (!statusOrder.includes(status)) {
+    if (!statusOrder.includes(status) && status != failedOrder) {
       return res.status(402).json({
         status: 402,
         message: "Invalid status",
@@ -970,7 +971,7 @@ export const UpdateOrder = async (req, res) => {
 
     const currentStatusIndex = statusOrder.indexOf(currentOrder.status);
     const newStatusIndex = statusOrder.indexOf(status);
-    if (newStatusIndex != currentStatusIndex + 1) {
+    if (newStatusIndex != currentStatusIndex + 1 &&  status != failedOrder) {
       return res.status(401).json({
         status: 400,
         message: "Trạng thái đơn hàng update phải theo tuần tự!",
