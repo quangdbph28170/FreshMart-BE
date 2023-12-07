@@ -37,6 +37,7 @@ import { uploadData } from "./controllers/statistics";
 import UnSoldProduct from "./models/unsoldProducts";
 import routerUnSoldProduct from "./routers/unsoldProducts";
 import Evaluation from "./models/evaluation";
+import { handleReturntWeight } from "./controllers/orders";
 
 const app = express();
 const httpServer = createServer(app);
@@ -62,80 +63,7 @@ cron.schedule("1-59 * * * *", async () => {
     await Orders.findByIdAndUpdate(order._id, {
       status: "đã hủy",
     });
-    for (let item of order.products) {
-      const product = await Product.findById(item.productId);
-      // update lại sold
-      await Product.findByIdAndUpdate(item.productId, {
-        $set: {
-          sold: product.sold - 1,
-        },
-      });
-      const shipment = await Shipment.findOne({ _id: item.shipmentId })
-
-      const productHaveShipment = await Product.findOne({ _id: product._id, "shipments.idShipment": item.shipmentId })
-      if (productHaveShipment) {
-        for (const shipmentOnProduct of productHaveShipment.shipments) {
-          if (shipmentOnProduct.idShipment.equals(item.shipmentId)) {
-            // Trả lại cân ở bảng products
-            await Product.findOneAndUpdate(
-              { _id: product._id, "shipments.idShipment": shipmentOnProduct.idShipment },
-              {
-                $set: {
-                  "shipments.$.weight": shipmentOnProduct.weight + item.weight,
-                },
-              },
-              { new: true }
-            );
-            //Bảng shipment
-            await Shipment.findOneAndUpdate(
-              { _id: shipmentOnProduct.idShipment, "products.idProduct": product._id },
-              {
-                $set: {
-                  "products.$.weight": shipmentOnProduct.weight + item.weight,
-                },
-              },
-              { new: true }
-            );
-          }
-        }
-      } else {
-        for (const productOnShipment of shipment.products) {
-          if (productOnShipment.idProduct.equals(product._id)) {
-            // Tạo lại lô hàng cho sản phẩm rồi rả lại cân ở bảng products
-            await Product.findOneAndUpdate(
-              { _id: product._id },
-              {
-                $push: {
-                  shipments: {
-                    $each: [{
-                      idShipment: item.shipmentId,
-                      originWeight: productOnShipment.originWeight,
-                      weight: productOnShipment.weight + item.weight,
-                      date: productOnShipment.date,
-                      originPrice: productOnShipment.originPrice,
-                      price: productOnShipment.price,
-                      willExpire: productOnShipment.willExpire
-                    }],
-                    $position: 0 // Số 0 đại diện cho việc thêm vào đầu mảng
-                  },
-                },
-              },
-              { new: true }
-            );
-            //Bảng shipment
-            await Shipment.findOneAndUpdate(
-              { _id: item.shipmentId, "products.idProduct": product._id },
-              {
-                $set: {
-                  "products.$.weight": productOnShipment.weight + item.weight,
-                },
-              },
-              { new: true }
-            );
-          }
-        }
-      }
-    }
+    await handleReturntWeight(order)
   }
 });
 
@@ -395,7 +323,7 @@ cron.schedule("*/1 * * * *", async () => {
 });
 
 //Chạy 24h 1 lần kiểm tra những đơn hàng đã giao hàng thành công sau 3 ngày tự động chuyển thành trạng thái thành công
-cron.schedule("* */24 * * *", async () => {
+cron.schedule("*/1 * * * *", async () => {
   const orders = await Orders.find({ status: "giao hành thành công" });
   for (const order of orders) {
     // Chuyển đổi chuỗi ngày từ MongoDB thành đối tượng Date
@@ -511,7 +439,6 @@ cron.schedule("*/1 * * * *", async () => {
 })
 
 //===========Xử lý sp thất thoát (SP Ế) - 1p chạy lại 1 lần=================//
-
 cron.schedule("*/1 * * * *", async () => {
   try {
     // check roomChatId là của admin bên client thì xóa
@@ -621,7 +548,7 @@ cron.schedule("*/1 * * * *", async () => {
   }
 });
 io.of("/admin").on("connection", (socket) => {
-  cron.schedule("* 0,12 * * *", async () => {
+  cron.schedule("*/5 * * * *", async () => {
     const response = [];
     const products = await Product.find();
     for (const product of products) {
