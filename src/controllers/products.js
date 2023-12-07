@@ -295,13 +295,21 @@ export const updateProduct = async (req, res) => {
 export const removeProduct = async (req, res) => {
   try {
     const product = await Products.findById(req.params.id);
+
     if (!product) {
       return res.status(404).json({
         status: 404,
         message: "Product not found",
       });
     }
-    const { categoryId } = product;
+
+    const { categoryId,isSale } = product;
+    if(isSale){
+      return res.status(401).json({
+        status: 401,
+        message: "The liquidation products are not remove",
+      });
+    }
     // Xóa sp có trong danh mục
     await Categories.findByIdAndUpdate(categoryId, {
       $pull: {
