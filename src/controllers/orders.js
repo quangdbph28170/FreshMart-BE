@@ -783,7 +783,7 @@ export const handleReturntWeight = async (order) => {
   try {
     for (let item of order.products) {
       const product = await Product.findById(item.productId);
-      if(!product) {
+      if (!product) {
         continue
       }
       // update lại sold
@@ -793,7 +793,7 @@ export const handleReturntWeight = async (order) => {
         },
         shipments: []
       });
-      // const shipment = await Shipment.findOne({ _id: item.shipmentId })
+      const shipment = await Shipment.findOne({ _id: item.shipmentId })
       // const currentShipmetIndex = shipmentsIncludeProduct.indexOf(shipmentsIncludeProduct.find((ship) => ship._id.equals(shipment._id)))
       const shipmentsIncludeProduct = await Shipment.find({ "products.idProduct": item.productId }).sort({ createdAt: -1 })
       const productHaveShipment = await Product.findOne({ _id: product._id, "shipments.idShipment": item.shipmentId })
@@ -827,14 +827,37 @@ export const handleReturntWeight = async (order) => {
         const currentDate = new Date().getTime()
         let currentWeight = item.weight
         for (const shipmentOfProduct of shipmentsIncludeProduct) {
+          if (shipmentOfProduct._id.equals(shipment._id)) {
+            return
+          }
           for (const productOnShipment of shipmentOfProduct.products) {
             const targerDate = new Date(productOnShipment.date).getTime();
             //Check xem lô hàng đã hết hạn hay chưa nếu hết hạn thì bỏ qua
             if (productOnShipment.idProduct.equals(product._id)) {
               if (targerDate - currentDate <= 0) {
                 if (currentWeight > productOnShipment.originWeight) {
+                  //Bảng shipment
+                  await Shipment.findOneAndUpdate(
+                    { _id: shipmentOfProduct._id, "products.idProduct": product._id },
+                    {
+                      $set: {
+                        "products.$.weight": productOnShipment.originWeight,
+                      },
+                    },
+                    { new: true }
+                  );
                   currentWeight = productOnShipment.originWeight - currentWeight
                 } else {
+                  //Bảng shipment
+                  await Shipment.findOneAndUpdate(
+                    { _id: shipmentOfProduct._id, "products.idProduct": product._id },
+                    {
+                      $set: {
+                        "products.$.weight": productOnShipment.weight + currentWeight,
+                      },
+                    },
+                    { new: true }
+                  );
                   currentWeight = 0
                 }
                 return
