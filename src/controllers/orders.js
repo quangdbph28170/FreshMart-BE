@@ -827,9 +827,6 @@ export const handleReturntWeight = async (order) => {
         const currentDate = new Date().getTime()
         let currentWeight = item.weight
         for (const shipmentOfProduct of shipmentsIncludeProduct) {
-          if (shipmentOfProduct._id.equals(shipment._id)) {
-            return
-          }
           for (const productOnShipment of shipmentOfProduct.products) {
             const targerDate = new Date(productOnShipment.date).getTime();
             //Check xem lô hàng đã hết hạn hay chưa nếu hết hạn thì bỏ qua
@@ -931,6 +928,9 @@ export const handleReturntWeight = async (order) => {
               }
 
             }
+          }
+          if (shipmentOfProduct._id.equals(shipment._id)) {
+            return
           }
         }
       }
