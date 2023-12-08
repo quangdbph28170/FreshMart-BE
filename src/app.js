@@ -548,7 +548,7 @@ cron.schedule("*/1 * * * *", async () => {
   }
 });
 io.of("/admin").on("connection", (socket) => {
-  cron.schedule("*/5 * * * *", async () => {
+  cron.schedule("*/20 * * * *", async () => {
     const response = [];
     const products = await Product.find();
     for (const product of products) {

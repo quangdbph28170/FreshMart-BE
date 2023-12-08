@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import jwt, { decode } from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { typeRequestMw } from '../middleware/configResponse';
+import e from 'express';
 
 dotenv.config();
 const { RESPONSE_MESSAGE, RESPONSE_STATUS, RESPONSE_OBJ } = typeRequestMw;
@@ -69,7 +70,7 @@ export const signUp = async (req, res, next) => {
       const userExist = await User.findOne({ email: req.body.email });
       if (userExist) {
          req[RESPONSE_STATUS] = 400;
-         req[RESPONSE_MESSAGE] = `Form error: Email already registered`;
+         req[RESPONSE_MESSAGE] = `Email này đã được sử dụng`;
          return next();
       }
 
@@ -81,7 +82,7 @@ export const signUp = async (req, res, next) => {
       });
       if (!user) {
          req[RESPONSE_STATUS] = 401;
-         req[RESPONSE_MESSAGE] = `Form error: Create a new user failed`;
+         req[RESPONSE_MESSAGE] = `Quá trình đăng ký bị lỗi! Vui lòng thử lại sau`;
          return next();
       }
 
@@ -142,26 +143,26 @@ export const signIn = async (req, res, next) => {
       const user = await User.findOne({ email: req.body.email });
       if (!user) {
          req[RESPONSE_STATUS] = 404;
-         req[RESPONSE_MESSAGE] = `Form error: Email not exist`;
+         req[RESPONSE_MESSAGE] = `Email này chưa được đăng ký`;
          return next();
       }
 
       if (!user.state) {
          req[RESPONSE_STATUS] = 403;
-         req[RESPONSE_MESSAGE] = `Form error: This account is disabled`;
+         req[RESPONSE_MESSAGE] = `Email này đã bị vô hiệu hóa`;
          return next();
       }
 
       const validPass = await bcrypt.compare(req.body.password, user.password);
       if (!validPass) {
          req[RESPONSE_STATUS] = 400;
-         req[RESPONSE_MESSAGE] = `Form error: Passwords do not match`;
+         req[RESPONSE_MESSAGE] = `Mật khẩu không trùng khớp`;
          return next();
       }
 
       if (!user) {
          req[RESPONSE_STATUS] = 401;
-         req[RESPONSE_MESSAGE] = `Form error: Create a new user failed`;
+         req[RESPONSE_MESSAGE] = `Quá trình đăng nhập bị lỗi! vui lòng thử lại sau`;
          return next();
       }
       const refreshToken = jwt.sign({ _id: user._id }, process.env.SERECT_REFRESHTOKEN_KEY, {
@@ -218,9 +219,12 @@ export const redirect = (req, res) => {
          expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
          httpOnly: true,
       });
+      // Successful authentication, redirect success.
+      res.redirect(process.env.GOOGLE_REDIRECT_URL);
+   } else {
+      // Successful authentication, redirect success.
+      res.redirect(process.env.GOOGLE_REDIRECT_URL + '?err=');
    }
-   // Successful authentication, redirect success.
-   res.redirect(process.env.GOOGLE_REDIRECT_URL);
 };
 
 export const refresh = async (req, res, next) => {
