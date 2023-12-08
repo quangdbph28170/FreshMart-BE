@@ -275,7 +275,7 @@ cron.schedule("*/1 * * * *", async () => {
     }
 
     // Thống kế doanh thu theo ngày
-    const salesRevenueByDay = [];
+    let salesRevenueByDay = [];
     const mapOrders = (array) => {
       for (const order of array) {
         const targetDate = new Date(order.createdAt);
@@ -300,7 +300,8 @@ cron.schedule("*/1 * * * *", async () => {
       }
     };
     mapOrders(orders);
-
+    salesRevenueByDay = salesRevenueByDay.sort((a, b) => a[0] - b[0]);
+    
     const dataToUpload = {
       salesRevenue,
       customers,
