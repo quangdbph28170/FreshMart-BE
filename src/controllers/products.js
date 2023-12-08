@@ -1,6 +1,6 @@
 import Products from "../models/products";
 import Evaluation from "../models/evaluation";
-import Shipment from "../models/shipment";
+import UnsoldProduct from "../models/unsoldProducts";
 import Categories from "../models/categories";
 import {
   validateProduct,
@@ -303,13 +303,63 @@ export const removeProduct = async (req, res) => {
       });
     }
 
-    const { categoryId,isSale } = product;
-    if(isSale){
+    const { categoryId, isSale } = product;
+    if (isSale) {
       return res.status(401).json({
         status: 401,
         message: "The liquidation products are not remove",
       });
     }
+    let data = null
+    //Chuyển vào sp thất thoát nếu còn
+    if (product.shipments.length > 0) {
+      //TH1: SP chưa có (.) thất thoát =>Tạo mới lun
+      //Kiểm tra xem sp đó có p hàng thanh lý ko
+      let originalID = null
+      let productName = null
+      if (product.isSale) {
+        originalID = product.originalID
+        //Lấy info sp gốc
+        const productExist = await Products.findById(originalID)
+        productName = productExist.productName
+      } else {
+        originalID = product._id
+        productName = product.productName
+      }
+      const unsoldProduct = await UnsoldProduct.findOne({ originalID })
+      let shipments = []
+      //Lặp qua tất cả lô hàng hiện có 
+      for (let item of product.shipments) {
+        const shipment = {
+          shipmentId: item.idShipment,
+          purchasePrice: item.originPrice,
+          weight: item.weight,
+          date: item.date
+        }
+        shipments.push(shipment)
+      }
+      //TH1 : SP đã có trong hàng ế => chỉ push shipment vào
+      if (!unsoldProduct) {
+        data = await UnsoldProduct.create({
+          originalID,
+          productName,
+          shipments
+        })
+      } else {
+        //TH1 : SP chưa có trong hàng ế => Tạo mới lun
+        data = await UnsoldProduct.findOneAndUpdate(
+          { originalID },
+          {
+            $push: {
+              shipments: shipments
+            }
+          }, { new: true }
+        )
+      }
+
+      // console.log(data);
+    }
+
     // Xóa sp có trong danh mục
     await Categories.findByIdAndUpdate(categoryId, {
       $pull: {
@@ -328,6 +378,7 @@ export const removeProduct = async (req, res) => {
     return res.status(201).json({
       status: 201,
       message: "Remove product successfully",
+      unsoldProduct: data
     });
   } catch (error) {
     return res.status(500).json({
@@ -382,7 +433,7 @@ export const productClearance = async (req, res) => {
       });
     }
 
- 
+
     const data = await Products.create({
       ...productExist.toObject(),
       _id: undefined,

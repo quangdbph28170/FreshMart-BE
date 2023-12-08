@@ -218,7 +218,7 @@ export const redirect = (req, res) => {
       httpOnly: true,
    });
    // Successful authentication, redirect success.
-   res.redirect('http://localhost:5173/');
+   res.redirect(process.env.GOOGLE_REDIRECT_URL);
 };
 
 export const refresh = async (req, res, next) => {
