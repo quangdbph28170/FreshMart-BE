@@ -201,6 +201,8 @@ export const removeVoucher = async (req, res) => {
 export const updateVoucher = async (req, res) => {
   try {
     const { quantity, status, code } = req.body
+    const voucher = await Voucher.findById(req.params.id)
+
     const dateStart = new Date(voucher.dateStart)
     const dateEnd = new Date(voucher.dateStart)
     const date_end = new Date(req.body.dateEnd)
