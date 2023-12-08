@@ -26,7 +26,7 @@ export const getProducts = async (req, res) => {
     limit: _limit,
     sort: {
       [_sort]: _order === "desc" ? -1 : 1,
-      "shipments.price": _order === "desc" ? -1 : 1,
+      price: _order === "desc" ? -1 : 1,
     },
     populate: ["originId", "categoryId", "evaluated.evaluatedId"],
   };
@@ -63,8 +63,9 @@ export const getProducts = async (req, res) => {
     let minPrice = Number.MAX_SAFE_INTEGER;
 
     for (let item of prd) {
-      maxPrice = Math.max(maxPrice, item.price);
-      minPrice = Math.min(minPrice, item.price);
+      const price = item.price - (item.price * item.discount / 100)
+      maxPrice = Math.max(maxPrice, price);
+      minPrice = Math.min(minPrice, price);
     }
 
     if (_willExpire) {
