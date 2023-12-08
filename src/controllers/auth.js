@@ -12,7 +12,7 @@ const { RESPONSE_MESSAGE, RESPONSE_STATUS, RESPONSE_OBJ } = typeRequestMw;
 export const validateUser = async (detail) => {
    const user = await User.findOne({ email: detail.email });
 
-   if(user) {
+   if (user) {
       const chatExist = await Chat.findOne({ roomChatId: user._id })
 
       if (!chatExist) {
@@ -39,10 +39,10 @@ export const validateUser = async (detail) => {
       avatar: detail.picture,
       password: hashedPassword,
    });
-   
+
    const chatExist = await Chat.findOne({ roomChatId: newUser._id })
-      
-   if(!chatExist) {
+
+   if (!chatExist) {
       await Chat.create({
          roomChatId: newUser._id,
          messages: [{
@@ -102,8 +102,8 @@ export const signUp = async (req, res, next) => {
          httpOnly: true,
       });
       const chatExist = await Chat.findOne({ roomChatId: user._id })
-      
-      if(!chatExist) {
+
+      if (!chatExist) {
          await Chat.create({
             roomChatId: user._id,
             messages: [{
@@ -113,7 +113,7 @@ export const signUp = async (req, res, next) => {
             }]
          })
       }
-         
+
       user.password = undefined;
 
       req[RESPONSE_OBJ] = {
@@ -181,8 +181,8 @@ export const signIn = async (req, res, next) => {
       });
 
       const chatExist = await Chat.findOne({ roomChatId: user._id })
-      
-      if(!chatExist) {
+
+      if (!chatExist) {
          await Chat.create({
             roomChatId: user._id,
             messages: [{
@@ -209,14 +209,16 @@ export const signIn = async (req, res, next) => {
 };
 
 export const redirect = (req, res) => {
-   res.cookie('accessToken', req.user?.accessToken, {
-      expires: new Date(Date.now() + 60 * 1000),
-      httpOnly: true,
-   });
-   res.cookie('refreshToken', req.user?.refreshToken, {
-      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      httpOnly: true,
-   });
+   if (req.user?.data.state) {
+      res.cookie('accessToken', req.user?.accessToken, {
+         expires: new Date(Date.now() + 60 * 1000),
+         httpOnly: true,
+      });
+      res.cookie('refreshToken', req.user?.refreshToken, {
+         expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+         httpOnly: true,
+      });
+   }
    // Successful authentication, redirect success.
    res.redirect(process.env.GOOGLE_REDIRECT_URL);
 };
