@@ -143,15 +143,17 @@ cron.schedule("*/1 * * * *", async () => {
     for (const product of products) {
       let starCount = 0
       const evaluations = await Evaluation.find({ productId: product._id })
-      for (const evaluation of evaluations) {
-        starCount += evaluation.rate
+      if (evaluations && evaluations.length > 0) {
+        for (const evaluation of evaluations) {
+          starCount += evaluation.rate
+        }
+        productsWithRate.push({
+          product: product._id,
+          productName: product.productName,
+          image: product.images[0].url,
+          starCount: evaluations.length == 0 ? 0 : (starCount / evaluations.length).toFixed(1)
+        })
       }
-      productsWithRate.push({
-        product: product._id,
-        productName: product.productName,
-        image: product.images[0].url,
-        starCount: evaluations.length == 0 ? 0 : (starCount / evaluations.length).toFixed(1)
-      })
     }
     productsWithRate = productsWithRate?.sort((a, b) => b?.starCount - a?.starCount) || [];
 
