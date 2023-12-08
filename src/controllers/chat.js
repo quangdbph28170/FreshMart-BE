@@ -17,7 +17,6 @@ export const addMessage = async (req,res)=>{
 }
 export const updateChatRoom = async (req,res)=>{
   try {
-    console.log(req.body.roomChatId);
     const chat = await Chat.findOne({roomChatId:req.body.roomChatId});
     if (!chat) {
       return res.status(404).json({

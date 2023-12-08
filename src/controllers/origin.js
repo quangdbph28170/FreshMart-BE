@@ -1,3 +1,4 @@
+import mongoose from "mongoose";
 import Origin from "../models/origin";
 import Products from "../models/products";
 import { originSchema } from "../validation/origin";
@@ -11,6 +12,15 @@ export const createOrigin = async (req, res) => {
                 message: error.details.map((error) => error.message),
             });
         }
+
+        const nameExist = await Origin.findOne({ name: req.body.name })
+        if(nameExist) {
+            return res.status(400).json({
+                status: 400,
+                message: "Tên đã tồn tại",
+            });
+        }
+
         const origin = await Origin.create(req.body)
 
         if (!origin) {
@@ -119,6 +129,15 @@ export const updateOrigin = async (req, res) => {
                 message: error.details.map((error) => error.message),
             });
         }
+
+        const nameExist = await Origin.findOne({ name: req.body.name })
+        if(!nameExist._id.equals(new mongoose.Types.ObjectId(id)) && nameExist) {
+            return res.status(400).json({
+                status: 400,
+                message: "Tên đã tồn tại",
+            });
+        }
+
         const origin = await Origin.findByIdAndUpdate(id, req.body, { new: true })
 
         if (!origin) {

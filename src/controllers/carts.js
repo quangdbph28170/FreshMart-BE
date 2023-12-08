@@ -6,7 +6,6 @@ import { cartDB, cartValid } from "../validation/cart"
 
 //Tính tổng tiền
 const calculateTotalPrice = async (data) => {
-    console.log(data);
     let totalPrice = 0;
     if (data) {
         for (let item of data.products) {

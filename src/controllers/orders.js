@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 import Order from "../models/orders";
 import Origin from "../models/origin";
 import Product from "../models/products";
+import UnsoleProduct from "../models/unsoldProducts";
 import Shipment from "../models/shipment";
 import { validateCheckout } from "../validation/checkout";
 import { transporter } from "../config/mail";
@@ -833,6 +834,18 @@ export const handleReturntWeight = async (order) => {
             if (productOnShipment.idProduct.equals(product._id)) {
               if (targerDate - currentDate <= 0) {
                 if (currentWeight > productOnShipment.originWeight) {
+                  const unsoldProduct = await UnsoleProduct.findOne({ originalID: product._id, "shipments.shipmentId": shipmentOfProduct._id })
+                  if (unsoldProduct) {
+                    await UnsoleProduct.findOneAndUpdate(
+                      { originalID: product._id, "shipments.shipmentId": shipmentOfProduct._id },
+                      {
+                        $set: {
+                          "shipments.$.weight": productOnShipment.originWeight,
+                        },
+                      },
+                      { new: true }
+                    );
+                  }
                   //Bảng shipment
                   await Shipment.findOneAndUpdate(
                     { _id: shipmentOfProduct._id, "products.idProduct": product._id },
@@ -845,6 +858,18 @@ export const handleReturntWeight = async (order) => {
                   );
                   currentWeight = productOnShipment.originWeight - currentWeight
                 } else {
+                  const unsoldProduct = await UnsoleProduct.findOne({ originalID: product._id, "shipments.shipmentId": shipmentOfProduct._id })
+                  if (unsoldProduct) {
+                    await UnsoleProduct.findOneAndUpdate(
+                      { originalID: product._id, "shipments.shipmentId": shipmentOfProduct._id },
+                      {
+                        $set: {
+                          "shipments.$.weight": productOnShipment.weight + currentWeight,
+                        },
+                      },
+                      { new: true }
+                    );
+                  }
                   //Bảng shipment
                   await Shipment.findOneAndUpdate(
                     { _id: shipmentOfProduct._id, "products.idProduct": product._id },

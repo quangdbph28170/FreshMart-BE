@@ -5,6 +5,7 @@ import bcrypt from 'bcrypt';
 import jwt, { decode } from 'jsonwebtoken';
 import dotenv from 'dotenv';
 import { typeRequestMw } from '../middleware/configResponse';
+import e from 'express';
 
 dotenv.config();
 const { RESPONSE_MESSAGE, RESPONSE_STATUS, RESPONSE_OBJ } = typeRequestMw;
@@ -12,7 +13,7 @@ const { RESPONSE_MESSAGE, RESPONSE_STATUS, RESPONSE_OBJ } = typeRequestMw;
 export const validateUser = async (detail) => {
    const user = await User.findOne({ email: detail.email });
 
-   if(user) {
+   if (user) {
       const chatExist = await Chat.findOne({ roomChatId: user._id })
 
       if (!chatExist) {
@@ -39,10 +40,10 @@ export const validateUser = async (detail) => {
       avatar: detail.picture,
       password: hashedPassword,
    });
-   
+
    const chatExist = await Chat.findOne({ roomChatId: newUser._id })
-      
-   if(!chatExist) {
+
+   if (!chatExist) {
       await Chat.create({
          roomChatId: newUser._id,
          messages: [{
@@ -69,7 +70,7 @@ export const signUp = async (req, res, next) => {
       const userExist = await User.findOne({ email: req.body.email });
       if (userExist) {
          req[RESPONSE_STATUS] = 400;
-         req[RESPONSE_MESSAGE] = `Form error: Email already registered`;
+         req[RESPONSE_MESSAGE] = `Email này đã được sử dụng`;
          return next();
       }
 
@@ -81,7 +82,7 @@ export const signUp = async (req, res, next) => {
       });
       if (!user) {
          req[RESPONSE_STATUS] = 401;
-         req[RESPONSE_MESSAGE] = `Form error: Create a new user failed`;
+         req[RESPONSE_MESSAGE] = `Quá trình đăng ký bị lỗi! Vui lòng thử lại sau`;
          return next();
       }
 
@@ -102,8 +103,8 @@ export const signUp = async (req, res, next) => {
          httpOnly: true,
       });
       const chatExist = await Chat.findOne({ roomChatId: user._id })
-      
-      if(!chatExist) {
+
+      if (!chatExist) {
          await Chat.create({
             roomChatId: user._id,
             messages: [{
@@ -113,7 +114,7 @@ export const signUp = async (req, res, next) => {
             }]
          })
       }
-         
+
       user.password = undefined;
 
       req[RESPONSE_OBJ] = {
@@ -142,26 +143,26 @@ export const signIn = async (req, res, next) => {
       const user = await User.findOne({ email: req.body.email });
       if (!user) {
          req[RESPONSE_STATUS] = 404;
-         req[RESPONSE_MESSAGE] = `Form error: Email not exist`;
+         req[RESPONSE_MESSAGE] = `Email này chưa được đăng ký`;
          return next();
       }
 
       if (!user.state) {
          req[RESPONSE_STATUS] = 403;
-         req[RESPONSE_MESSAGE] = `Form error: This account is disabled`;
+         req[RESPONSE_MESSAGE] = `Email này đã bị vô hiệu hóa`;
          return next();
       }
 
       const validPass = await bcrypt.compare(req.body.password, user.password);
       if (!validPass) {
          req[RESPONSE_STATUS] = 400;
-         req[RESPONSE_MESSAGE] = `Form error: Passwords do not match`;
+         req[RESPONSE_MESSAGE] = `Mật khẩu không trùng khớp`;
          return next();
       }
 
       if (!user) {
          req[RESPONSE_STATUS] = 401;
-         req[RESPONSE_MESSAGE] = `Form error: Create a new user failed`;
+         req[RESPONSE_MESSAGE] = `Quá trình đăng nhập bị lỗi! vui lòng thử lại sau`;
          return next();
       }
       const refreshToken = jwt.sign({ _id: user._id }, process.env.SERECT_REFRESHTOKEN_KEY, {
@@ -181,8 +182,8 @@ export const signIn = async (req, res, next) => {
       });
 
       const chatExist = await Chat.findOne({ roomChatId: user._id })
-      
-      if(!chatExist) {
+
+      if (!chatExist) {
          await Chat.create({
             roomChatId: user._id,
             messages: [{
@@ -209,16 +210,21 @@ export const signIn = async (req, res, next) => {
 };
 
 export const redirect = (req, res) => {
-   res.cookie('accessToken', req.user?.accessToken, {
-      expires: new Date(Date.now() + 60 * 1000),
-      httpOnly: true,
-   });
-   res.cookie('refreshToken', req.user?.refreshToken, {
-      expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
-      httpOnly: true,
-   });
-   // Successful authentication, redirect success.
-   res.redirect(process.env.GOOGLE_REDIRECT_URL);
+   if (req.user?.data.state) {
+      res.cookie('accessToken', req.user?.accessToken, {
+         expires: new Date(Date.now() + 60 * 1000),
+         httpOnly: true,
+      });
+      res.cookie('refreshToken', req.user?.refreshToken, {
+         expires: new Date(Date.now() + 24 * 60 * 60 * 1000),
+         httpOnly: true,
+      });
+      // Successful authentication, redirect success.
+      res.redirect(process.env.GOOGLE_REDIRECT_URL);
+   } else {
+      // Successful authentication, redirect success.
+      res.redirect(process.env.GOOGLE_REDIRECT_URL + '?err=');
+   }
 };
 
 export const refresh = async (req, res, next) => {

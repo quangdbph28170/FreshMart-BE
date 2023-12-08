@@ -5,7 +5,7 @@ import { userSchema } from '../validation/auth';
 import bcrypt from 'bcrypt';
 import { transporter } from "../config/mail";
 import crypto from "crypto"
-import { forgotPasswordSchema } from "../validation/forgotPassword";
+import { changePasswordSchema, forgotPasswordSchema } from "../validation/forgotPassword";
 const { RESPONSE_MESSAGE, RESPONSE_STATUS, RESPONSE_OBJ } = typeRequestMw;
 
 export const getAllUsers = async (req, res, next) => {
@@ -212,7 +212,7 @@ export const forgotPassword = async (req, res) => {
    try {
       const email = req.cookies.email
       const Verification = req.cookies.Verification
-      if (!email || !Verification || ! req.cookies.exist) {
+      if (!email || !Verification || !req.cookies.exist) {
          return res.status(400).json({
             status: 400,
             message: "Please provide emails and confirmation codes!",
@@ -250,4 +250,40 @@ export const forgotPassword = async (req, res) => {
       });
    }
 }
+
+//Đổi mật khẩu
+export const changePassword = async (req, res) => {
+   try {
+      const { currentPassword, password } = req.body
+      const { error } = changePasswordSchema.validate(req.body, { abortEarly: false });
+      if (error) {
+         return res.status(400).json({
+            status: 400,
+            message: error.details.map((error) => error.message),
+         });
+      }
+      const userExist = await User.findById(req.user._id)
+      console.log(userExist);
+
+      const passwordExist = await bcrypt.compare(currentPassword, userExist.password);
+      if (!passwordExist) {
+         return res.status(400).json({
+            status: 400,
+            message: "Current password does not match",
+         })
+      }
+      const hashPassword = await bcrypt.hash(password, 10);
+      const user = await User.findByIdAndUpdate(req.user._id, { password: hashPassword })
+      return res.status(200).json({
+         message: "Change password successfully",
+         user
+      })
+   } catch (error) {
+      return res.status(500).json({
+         status: 500,
+         message: error.message,
+      });
+   }
+}
+
 
