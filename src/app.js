@@ -301,7 +301,6 @@ cron.schedule("*/1 * * * *", async () => {
     };
     mapOrders(orders);
     salesRevenueByDay = salesRevenueByDay.sort((a, b) => a[0] - b[0]);
-    
     const dataToUpload = {
       salesRevenue,
       customers,
