@@ -201,13 +201,6 @@ export const removeVoucher = async (req, res) => {
 export const updateVoucher = async (req, res) => {
   try {
     const { quantity, status, code } = req.body
-    const voucher = await Voucher.findById(req.params.id)
-    if (voucher.code == code) {
-      return res.status(400).json({
-        status: 400,
-        message: "Invalid Code",
-      });
-    }
     const dateStart = new Date(voucher.dateStart)
     const dateEnd = new Date(voucher.dateStart)
     const date_end = new Date(req.body.dateEnd)
