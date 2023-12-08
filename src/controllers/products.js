@@ -25,7 +25,7 @@ export const getProducts = async (req, res) => {
     page: _page,
     limit: _limit,
     sort: {
-      [_sort]: _order === "desc" ? -1 : 1
+      [_sort]: _order === "desc" ? -1 : 1,
     },
     populate: ["originId", "categoryId", "evaluated.evaluatedId"],
   };
@@ -62,7 +62,7 @@ export const getProducts = async (req, res) => {
     let minPrice = Number.MAX_SAFE_INTEGER;
 
     for (let item of prd) {
-      const price = item.price - (item.price * item.discount / 100)
+      const price = item.price - (item.price * item.discount) / 100;
       maxPrice = Math.max(maxPrice, price);
       minPrice = Math.min(minPrice, price);
     }
@@ -304,12 +304,12 @@ export const removeProduct = async (req, res) => {
     }
 
     const { categoryId, isSale } = product;
-    if (isSale) {
-      return res.status(401).json({
-        status: 401,
-        message: "The liquidation products are not remove",
-      });
-    }
+    // if (isSale) {
+    //   return res.status(401).json({
+    //     status: 401,
+    //     message: "The liquidation products are not remove",
+    //   });
+    // }
     let data = null;
     //Chuyển vào sp thất thoát nếu còn
     if (product.shipments.length > 0) {
