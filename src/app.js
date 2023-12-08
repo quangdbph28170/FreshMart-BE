@@ -325,14 +325,14 @@ cron.schedule("*/1 * * * *", async () => {
 
 //Chạy 24h 1 lần kiểm tra những đơn hàng đã giao hàng thành công sau 3 ngày tự động chuyển thành trạng thái thành công
 cron.schedule("*/1 * * * *", async () => {
-  const orders = await Orders.find({ status: "giao hành thành công" });
+  const orders = await Orders.find({ status: "giao hàng thành công" });
   for (const order of orders) {
     // Chuyển đổi chuỗi ngày từ MongoDB thành đối tượng Date
     const targetDate = new Date(order.updatedAt);
     // Lấy ngày hiện tại
     const currentDate = new Date();
     // Số mili giây trong 3 ngày
-    const threeDaysInMillis = 3 * 24 * 60 * 60 * 1000;
+    const threeDaysInMillis = 5 * 60 * 1000;
     // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 3 ngày không
     const isRatherThreeDays = currentDate - targetDate >= threeDaysInMillis;
 
