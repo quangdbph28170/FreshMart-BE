@@ -304,12 +304,12 @@ export const removeProduct = async (req, res) => {
     }
 
     const { categoryId, isSale } = product;
-    if (isSale) {
-      return res.status(401).json({
-        status: 401,
-        message: "The liquidation products are not remove",
-      });
-    }
+    // if (isSale) {
+    //   return res.status(401).json({
+    //     status: 401,
+    //     message: "The liquidation products are not remove",
+    //   });
+    // }
     let data = null
     //Chuyển vào sp thất thoát nếu còn
     if (product.shipments.length > 0) {
