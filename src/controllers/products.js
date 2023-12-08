@@ -26,7 +26,6 @@ export const getProducts = async (req, res) => {
     limit: _limit,
     sort: {
       [_sort]: _order === "desc" ? -1 : 1,
-      "shipments.price": _order === "desc" ? -1 : 1,
     },
     populate: ["originId", "categoryId", "evaluated.evaluatedId"],
   };
@@ -63,8 +62,9 @@ export const getProducts = async (req, res) => {
     let minPrice = Number.MAX_SAFE_INTEGER;
 
     for (let item of prd) {
-      maxPrice = Math.max(maxPrice, item.price);
-      minPrice = Math.min(minPrice, item.price);
+      const price = item.price - (item.price * item.discount) / 100;
+      maxPrice = Math.max(maxPrice, price);
+      minPrice = Math.min(minPrice, price);
     }
 
     if (_willExpire) {
@@ -304,57 +304,58 @@ export const removeProduct = async (req, res) => {
     }
 
     const { categoryId, isSale } = product;
-    if (isSale) {
-      return res.status(401).json({
-        status: 401,
-        message: "The liquidation products are not remove",
-      });
-    }
-    let data = null
+    // if (isSale) {
+    //   return res.status(401).json({
+    //     status: 401,
+    //     message: "The liquidation products are not remove",
+    //   });
+    // }
+    let data = null;
     //Chuyển vào sp thất thoát nếu còn
     if (product.shipments.length > 0) {
       //TH1: SP chưa có (.) thất thoát =>Tạo mới lun
       //Kiểm tra xem sp đó có p hàng thanh lý ko
-      let originalID = null
-      let productName = null
+      let originalID = null;
+      let productName = null;
       if (product.isSale) {
-        originalID = product.originalID
+        originalID = product.originalID;
         //Lấy info sp gốc
-        const productExist = await Products.findById(originalID)
-        productName = productExist.productName
+        const productExist = await Products.findById(originalID);
+        productName = productExist.productName;
       } else {
-        originalID = product._id
-        productName = product.productName
+        originalID = product._id;
+        productName = product.productName;
       }
-      const unsoldProduct = await UnsoldProduct.findOne({ originalID })
-      let shipments = []
-      //Lặp qua tất cả lô hàng hiện có 
+      const unsoldProduct = await UnsoldProduct.findOne({ originalID });
+      let shipments = [];
+      //Lặp qua tất cả lô hàng hiện có
       for (let item of product.shipments) {
         const shipment = {
           shipmentId: item.idShipment,
           purchasePrice: item.originPrice,
           weight: item.weight,
-          date: item.date
-        }
-        shipments.push(shipment)
+          date: item.date,
+        };
+        shipments.push(shipment);
       }
       //TH1 : SP đã có trong hàng ế => chỉ push shipment vào
       if (!unsoldProduct) {
         data = await UnsoldProduct.create({
           originalID,
           productName,
-          shipments
-        })
+          shipments,
+        });
       } else {
         //TH1 : SP chưa có trong hàng ế => Tạo mới lun
         data = await UnsoldProduct.findOneAndUpdate(
           { originalID },
           {
             $push: {
-              shipments: shipments
-            }
-          }, { new: true }
-        )
+              shipments: shipments,
+            },
+          },
+          { new: true }
+        );
       }
 
       // console.log(data);
@@ -378,7 +379,7 @@ export const removeProduct = async (req, res) => {
     return res.status(201).json({
       status: 201,
       message: "Remove product successfully",
-      unsoldProduct: data
+      unsoldProduct: data,
     });
   } catch (error) {
     return res.status(500).json({
@@ -432,7 +433,6 @@ export const productClearance = async (req, res) => {
         message: "Sản phẩm đã không còn trong lô hàng này!",
       });
     }
-
 
     const data = await Products.create({
       ...productExist.toObject(),
