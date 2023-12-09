@@ -168,7 +168,17 @@ const statisticsSchema = new mongoose.Schema(
                     required: true,
                 }
             ]
-        ]
+        ],
+        // Doanh thu hôm nay
+        salesRevenueOfCurrentDay: {
+            type: Number,
+            required: true
+        },
+        // Lợi nhuận hôm nay
+        profitOfCurrentDay: {
+            type: Number,
+            required: true
+        }
         // .... Còn nữa 
     },
     { timestamps: true, versionKey: false },

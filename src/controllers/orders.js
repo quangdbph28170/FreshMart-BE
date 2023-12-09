@@ -834,7 +834,7 @@ export const handleReturntWeight = async (order) => {
             if (productOnShipment.idProduct.equals(product._id)) {
               if (targerDate - currentDate <= 0) {
                 if (currentWeight > productOnShipment.originWeight) {
-                  const unsoldProduct = await UnsoleProduct.findOne({ originalID: product._id, "shipments.shipmentId": shipmentOfProduct._id })
+                  const unsoldProduct = await UnsoleProduct.findOne({ originalID: product.isSale ? product.originalID : product._id, "shipments.shipmentId": shipmentOfProduct._id })
                   if (unsoldProduct) {
                     await UnsoleProduct.findOneAndUpdate(
                       { originalID: product._id, "shipments.shipmentId": shipmentOfProduct._id },

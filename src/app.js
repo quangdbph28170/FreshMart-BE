@@ -105,38 +105,41 @@ cron.schedule("*/1 * * * *", async () => {
         ? Number((salesRevenue / orders.length).toFixed(2))
         : 0;
 
-    // Tổng giá nhập hàng theo lô của từng sản phẩm trong order
-    let totalImportPrice = 0;
-    const uniqueProducts = new Set();
+    const handleCalculationForProfit = (orders, revenue) => {
+      // Tổng giá nhập hàng theo lô của từng sản phẩm trong order
+      let totalImportPrice = 0;
+      const uniqueProducts = new Set();
+      if (orders && orders.length > 0) {
+        for (const order of orders) {
+          for (const product of order.products) {
+            if (product?.shipmentId?.products) {
+              for (const productOfShipment of product.shipmentId.products) {
+                const productKey = `${product.productId?._id}-${productOfShipment?.idProduct}`;
 
-    if (orders && orders.length > 0) {
-      for (const order of orders) {
-        for (const product of order.products) {
-          if (product?.shipmentId?.products) {
-            for (const productOfShipment of product.shipmentId.products) {
-              const productKey = `${product.productId?._id}-${productOfShipment?.idProduct}`;
+                // Check if the product combination has been added already
+                if (!uniqueProducts.has(productKey)) {
+                  if (
+                    product.productId?._id &&
+                    productOfShipment?.idProduct &&
+                    product.productId?._id.equals(productOfShipment?.idProduct)
+                  ) {
+                    totalImportPrice += productOfShipment.originPrice;
 
-              // Check if the product combination has been added already
-              if (!uniqueProducts.has(productKey)) {
-                if (
-                  product.productId?._id &&
-                  productOfShipment?.idProduct &&
-                  product.productId?._id.equals(productOfShipment?.idProduct)
-                ) {
-                  totalImportPrice += productOfShipment.originPrice;
-
-                  // Add the product combination to the set
-                  uniqueProducts.add(productKey);
+                    // Add the product combination to the set
+                    uniqueProducts.add(productKey);
+                  }
                 }
               }
             }
           }
         }
       }
+      return revenue - totalImportPrice
     }
 
+
     // Tính lợi nhuận
-    const profit = salesRevenue - totalImportPrice;
+    const profit = handleCalculationForProfit(orders, salesRevenue);
 
     // Lấy ra sản phẩm yêu thích nhất và kém yêu thích nhất theo số sao được đánh giá
     let productsWithRate = []
@@ -276,9 +279,16 @@ cron.schedule("*/1 * * * *", async () => {
       });
     }
 
+    // Lấy ra doanh thu ngày hôm nay
+    let salesRevenueOfCurrentDay = 0
+
+    // Mảng đơn hàng hôm nay
+    const currentOrderOfDay = []
+
     // Thống kế doanh thu theo ngày
-    const salesRevenueByDay = [];
+    let salesRevenueByDay = [];
     const mapOrders = (array) => {
+      const currentDate = new Date()
       for (const order of array) {
         const targetDate = new Date(order.createdAt);
         let totalPriceOfDay = 0;
@@ -286,6 +296,13 @@ cron.schedule("*/1 * * * *", async () => {
         // Lấy ra tất cả order cùng ngày tháng năm
         for (const odr of array) {
           const filterDate = new Date(odr.createdAt);
+          if (
+            filterDate.getDate() == currentDate.getDate() &&
+            filterDate.getMonth() + 1 == currentDate.getMonth() + 1 &&
+            filterDate.getFullYear() == currentDate.getFullYear()
+          ) {
+            currentOrderOfDay.push(odr)
+          }
           if (
             targetDate.getDate() == filterDate.getDate() &&
             targetDate.getMonth() + 1 == filterDate.getMonth() + 1 &&
@@ -296,6 +313,14 @@ cron.schedule("*/1 * * * *", async () => {
             ordersLeft.push(odr);
           }
         }
+
+        if (
+          targetDate.getDate() == currentDate.getDate() &&
+          targetDate.getMonth() + 1 == currentDate.getMonth() + 1 &&
+          targetDate.getFullYear() == currentDate.getFullYear()
+        ) {
+          salesRevenueOfCurrentDay = totalPriceOfDay
+        }
         salesRevenueByDay.push([targetDate.getTime(), totalPriceOfDay]);
         mapOrders(ordersLeft);
         return;
@@ -303,6 +328,9 @@ cron.schedule("*/1 * * * *", async () => {
     };
     mapOrders(orders);
     salesRevenueByDay = salesRevenueByDay.sort((a, b) => a[0] - b[0]);
+
+    // Lấy ra lợi nhuận ngày hôm nay
+    const profitOfCurrentDay = handleCalculationForProfit(currentOrderOfDay, salesRevenueOfCurrentDay);
 
     const dataToUpload = {
       salesRevenue,
@@ -315,11 +343,12 @@ cron.schedule("*/1 * * * *", async () => {
       averagePriceAndUnitsPerTransaction,
       favoriteProductAndLessFavoriteProduct,
       salesRevenueByDay,
+      salesRevenueOfCurrentDay,
+      profitOfCurrentDay
     };
     /*==================*/
     uploadData(dataToUpload);
 
-    // console.log(salesRevenueByDay.map((sale) => sale.salesRevenueData));
   } catch (error) {
     console.log(error.message);
   }
