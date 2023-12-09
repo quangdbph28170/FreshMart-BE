@@ -332,6 +332,12 @@ cron.schedule("*/1 * * * *", async () => {
     // Lấy ra lợi nhuận ngày hôm nay
     const profitOfCurrentDay = handleCalculationForProfit(currentOrderOfDay, salesRevenueOfCurrentDay);
 
+    // Tính trung bình tổng số tiền đã thanh toán
+    const averageTransactionPriceOfCurrentDay =
+      salesRevenueOfCurrentDay > 0 && currentOrderOfDay && currentOrderOfDay.length > 0
+        ? Number((salesRevenueOfCurrentDay / currentOrderOfDay.length).toFixed(2))
+        : 0;
+
     const dataToUpload = {
       salesRevenue,
       customers,
@@ -344,7 +350,8 @@ cron.schedule("*/1 * * * *", async () => {
       favoriteProductAndLessFavoriteProduct,
       salesRevenueByDay,
       salesRevenueOfCurrentDay,
-      profitOfCurrentDay
+      profitOfCurrentDay,
+      averageTransactionPriceOfCurrentDay
     };
     /*==================*/
     uploadData(dataToUpload);
