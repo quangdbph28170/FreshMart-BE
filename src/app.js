@@ -86,7 +86,7 @@ cron.schedule("*/1 * * * *", async () => {
 
     //Lấy ra thời gian hiện tại
     const currentDate = new Date();
-    
+
     /*console.log('data: ', products, orders, users, categories)*/
 
     /*==================*/
@@ -343,8 +343,6 @@ cron.schedule("*/1 * * * *", async () => {
       salesRevenueOfCurrentDay > 0 && currentOrderOfDay && currentOrderOfDay.length > 0
         ? Number((salesRevenueOfCurrentDay / currentOrderOfDay.length).toFixed(2))
         : 0;
-
-    console.log(salesRevenueOfCurrentDay, currentOrderOfDay.length, averageTransactionPriceOfCurrentDay);
 
     const dataToUpload = {
       salesRevenue,
