@@ -84,6 +84,9 @@ cron.schedule("*/1 * * * *", async () => {
     //Lấy ra tất cả danh mục (not type default)
     const categories = await Category.find({ type: "normal" });
 
+    //Lấy ra thời gian hiện tại
+    const currentDate = new Date();
+    
     /*console.log('data: ', products, orders, users, categories)*/
 
     /*==================*/
@@ -283,47 +286,50 @@ cron.schedule("*/1 * * * *", async () => {
     let salesRevenueOfCurrentDay = 0
 
     // Mảng đơn hàng hôm nay
-    const currentOrderOfDay = []
+    const currentOrderOfDay = orders.filter((order) => {
+      const targetDate = new Date(order.createdAt)
+      if (
+        targetDate.getDate() == currentDate.getDate() &&
+        targetDate.getMonth() + 1 == currentDate.getMonth() + 1 &&
+        targetDate.getFullYear() == currentDate.getFullYear()
+      ) {
+        return order
+      }
+    })
 
     // Thống kế doanh thu theo ngày
     let salesRevenueByDay = [];
     const mapOrders = (array) => {
-      const currentDate = new Date()
-      for (const order of array) {
-        const targetDate = new Date(order.createdAt);
-        let totalPriceOfDay = 0;
-        const ordersLeft = [];
-        // Lấy ra tất cả order cùng ngày tháng năm
-        for (const odr of array) {
-          const filterDate = new Date(odr.createdAt);
-          if (
-            filterDate.getDate() == currentDate.getDate() &&
-            filterDate.getMonth() + 1 == currentDate.getMonth() + 1 &&
-            filterDate.getFullYear() == currentDate.getFullYear()
-          ) {
-            currentOrderOfDay.push(odr)
+      if (array.length > 0) {
+        for (const order of array) {
+          const targetDate = new Date(order.createdAt);
+          let totalPriceOfDay = 0;
+          const ordersLeft = [];
+          // Lấy ra tất cả order cùng ngày tháng năm
+          for (const odr of array) {
+            const filterDate = new Date(odr.createdAt);
+            if (
+              targetDate.getDate() == filterDate.getDate() &&
+              targetDate.getMonth() + 1 == filterDate.getMonth() + 1 &&
+              targetDate.getFullYear() == filterDate.getFullYear()
+            ) {
+              totalPriceOfDay += odr.totalPayment;
+            } else {
+              ordersLeft.push(odr);
+            }
           }
-          if (
-            targetDate.getDate() == filterDate.getDate() &&
-            targetDate.getMonth() + 1 == filterDate.getMonth() + 1 &&
-            targetDate.getFullYear() == filterDate.getFullYear()
-          ) {
-            totalPriceOfDay += odr.totalPayment;
-          } else {
-            ordersLeft.push(odr);
-          }
-        }
 
-        if (
-          targetDate.getDate() == currentDate.getDate() &&
-          targetDate.getMonth() + 1 == currentDate.getMonth() + 1 &&
-          targetDate.getFullYear() == currentDate.getFullYear()
-        ) {
-          salesRevenueOfCurrentDay = totalPriceOfDay
+          if (
+            targetDate.getDate() == currentDate.getDate() &&
+            targetDate.getMonth() + 1 == currentDate.getMonth() + 1 &&
+            targetDate.getFullYear() == currentDate.getFullYear()
+          ) {
+            salesRevenueOfCurrentDay = totalPriceOfDay
+          }
+          salesRevenueByDay.push([targetDate.getTime(), totalPriceOfDay]);
+          mapOrders(ordersLeft);
+          return;
         }
-        salesRevenueByDay.push([targetDate.getTime(), totalPriceOfDay]);
-        mapOrders(ordersLeft);
-        return;
       }
     };
     mapOrders(orders);
@@ -337,6 +343,8 @@ cron.schedule("*/1 * * * *", async () => {
       salesRevenueOfCurrentDay > 0 && currentOrderOfDay && currentOrderOfDay.length > 0
         ? Number((salesRevenueOfCurrentDay / currentOrderOfDay.length).toFixed(2))
         : 0;
+
+    console.log(salesRevenueOfCurrentDay, currentOrderOfDay.length, averageTransactionPriceOfCurrentDay);
 
     const dataToUpload = {
       salesRevenue,
