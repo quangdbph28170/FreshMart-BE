@@ -26,6 +26,10 @@ const orderSchema = new mongoose.Schema(
           ref: "Shipment",
           required: true,
         },
+        isSale: {
+          type: Boolean,
+          default: false,
+        },
         originName: {
           type: String,
           required: true,
