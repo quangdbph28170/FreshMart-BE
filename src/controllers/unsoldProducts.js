@@ -3,7 +3,7 @@ import unsoldProducts from "../models/unsoldProducts";
 export const getUnsoldProducts = async (req, res) => {
     const {
         _page = 1,
-        _order = "asc",
+        _order = "desc",
         _limit = 9999,
         _sort = "createdAt",
         _q = "",
