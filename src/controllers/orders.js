@@ -428,6 +428,9 @@ export const CreateOrder = async (req, res) => {
       //nếu là sp thanh lý thì lấy lại id sp gốc
       if (prd.originalID != null) {
         item.productId = prd.originalID;
+        item.isSale = true
+      }else{
+        item.isSale = false
       }
     }
     // console.log(req.body.products);
