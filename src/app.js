@@ -434,44 +434,26 @@ cron.schedule("*/1 * * * *", async () => {
           })
 
         }
+        
         //Chuyển tất cả sp trong lô đó sang hàng thất thoát (sp ế)
-
         for (let item of shipment.products) {
           const product = await Product.findById(item.idProduct)
           const originalID = product._id
-          //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
-          const unsoldExist = await UnSoldProduct.findOne({ originalID });
-          if (unsoldExist) {
-            const unsold = await UnSoldProduct.findOneAndUpdate(
-              { originalID },
+          //Tạo mới sp thất thoát 
+          await UnSoldProduct.create({
+            originalID,
+            productName: product.productName,
+            shipments: [
               {
-                $push: {
-                  shipments: {
-                    shipmentId: shipment._id,
-                    purchasePrice: item.originPrice,
-                    weight: item.weight,
-                    date: item.date
-                  },
-                },
+                shipmentId: shipment._id,
+                purchasePrice: item.originPrice,
+                weight: item.weight,
+                date: item.date
               },
-              { new: true }
-            )
-
-          } else {
-            const data = await UnSoldProduct.create({
-              originalID,
-              productName: product.productName,
-              shipments: [
-                {
-                  shipmentId: shipment._id,
-                  purchasePrice: item.originPrice,
-                  weight: item.weight,
-                  date: item.date
-                },
-              ],
-            }
-            )
+            ],
           }
+          )
+
 
         }
       }
@@ -525,42 +507,23 @@ cron.schedule("*/1 * * * *", async () => {
         const twoDaysInMilliseconds = 2 * 24 * 60 * 60 * 1000;
         const remainingTime = expired - now;
         if (remainingTime <= twoDaysInMilliseconds && shipment.weight > 0) {
-          //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
-          const unsoldExist = await UnSoldProduct.findOne({ originalID });
-          if (unsoldExist) {
-            await UnSoldProduct.findOneAndUpdate(
-              { originalID },
+          // tạo mới sp thất thoát (sp ế)
+          await UnSoldProduct.create({
+            originalID,
+            productName: product.productName,
+            shipments: [
               {
-                $push: {
-                  shipments: {
-                    shipmentId: shipment.idShipment,
-                    purchasePrice: shipment.originPrice,
-                    weight: shipment.weight,
-                    date: shipment.date
-                  },
-                },
+                shipmentId: shipment.idShipment,
+                purchasePrice: shipment.originPrice,
+                weight: shipment.weight,
+                date: shipment.date
               },
-              { new: true }
-            );
-          } else {
-            // nếu chưa có thì tạo mới sp thất thoát (sp ế)
-            const data = await UnSoldProduct.create({
-              originalID,
-              productName: product.productName,
-              shipments: [
-                {
-                  shipmentId: shipment.idShipment,
-                  purchasePrice: shipment.originPrice,
-                  weight: shipment.weight,
-                  date: shipment.date
-                },
-              ],
-            }
-            )
-
+            ],
           }
+          )
+
           //update lại bảng products, xóa lô đó đi
-          const data = await Product.findOneAndUpdate(
+          await Product.findOneAndUpdate(
             { _id: product._id, "shipments.idShipment": shipment.idShipment }, {
             $pull: {
               shipments: {
@@ -583,9 +546,7 @@ cron.schedule("*/1 * * * *", async () => {
             products: product._id
           }
         })
-        if (remove) {
-        } else {
-        }
+
       }
     }
   } catch (error) {
