@@ -63,12 +63,12 @@ cron.schedule("1-59 * * * *", async () => {
     await Orders.findByIdAndUpdate(order._id, {
       status: "đã hủy",
     });
-    await handleReturntWeight(order)
+    await handleReturntWeight(order);
   }
 });
 
 //Thống kê lại dữ liệu sau mỗi 24h (dev: 30p)
-cron.schedule("*/1 * * * *", async () => {
+cron.schedule("*/5 * * * *", async () => {
   try {
     //Lấy ra tất cả sản phẩm (ko lấy sp thanh lý/thất thoát)
     const products = await Product.find({ isSale: false });
@@ -94,9 +94,9 @@ cron.schedule("*/1 * * * *", async () => {
     // Tính tổng doanh thu theo đơn hàng đã hoàn thành
     const salesRevenue = orders
       ? orders.reduce(
-        (accumulator, order) => accumulator + order.totalPayment,
-        0
-      )
+          (accumulator, order) => accumulator + order.totalPayment,
+          0
+        )
       : 0;
 
     // Tổng khách hàng đã đăng ký tài khoản
@@ -137,36 +137,39 @@ cron.schedule("*/1 * * * *", async () => {
           }
         }
       }
-      return revenue - totalImportPrice
-    }
-
+      return revenue - totalImportPrice;
+    };
 
     // Tính lợi nhuận
     const profit = handleCalculationForProfit(orders, salesRevenue);
 
     // Lấy ra sản phẩm yêu thích nhất và kém yêu thích nhất theo số sao được đánh giá
-    let productsWithRate = []
+    let productsWithRate = [];
     for (const product of products) {
-      let starCount = 0
-      const evaluations = await Evaluation.find({ productId: product._id })
+      let starCount = 0;
+      const evaluations = await Evaluation.find({ productId: product._id });
       if (evaluations && evaluations.length > 0) {
         for (const evaluation of evaluations) {
-          starCount += evaluation.rate
+          starCount += evaluation.rate;
         }
         productsWithRate.push({
           product: product._id,
           productName: product.productName,
           image: product.images[0].url,
-          starCount: evaluations.length == 0 ? 0 : (starCount / evaluations.length).toFixed(1)
-        })
+          starCount:
+            evaluations.length == 0
+              ? 0
+              : (starCount / evaluations.length).toFixed(1),
+        });
       }
     }
-    productsWithRate = productsWithRate?.sort((a, b) => b?.starCount - a?.starCount) || [];
+    productsWithRate =
+      productsWithRate?.sort((a, b) => b?.starCount - a?.starCount) || [];
 
     const favoriteProductAndLessFavoriteProduct = {
       favoriteProduct: productsWithRate[0],
       lessFavoriteProduct: productsWithRate[productsWithRate.length - 1],
-    }
+    };
 
     // Lấy ra top 5 sản phẩm có số lượng bán ra nhiều nhất
     let topFiveProductsSold = [];
@@ -283,19 +286,19 @@ cron.schedule("*/1 * * * *", async () => {
     }
 
     // Lấy ra doanh thu ngày hôm nay
-    let salesRevenueOfCurrentDay = 0
+    let salesRevenueOfCurrentDay = 0;
 
     // Mảng đơn hàng hôm nay
     const currentOrderOfDay = orders.filter((order) => {
-      const targetDate = new Date(order.createdAt)
+      const targetDate = new Date(order.createdAt);
       if (
         targetDate.getDate() == currentDate.getDate() &&
         targetDate.getMonth() + 1 == currentDate.getMonth() + 1 &&
         targetDate.getFullYear() == currentDate.getFullYear()
       ) {
-        return order
+        return order;
       }
-    })
+    });
 
     // Thống kế doanh thu theo ngày
     let salesRevenueByDay = [];
@@ -324,7 +327,7 @@ cron.schedule("*/1 * * * *", async () => {
             targetDate.getMonth() + 1 == currentDate.getMonth() + 1 &&
             targetDate.getFullYear() == currentDate.getFullYear()
           ) {
-            salesRevenueOfCurrentDay = totalPriceOfDay
+            salesRevenueOfCurrentDay = totalPriceOfDay;
           }
           salesRevenueByDay.push([targetDate.getTime(), totalPriceOfDay]);
           mapOrders(ordersLeft);
@@ -336,12 +339,19 @@ cron.schedule("*/1 * * * *", async () => {
     salesRevenueByDay = salesRevenueByDay.sort((a, b) => a[0] - b[0]);
 
     // Lấy ra lợi nhuận ngày hôm nay
-    const profitOfCurrentDay = handleCalculationForProfit(currentOrderOfDay, salesRevenueOfCurrentDay);
+    const profitOfCurrentDay = handleCalculationForProfit(
+      currentOrderOfDay,
+      salesRevenueOfCurrentDay
+    );
 
     // Tính trung bình tổng số tiền đã thanh toán
     const averageTransactionPriceOfCurrentDay =
-      salesRevenueOfCurrentDay > 0 && currentOrderOfDay && currentOrderOfDay.length > 0
-        ? Number((salesRevenueOfCurrentDay / currentOrderOfDay.length).toFixed(2))
+      salesRevenueOfCurrentDay > 0 &&
+      currentOrderOfDay &&
+      currentOrderOfDay.length > 0
+        ? Number(
+            (salesRevenueOfCurrentDay / currentOrderOfDay.length).toFixed(2)
+          )
         : 0;
 
     const dataToUpload = {
@@ -357,11 +367,10 @@ cron.schedule("*/1 * * * *", async () => {
       salesRevenueByDay,
       salesRevenueOfCurrentDay,
       profitOfCurrentDay,
-      averageTransactionPriceOfCurrentDay
+      averageTransactionPriceOfCurrentDay,
     };
     /*==================*/
     uploadData(dataToUpload);
-
   } catch (error) {
     console.log(error.message);
   }
@@ -406,40 +415,46 @@ cron.schedule("*/1 * * * *", async () => {
 });
 
 //============== DISABLE lô hàng đó nếu tất cả sp trong lô hết hạn - 12h chạy 1 lần ==============//
-cron.schedule("*/1 * * * *", async () => {
+cron.schedule("*/3 * * * *", async () => {
   try {
-    const shipments = await Shipment.find()
+    const shipments = await Shipment.find();
     //Lặp qua tất cả lô hàng
     for (let item of shipments) {
-      let willExpire = true
+      let willExpire = true;
       //lặp qua tất cả sp trong lô hàng đó
       for (let product of item.products) {
         //check xem còn sp còn hạn ko
         if (product.willExpire != 2) {
-          willExpire = false
+          willExpire = false;
         }
       }
       if (willExpire && !item.isDisable) {
-        const shipment = await Shipment.findByIdAndUpdate(item._id, { isDisable: true }, { new: true })
+        const shipment = await Shipment.findByIdAndUpdate(
+          item._id,
+          { isDisable: true },
+          { new: true }
+        );
         // console.log("shipment is disabled ", shipment);
-        const products = await Product.find()
+        const products = await Product.find();
         for (let product of products) {
           //Xóa shipment trong bảng products
-          await Product.findOneAndUpdate({ _id: product._id, "shipments.idShipment": item._id }, {
-            $pull: {
-              shipments: {
-                idShipment: item._id
-              }
+          await Product.findOneAndUpdate(
+            { _id: product._id, "shipments.idShipment": item._id },
+            {
+              $pull: {
+                shipments: {
+                  idShipment: item._id,
+                },
+              },
             }
-          })
-
+          );
         }
-        
+
         //Chuyển tất cả sp trong lô đó sang hàng thất thoát (sp ế)
         for (let item of shipment.products) {
-          const product = await Product.findById(item.idProduct)
-          const originalID = product._id
-          //Tạo mới sp thất thoát 
+          const product = await Product.findById(item.idProduct);
+          const originalID = product._id;
+          //Tạo mới sp thất thoát
           await UnSoldProduct.create({
             originalID,
             productName: product.productName,
@@ -448,43 +463,41 @@ cron.schedule("*/1 * * * *", async () => {
                 shipmentId: shipment._id,
                 purchasePrice: item.originPrice,
                 weight: item.weight,
-                date: item.date
+                date: item.date,
               },
             ],
-          }
-          )
-
-
+          });
         }
       }
-
     }
   } catch (error) {
-    console.log(error.message)
+    console.log(error.message);
   }
-
-})
+});
 
 //===========Xử lý sp thất thoát (SP Ế) - 1p chạy lại 1 lần=================//
-cron.schedule("*/1 * * * *", async () => {
+cron.schedule("*/3 * * * *", async () => {
   try {
     // check roomChatId là của admin bên client thì xóa
-    const chats = await Chat.find().populate('roomChatId')
+    const chats = await Chat.find().populate("roomChatId");
     const sevenDayInAMiliSeconds = 7 * 24 * 60 * 60 * 1000;
     for (const chat of chats) {
-      const messageInSevenDay = []
+      const messageInSevenDay = [];
       for (const message of chat.messages) {
-        const targetDate = new Date(message.day)
-        const currentDate = new Date()
+        const targetDate = new Date(message.day);
+        const currentDate = new Date();
         if (currentDate - targetDate < sevenDayInAMiliSeconds) {
-          messageInSevenDay.push(message)
+          messageInSevenDay.push(message);
         }
       }
-      await Chat.findOneAndUpdate({ roomChatId: chat.roomChatId?._id }, {
-        messages: messageInSevenDay
-      })
-      if (chat.roomChatId?.role && chat.roomChatId.role == 'admin') {
-        await Chat.findOneAndDelete({ roomChatId: chat.roomChatId?._id })
+      await Chat.findOneAndUpdate(
+        { roomChatId: chat.roomChatId?._id },
+        {
+          messages: messageInSevenDay,
+        }
+      );
+      if (chat.roomChatId?.role && chat.roomChatId.role == "admin") {
+        await Chat.findOneAndDelete({ roomChatId: chat.roomChatId?._id });
       }
     }
     // Lấy ra tất cả sp
@@ -500,10 +513,9 @@ cron.schedule("*/1 * * * *", async () => {
       }
 
       for (let shipment of product.shipments) {
-
         // lấy ra sp sắp còn 2 ngày là hết hạn mà vẫn còn hàng
-        const expired = new Date(shipment.date)
-        const now = new Date()
+        const expired = new Date(shipment.date);
+        const now = new Date();
         const twoDaysInMilliseconds = 2 * 24 * 60 * 60 * 1000;
         const remainingTime = expired - now;
         if (remainingTime <= twoDaysInMilliseconds && shipment.weight > 0) {
@@ -516,37 +528,35 @@ cron.schedule("*/1 * * * *", async () => {
                 shipmentId: shipment.idShipment,
                 purchasePrice: shipment.originPrice,
                 weight: shipment.weight,
-                date: shipment.date
+                date: shipment.date,
               },
             ],
-          }
-          )
+          });
 
           //update lại bảng products, xóa lô đó đi
           await Product.findOneAndUpdate(
-            { _id: product._id, "shipments.idShipment": shipment.idShipment }, {
-            $pull: {
-              shipments: {
-                idShipment: shipment.idShipment
-              }
-            }
-          },
+            { _id: product._id, "shipments.idShipment": shipment.idShipment },
+            {
+              $pull: {
+                shipments: {
+                  idShipment: shipment.idShipment,
+                },
+              },
+            },
             { new: true }
           );
-
         }
       }
-      const prd = await Product.findById(product._id)
+      const prd = await Product.findById(product._id);
       //nếu sp đó là sp thanh lý thì xóa nó khỏi bảng products
       if (product.isSale && product.shipments.length == 0) {
         const remove = await Product.findByIdAndDelete(product._id);
-        //Xóa sp thanh lý (.) danh mục 
+        //Xóa sp thanh lý (.) danh mục
         await Category.findByIdAndUpdate(prd.categoryId, {
           $pull: {
-            products: product._id
-          }
-        })
-
+            products: product._id,
+          },
+        });
       }
     }
   } catch (error) {
@@ -671,7 +681,7 @@ io.of("/admin").on("connection", (socket) => {
 
   socket.on("AdminSendMessage", async (data) => {
     const socketData = JSON.parse(data);
-    io.of("/admin").emit("refetchMessage")
+    io.of("/admin").emit("refetchMessage");
     io.to(socketData.roomChatId).emit("updatemess");
   });
 });
@@ -720,12 +730,13 @@ io.on("connection", (socket) => {
     io.of("/admin").emit("adminStatusNotification", {
       data: { ...notification._doc, status: socketData.status },
     });
-
   });
 
   socket.on("ClientSendMessage", async (data) => {
     const socketData = JSON.parse(data);
-    io.of("/admin").emit("messageNotification", { data: socketData.roomChatId });
+    io.of("/admin").emit("messageNotification", {
+      data: socketData.roomChatId,
+    });
     io.of("/admin").emit("updatemess", { data: socketData.roomChatId });
   });
 
