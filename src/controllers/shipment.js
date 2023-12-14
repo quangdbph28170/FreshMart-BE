@@ -163,42 +163,42 @@ export const updateShipment = async (req, res) => {
       for (let item of shipmentUpdate.products) {
         const product = await Products.findById(item.idProduct)
         const originalID = product._id
-        //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
-        const unsoldExist = await UnSoldProduct.findOne({ originalID });
-        if (unsoldExist) {
-          console.log("running: ", shipment)
-          const unsold = await UnSoldProduct.findOneAndUpdate(
-            { originalID },
-            {
-              $push: {
-                shipments: {
-                  shipmentId: shipment._id,
-                  purchasePrice: item.originPrice,
-                  weight: item.weight,
-                  date: item.date
-                },
-              },
-            },
-            { new: true }
-          )
-          console.log("Đã push shipment vào...", unsold)
+        // //nếu sp gốc đó đã có trong kho ế thì chỉ update lại shipments
+        // const unsoldExist = await UnSoldProduct.findOne({ originalID });
+        // if (unsoldExist) {
+        //   console.log("running: ", shipment)
+        //   const unsold = await UnSoldProduct.findOneAndUpdate(
+        //     { originalID },
+        //     {
+        //       $push: {
+        //         shipments: {
+        //           shipmentId: shipment._id,
+        //           purchasePrice: item.originPrice,
+        //           weight: item.weight,
+        //           date: item.date
+        //         },
+        //       },
+        //     },
+        //     { new: true }
+        //   )
+        //   console.log("Đã push shipment vào...", unsold)
 
-        } else {
-          const data = await UnSoldProduct.create({
-            originalID,
-            productName: product.productName,
-            shipments: [
-              {
-                shipmentId: shipment._id,
-                purchasePrice: item.originPrice,
-                weight: item.weight,
-                date: item.date
-              },
-            ],
-          }
-          )
-          console.log("Create: ", data)
+        // } else {
+        const data = await UnSoldProduct.create({
+          originalID,
+          productName: product.productName,
+          shipments: [
+            {
+              shipmentId: shipment._id,
+              purchasePrice: item.originPrice,
+              weight: item.weight,
+              date: item.date
+            },
+          ],
         }
+        )
+        console.log("Create: ", data)
+
 
       }
     }

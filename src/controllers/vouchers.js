@@ -265,7 +265,7 @@ export const getVoucherUser = async (req, res) => {
     for (let item of data) {
       let exist = true;
       let active = true;
-
+      let isValidDate = true
       // Hết số lượng
       if (item.quantity == 0) {
         exist = false;
@@ -281,7 +281,8 @@ export const getVoucherUser = async (req, res) => {
       }
       // Voucher chưa cho phép dùng
       if (item.dateStart > dateNow) {
-        exist = false;
+        // exist = false;
+        isValidDate = false
       }
       // Kiểm tra xem người dùng đã sử dụng voucher chưa
       if (userId) {
@@ -298,6 +299,7 @@ export const getVoucherUser = async (req, res) => {
         }
         item = item.toObject();
         item.active = active;
+        item.isValidDate = isValidDate
         vouchers.push(item);
       }
 

@@ -1,9 +1,40 @@
 import unsoldProducts from "../models/unsoldProducts";
 
+const filterDate = async (products, day, currentPage, limit, res) => {
+
+    const today = new Date();
+    const dayOfPast = today - day * 24 * 60 * 60 * 1000;
+    const filteredProducts = [];
+
+    for (let item of products) {
+        const date = new Date(item.createdAt);
+        if (date >= dayOfPast) {
+            filteredProducts.push(item);
+        }
+    }
+
+    const totalItems = filteredProducts.length;
+    const totalPages = Math.ceil(totalItems / limit);
+
+    return res.status(200).json({
+        status: 200,
+        message: 'Filter products success',
+        body: {
+            data: filteredProducts,
+            pagination: {
+                currentPage,
+                totalPages,
+                totalItems,
+            },
+        },
+    });
+    //======================== CÒN TỔNG THẤT THOÁT FE TỰ TÍNH ĐI =)) =============================//
+
+};
 export const getUnsoldProducts = async (req, res) => {
     const {
         _page = 1,
-        _order = "asc",
+        _order = "desc",
         _limit = 9999,
         _sort = "createdAt",
         _q = "",
@@ -13,17 +44,35 @@ export const getUnsoldProducts = async (req, res) => {
         limit: _limit,
         sort: {
             [_sort]: _order === "desc" ? -1 : 1,
-            "shipments.price": _order === "desc" ? -1 : 1,
         },
-        populate:"shipments.shipmentId"
-
+        populate: "shipments.shipmentId"
     };
 
     try {
-        const products = await unsoldProducts.paginate({}, options);
+        const query = {}
+        const { day, today } = req.query
+
+        if (today) {
+            console.log(today);
+            const startOfDay = new Date(today);
+            startOfDay.setHours(0, 0, 0, 0);
+            const endOfDay = new Date(today);
+            endOfDay.setHours(23, 59, 59, 999);
+            query.createdAt = {
+                $gte: startOfDay,
+                $lte: endOfDay,
+            }
+        }
+
+        const products = await unsoldProducts.paginate(query, options);
+
+        if (day) {
+            return filterDate(products.docs, day, _page, _limit, res)
+        }
+
         return res.status(200).json({
             status: 200,
-            message: "Get products successfully",
+            message: 'Get products successfully',
             body: {
                 data: products.docs,
                 pagination: {
@@ -32,7 +81,6 @@ export const getUnsoldProducts = async (req, res) => {
                     totalItems: products.totalDocs,
                 },
             },
-
         });
     } catch (error) {
         return res.status(500).json({
@@ -41,6 +89,7 @@ export const getUnsoldProducts = async (req, res) => {
         });
     }
 };
+
 export const getUnsoldProduct = async (req, res) => {
     try {
         const product = await unsoldProducts.findById(req.params.id).populate("originalID");
