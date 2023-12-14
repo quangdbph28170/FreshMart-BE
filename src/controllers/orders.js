@@ -519,6 +519,7 @@ export const GetAllOrders = async (req, res) => {
     sort: {
       [_sort]: _order === "desc" ? -1 : 1,
     },
+    populate:"products.shipmentId"
   };
 
   try {

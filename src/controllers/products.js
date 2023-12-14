@@ -10,7 +10,7 @@ import {
 export const getProducts = async (req, res) => {
   const {
     _page = 1,
-    _order = "asc",
+    _order = "desc",
     _limit = 9999,
     _sort = "createdAt",
     _q = "",
@@ -313,7 +313,7 @@ export const removeProduct = async (req, res) => {
     let data = null;
     //Chuyển vào sp thất thoát nếu còn
     if (product.shipments.length > 0) {
-      //TH1: SP chưa có (.) thất thoát =>Tạo mới lun
+
       //Kiểm tra xem sp đó có p hàng thanh lý ko
       let originalID = null;
       let productName = null;
@@ -339,24 +339,13 @@ export const removeProduct = async (req, res) => {
         shipments.push(shipment);
       }
       //TH1 : SP đã có trong hàng ế => chỉ push shipment vào
-      if (!unsoldProduct) {
-        data = await UnsoldProduct.create({
-          originalID,
-          productName,
-          shipments,
-        });
-      } else {
-        //TH1 : SP chưa có trong hàng ế => Tạo mới lun
-        data = await UnsoldProduct.findOneAndUpdate(
-          { originalID },
-          {
-            $push: {
-              shipments: shipments,
-            },
-          },
-          { new: true }
-        );
-      }
+
+      data = await UnsoldProduct.create({
+        originalID,
+        productName,
+        shipments,
+      });
+
 
       // console.log(data);
     }
