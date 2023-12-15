@@ -401,10 +401,12 @@ export const cartLocal = async (req, res) => {
                         message: "Invalid product name!"
                     });
                 }
-                if (!new mongoose.Types.ObjectId(item.productId.originId._id).equals(prd.originId)) {
+                if (!new mongoose.Types.ObjectId(item.productId.originId._id).equals(prd.originId)) {      
+                    await prd.populate("originId")
                     errors.push({
                         productId: prd._id,
-                        originId: prd.originId,
+                        originId: prd.originId._id,
+                        originName: prd.originId.name,
                         productName: prd.productName,
                         message: "Invalid product origin!",
                     });
