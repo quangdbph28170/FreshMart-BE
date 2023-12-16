@@ -840,7 +840,7 @@ export const handleReturntWeight = async (order) => {
             const targerDate = new Date(productOnShipment.date).getTime();
             //Check xem lô hàng đã hết hạn hay chưa nếu hết hạn thì bỏ qua
             if (productOnShipment.idProduct.equals(product._id)) {
-              if (targerDate - currentDate <= 0) {
+              if (targerDate - currentDate <= 0 || shipmentOfProduct.isDisable) {
                 if (currentWeight > productOnShipment.originWeight) {
                   const unsoldProduct = await UnsoleProduct.findOne({ originalID: product.isSale ? product.originalID : product._id, "shipments.shipmentId": shipmentOfProduct._id })
                   if (unsoldProduct) {
