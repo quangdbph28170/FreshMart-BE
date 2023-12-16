@@ -55,7 +55,7 @@ export const getUnsoldProducts = async (req, res) => {
         if (today) {
             console.log(today);
             const startOfDay = new Date(today);
-            startOfDay.setHours(0, 0, 0, 0);
+            startOfDay.setHours(0, 0, 0, 0); startOfDay.setHours(0, 0, 0, 0);
             const endOfDay = new Date(today);
             endOfDay.setHours(23, 59, 59, 999);
             query.createdAt = {
