@@ -1102,7 +1102,7 @@ export const UpdateOrder = async (req, res) => {
       });
     }
     let data = null
-    if (currentOrder.status == "chờ xác nhận" && status == failedOrder) {
+    if (currentOrder.status != "đơn hàng hoàn thành" && status == failedOrder) {
       data = await Order.findByIdAndUpdate(
         orderId,
         { ...req.body, userId: new mongoose.Types.ObjectId(req.body.userId) },
@@ -1111,6 +1111,10 @@ export const UpdateOrder = async (req, res) => {
         }
       );
 
+    }else{
+      return res.status(400).json({
+        message: "The completed order is not canceled!",  
+      });
     }
     if (!statusOrder.includes(status) && status != failedOrder) {
       return res.status(402).json({
