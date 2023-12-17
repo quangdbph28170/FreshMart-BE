@@ -1111,11 +1111,8 @@ export const UpdateOrder = async (req, res) => {
         }
       );
 
-    }else{
-      return res.status(400).json({
-        message: "The completed order is not canceled!",  
-      });
     }
+
     if (!statusOrder.includes(status) && status != failedOrder) {
       return res.status(402).json({
         status: 402,
