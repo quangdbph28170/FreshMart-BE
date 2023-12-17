@@ -6,6 +6,36 @@ import {
   validateUpdateShipment,
 } from "../validation/shipment";
 
+const checkExprie = (date) => {
+  try {
+    // Chuyển đổi chuỗi ngày từ MongoDB thành đối tượng Date
+    const targetDate = new Date(date);
+    // Lấy ngày hiện tại
+    const currentDate = new Date();
+
+    // Số mili giây trong 7 ngày
+    const sevenDaysInMillis = 7 * 24 * 60 * 60 * 1000;
+
+    //Kiểm tra xem sản phẩm trong lô đã hết hạn chưa
+    if (targetDate - currentDate <= 0) {
+      return 2
+    }
+
+    // Kiểm tra xem thời gian hiện tại đến ngày cụ thể có cách 3 ngày không
+    const isWithinSevenDays = targetDate - currentDate < sevenDaysInMillis;
+
+    if (
+      isWithinSevenDays &&
+      targetDate - currentDate > 0
+    ) {
+      return 1
+    }
+    return 0
+  } catch (error) {
+    console.log(error.message);
+  }
+}
+
 export const createShipment = async (req, res) => {
   const { error } = validateShipment.validate(req.body, { abortEarly: false });
   if (error) {
@@ -19,6 +49,7 @@ export const createShipment = async (req, res) => {
       return {
         ...data,
         originWeight: data.weight,
+        willExpire: checkExprie(data.date) || 0
       };
     });
     const newShipment = await Shipment.create(req.body);
