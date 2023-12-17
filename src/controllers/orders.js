@@ -267,14 +267,18 @@ export const CreateOrder = async (req, res) => {
 
         //Voucher đã hết hạn
         const dateNow = new Date();
-        if (voucherExist.dateEnd < dateNow) {
+        const endOfDay = new Date(voucherExist.dateEnd);
+        endOfDay.setHours(23, 59, 59, 999);
+        if (endOfDay < dateNow) {
           return res.status(400).json({
             status: 400,
             message: "Voucher is out of date",
           });
         }
         //Voucher chưa được bắt đầu sử dụng
-        if (voucherExist.dateStart > dateNow) {
+        const startOfDay = new Date(voucherExist.dateStart)
+        startOfDay.setHours(0, 0, 0, 0);
+        if (startOfDay > dateNow) {
           return res.status(400).json({
             status: 400,
             message: "Sorry, this voucher is not yet available for use!",
@@ -369,6 +373,15 @@ export const CreateOrder = async (req, res) => {
             //Xóa sp nếu đó là sp thanh lý
             if (prd.isSale) {
               await Product.findByIdAndDelete(prd._id);
+              // thay đổi số lượng của sản phẩm trong lô hàng về 0
+              await Shipment.findOneAndUpdate(
+                { _id: shipment.idShipment, "products.idProduct": prd.originalID },
+                {
+                  $set: {
+                    "products.$.weight": 0,
+                  },
+                }
+              );
             } else {
               // xóa lô hàng hiện tại trong record của sản phẩm hiện tại
               await Product.findOneAndUpdate(
@@ -381,37 +394,57 @@ export const CreateOrder = async (req, res) => {
                   },
                 }
               );
+              // thay đổi số lượng của sản phẩm trong lô hàng về 0
+              await Shipment.findOneAndUpdate(
+                { _id: shipment.idShipment, "products.idProduct": prd._id },
+                {
+                  $set: {
+                    "products.$.weight": 0,
+                  },
+                }
+              );
             }
-            // thay đổi số lượng của sản phẩm trong lô hàng về 0
-            await Shipment.findOneAndUpdate(
-              { _id: shipment.idShipment, "products.idProduct": prd._id },
-              {
-                $set: {
-                  "products.$.weight": 0,
-                },
-              }
-            );
             itemWeight = -(shipment.weight - itemWeight);
           } else {
             //TH2 : số lượng mua bé hơn số lượng trong lô hàng hiện tại của sản phẩm
             // thay đổi số lượng trong lô hàng của sản phẩm
-            await Product.findOneAndUpdate(
-              { _id: prd._id, "shipments.idShipment": shipment.idShipment },
-              {
-                $set: {
-                  "shipments.$.weight": shipment.weight - itemWeight,
-                },
-              }
-            );
-            // thay đổi số lượng sản phẩm trong lô hàng
-            await Shipment.findOneAndUpdate(
-              { _id: shipment.idShipment, "products.idProduct": prd._id },
-              {
-                $set: {
-                  "products.$.weight": shipment.weight - itemWeight,
-                },
-              }
-            );
+            if (prd.isSale) {
+              await Product.findOneAndUpdate(
+                { _id: prd._id, "shipments.idShipment": shipment.idShipment },
+                {
+                  $set: {
+                    "shipments.$.weight": shipment.weight - itemWeight,
+                  },
+                }
+              );
+              // thay đổi số lượng sản phẩm trong lô hàng
+              await Shipment.findOneAndUpdate(
+                { _id: shipment.idShipment, "products.idProduct": prd.originalID },
+                {
+                  $set: {
+                    "products.$.weight": shipment.weight - itemWeight,
+                  },
+                }
+              );
+            } else {
+              await Product.findOneAndUpdate(
+                { _id: prd._id, "shipments.idShipment": shipment.idShipment },
+                {
+                  $set: {
+                    "shipments.$.weight": shipment.weight - itemWeight,
+                  },
+                }
+              );
+              // thay đổi số lượng sản phẩm trong lô hàng
+              await Shipment.findOneAndUpdate(
+                { _id: shipment.idShipment, "products.idProduct": prd._id },
+                {
+                  $set: {
+                    "products.$.weight": shipment.weight - itemWeight,
+                  },
+                }
+              );
+            }
             itemWeight = 0;
           }
         }
@@ -429,7 +462,7 @@ export const CreateOrder = async (req, res) => {
       if (prd.originalID != null) {
         item.productId = prd.originalID;
         item.isSale = true
-      }else{
+      } else {
         item.isSale = false
       }
     }
@@ -519,7 +552,7 @@ export const GetAllOrders = async (req, res) => {
     sort: {
       [_sort]: _order === "desc" ? -1 : 1,
     },
-    populate:"products.shipmentId"
+    populate: "products.shipmentId"
   };
 
   try {
