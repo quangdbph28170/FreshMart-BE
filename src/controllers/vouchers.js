@@ -54,14 +54,18 @@ export const validateVoucher = async (req, res) => {
 
     const dateNow = new Date()
     //Voucher đã hết hạn
-    if (voucherExist.dateEnd < dateNow) {
+    const endOfDay = new Date(voucherExist.dateEnd);
+    endOfDay.setHours(23, 59, 59, 999);
+    if (endOfDay < dateNow) {
       return res.status(400).json({
         status: 400,
         message: "Voucher is out of date",
       });
     }
     //Voucher chưa được bắt đầu sử dụng
-    if (voucherExist.dateStart > dateNow) {
+    const startOfDay = new Date(voucherExist.dateStart)
+    startOfDay.setHours(0, 0, 0, 0);
+    if (startOfDay > dateNow) {
       return res.status(400).json({
         status: 400,
         message: "Sorry, this voucher is not yet available for use!",
@@ -276,11 +280,15 @@ export const getVoucherUser = async (req, res) => {
       }
 
       // Voucher đã hết hạn
-      if (item.dateEnd < dateNow) {
+      const endOfDay = new Date(item.dateEnd);
+      endOfDay.setHours(23, 59, 59, 999);
+      if (endOfDay < dateNow) {
         exist = false;
       }
-      // Voucher chưa cho phép dùng
-      if (item.dateStart > dateNow) {
+      // Voucher chưa cho phép 
+      const startOfDay = new Date(item.dateStart)
+      startOfDay.setHours(0, 0, 0, 0);
+      if (startOfDay > dateNow) {
         // exist = false;
         isValidDate = false
       }
