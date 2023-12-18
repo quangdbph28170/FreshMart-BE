@@ -131,7 +131,7 @@ export const updateOrigin = async (req, res) => {
         }
 
         const nameExist = await Origin.findOne({ name: req.body.name })
-        if(!nameExist._id.equals(new mongoose.Types.ObjectId(id)) && nameExist) {
+        if(nameExist && !nameExist?._id.equals(new mongoose.Types.ObjectId(id))) {
             return res.status(400).json({
                 status: 400,
                 message: "Tên đã tồn tại",
