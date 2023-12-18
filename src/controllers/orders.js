@@ -373,6 +373,15 @@ export const CreateOrder = async (req, res) => {
             //Xóa sp nếu đó là sp thanh lý
             if (prd.isSale) {
               await Product.findByIdAndDelete(prd._id);
+              // thay đổi số lượng của sản phẩm trong lô hàng về 0
+              await Shipment.findOneAndUpdate(
+                { _id: shipment.idShipment, "products.idProduct": prd.originalID },
+                {
+                  $set: {
+                    "products.$.weight": 0,
+                  },
+                }
+              );
             } else {
               // xóa lô hàng hiện tại trong record của sản phẩm hiện tại
               await Product.findOneAndUpdate(
@@ -385,37 +394,57 @@ export const CreateOrder = async (req, res) => {
                   },
                 }
               );
+              // thay đổi số lượng của sản phẩm trong lô hàng về 0
+              await Shipment.findOneAndUpdate(
+                { _id: shipment.idShipment, "products.idProduct": prd._id },
+                {
+                  $set: {
+                    "products.$.weight": 0,
+                  },
+                }
+              );
             }
-            // thay đổi số lượng của sản phẩm trong lô hàng về 0
-            await Shipment.findOneAndUpdate(
-              { _id: shipment.idShipment, "products.idProduct": prd._id },
-              {
-                $set: {
-                  "products.$.weight": 0,
-                },
-              }
-            );
             itemWeight = -(shipment.weight - itemWeight);
           } else {
             //TH2 : số lượng mua bé hơn số lượng trong lô hàng hiện tại của sản phẩm
             // thay đổi số lượng trong lô hàng của sản phẩm
-            await Product.findOneAndUpdate(
-              { _id: prd._id, "shipments.idShipment": shipment.idShipment },
-              {
-                $set: {
-                  "shipments.$.weight": shipment.weight - itemWeight,
-                },
-              }
-            );
-            // thay đổi số lượng sản phẩm trong lô hàng
-            await Shipment.findOneAndUpdate(
-              { _id: shipment.idShipment, "products.idProduct": prd._id },
-              {
-                $set: {
-                  "products.$.weight": shipment.weight - itemWeight,
-                },
-              }
-            );
+            if (prd.isSale) {
+              await Product.findOneAndUpdate(
+                { _id: prd._id, "shipments.idShipment": shipment.idShipment },
+                {
+                  $set: {
+                    "shipments.$.weight": shipment.weight - itemWeight,
+                  },
+                }
+              );
+              // thay đổi số lượng sản phẩm trong lô hàng
+              await Shipment.findOneAndUpdate(
+                { _id: shipment.idShipment, "products.idProduct": prd.originalID },
+                {
+                  $set: {
+                    "products.$.weight": shipment.weight - itemWeight,
+                  },
+                }
+              );
+            } else {
+              await Product.findOneAndUpdate(
+                { _id: prd._id, "shipments.idShipment": shipment.idShipment },
+                {
+                  $set: {
+                    "shipments.$.weight": shipment.weight - itemWeight,
+                  },
+                }
+              );
+              // thay đổi số lượng sản phẩm trong lô hàng
+              await Shipment.findOneAndUpdate(
+                { _id: shipment.idShipment, "products.idProduct": prd._id },
+                {
+                  $set: {
+                    "products.$.weight": shipment.weight - itemWeight,
+                  },
+                }
+              );
+            }
             itemWeight = 0;
           }
         }
@@ -1073,7 +1102,7 @@ export const UpdateOrder = async (req, res) => {
       });
     }
     let data = null
-    if (currentOrder.status == "chờ xác nhận" && status == failedOrder) {
+    if (currentOrder.status != "đơn hàng hoàn thành" && status == failedOrder) {
       data = await Order.findByIdAndUpdate(
         orderId,
         { ...req.body, userId: new mongoose.Types.ObjectId(req.body.userId) },
@@ -1083,6 +1112,7 @@ export const UpdateOrder = async (req, res) => {
       );
 
     }
+
     if (!statusOrder.includes(status) && status != failedOrder) {
       return res.status(402).json({
         status: 402,
