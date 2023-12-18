@@ -13,12 +13,12 @@ import authentication from "../middleware/authentication";
 
 const router = express.Router();
 
-router.post("/vouchers", authorization, createVoucher);
-router.get("/vouchers", authorization, getAllVoucher);
+router.post("/vouchers", authentication, authorization, createVoucher);
+router.get("/vouchers", authentication, authorization, getAllVoucher);
 router.post("/vouchers-user", getVoucherUser);
-router.get("/vouchers/:id", authorization, getVoucher);
-router.patch("/vouchers/:id", authorization, updateVoucher);
-router.delete("/vouchers/:id", authorization, removeVoucher);
+router.get("/vouchers/:id", authentication, authorization, getVoucher);
+router.patch("/vouchers/:id", authentication, authorization, updateVoucher);
+router.delete("/vouchers/:id", authentication, authorization, removeVoucher);
 router.put("/vouchers/", authentication, validateVoucher);
 
 export default router;
