@@ -9,6 +9,6 @@ router.post('/evaluation', createEvaluation);
 router.get('/evaluationByProductId/:id', getIsRatedByProductId);
 router.get('/evaluation/:id', getIsRatedDetail);
 router.get('/evaluation/', getAllRating);
-router.patch('/evaluation/:id', authorization,isReviewVisible);
+router.patch('/evaluation/:id', authentication, authorization, isReviewVisible);
 
 export default router;
