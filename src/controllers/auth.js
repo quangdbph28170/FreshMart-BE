@@ -63,7 +63,7 @@ export const signUp = async (req, res, next) => {
 
       if (error) {
          req[RESPONSE_STATUS] = 500;
-         req[RESPONSE_MESSAGE] = `Form error: ${error.details[0].message}`;
+         req[RESPONSE_MESSAGE] = `${error.details[0].message}`;
          return next();
       }
 
@@ -125,7 +125,7 @@ export const signUp = async (req, res, next) => {
       return next();
    } catch (error) {
       req[RESPONSE_STATUS] = 500;
-      req[RESPONSE_MESSAGE] = `Form error: ${error.message}`;
+      req[RESPONSE_MESSAGE] = `${error.message}`;
       return next();
    }
 };
@@ -136,7 +136,7 @@ export const signIn = async (req, res, next) => {
 
       if (error) {
          req[RESPONSE_STATUS] = 500;
-         req[RESPONSE_MESSAGE] = `Form error: ${error.details[0].message}`;
+         req[RESPONSE_MESSAGE] = `${error.details[0].message}`;
          return next();
       }
 
@@ -204,7 +204,7 @@ export const signIn = async (req, res, next) => {
       return next();
    } catch (error) {
       req[RESPONSE_STATUS] = 500;
-      req[RESPONSE_MESSAGE] = `Form error: ${error.message}`;
+      req[RESPONSE_MESSAGE] = `${error.message}`;
       return next();
    }
 };
@@ -240,13 +240,13 @@ export const refresh = async (req, res, next) => {
       jwt.verify(refreshToken, process.env.SERECT_REFRESHTOKEN_KEY, async (err, decode) => {
          if (err) {
             req[RESPONSE_STATUS] = 400;
-            req[RESPONSE_MESSAGE] = `Form error: ${err}`;
+            req[RESPONSE_MESSAGE] = `${err}`;
             return next();
          } else {
             const user = await User.findById(decode._id);
             if (!user) {
                req[RESPONSE_STATUS] = 400;
-               req[RESPONSE_MESSAGE] = `Form error: not found account`;
+               req[RESPONSE_MESSAGE] = `not found account`;
                return next();
             }
             const accessToken = jwt.sign({ _id: user._id }, process.env.SERECT_ACCESSTOKEN_KEY, {
@@ -266,7 +266,7 @@ export const refresh = async (req, res, next) => {
       });
    } catch (error) {
       req[RESPONSE_STATUS] = 500;
-      req[RESPONSE_MESSAGE] = `Form error: ${error.message}`;
+      req[RESPONSE_MESSAGE] = `${error.message}`;
       return next();
    }
 };
@@ -280,7 +280,7 @@ export const clearToken = async (req, res, next) => {
       return next();
    } catch (error) {
       req[RESPONSE_STATUS] = 500;
-      req[RESPONSE_MESSAGE] = `Form error: ${error.message}`;
+      req[RESPONSE_MESSAGE] = `${error.message}`;
       return next();
    }
 };
