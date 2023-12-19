@@ -79,13 +79,13 @@ export const vnpayIpn = async (req, res) => {
     if (secureHash === signed) {
         var orderId = vnp_Params['vnp_TxnRef'];
         var rspCode = vnp_Params['vnp_ResponseCode'];
-        await Orders.findByIdAndUpdate(orderId, {
-            pay: true
-        })
-        const order = await Orders.findById(orderId);
-        await sendMailer(order.email, order)
         //Kiem tra du lieu co hop le khong, cap nhat trang thai don hang va gui ket qua cho VNPAY theo dinh dang duoi
         if(rspCode == '00') {
+          await Orders.findByIdAndUpdate(orderId, {
+              pay: true
+          })
+          const order = await Orders.findById(orderId);
+          await sendMailer(order.email, order)
           res.status(200).json({ RspCode: '00', Message: 'success' })
         } else {
           res.status(200).json({ RspCode: rspCode, Message: 'Fail checksum' })
