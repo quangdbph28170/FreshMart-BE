@@ -223,7 +223,7 @@ export const redirect = (req, res) => {
       res.redirect(process.env.GOOGLE_REDIRECT_URL);
    } else {
       // Successful authentication, redirect success.
-      res.redirect(process.env.GOOGLE_REDIRECT_URL + '?err=');
+      res.redirect(process.env.GOOGLE_REDIRECT_URL + '?err=2');
    }
 };
 
@@ -273,13 +273,6 @@ export const refresh = async (req, res, next) => {
 
 export const clearToken = async (req, res, next) => {
    try {
-      const token = req.cookies.refreshToken;
-      if (!token) {
-         req[RESPONSE_STATUS] = 404;
-         req[RESPONSE_MESSAGE] = `Form error: No token available`;
-         return next();
-      }
-
       res.clearCookie('refreshToken');
       res.clearCookie('accessToken');
 
