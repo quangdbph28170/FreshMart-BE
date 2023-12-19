@@ -669,11 +669,11 @@ export const OrdersForMember = async (req, res) => {
       filterOrderDay(data, _day, res, _from, _to);
       return;
     }
-    return res.status(201).json({
+    return res.status(200).json({
       body: {
         data,
       },
-      status: 201,
+      status: 200,
       message: "Get order successfully",
     });
   } catch (error) {
@@ -717,7 +717,7 @@ export const filterOrderDay = async (data, day, res, from, to) => {
       body: { data: [] },
     });
   }
-  return res.status(201).json({
+  return res.status(200).json({
     body: {
       data: filterData,
       pagination: {
@@ -727,7 +727,7 @@ export const filterOrderDay = async (data, day, res, from, to) => {
       },
     },
     message: "Filter order successfully",
-    status: 201,
+    status: 200,
   });
 
   //  console.log(filterData);
@@ -770,11 +770,11 @@ export const FilterOrdersForMember = async (req, res) => {
       });
     }
 
-    return res.status(201).json({
+    return res.status(200).json({
       body: {
         data,
       },
-      status: 201,
+      status: 200,
       message: "Get order successfully",
     });
   } catch (error) {
@@ -803,9 +803,9 @@ export const OrderDetail = async (req, res) => {
     }
     const { canCancel } = checkCancellationTime(data);
 
-    return res.status(201).json({
-      body: { data, voucher },
-      status: 201,
+    return res.status(200).json({
+      body: { data },
+      status: 200,
       message: "Get order successfully",
       canCancel,
     });
@@ -1102,7 +1102,8 @@ export const UpdateOrder = async (req, res) => {
       });
     }
     let data = null
-    if (currentOrder.status != "đơn hàng hoàn thành" && status == failedOrder) {
+    if(status == failedOrder){
+      if (currentOrder.status != "đơn hàng hoàn thành" && currentOrder.status != "giao hàng thành công" ) {
       data = await Order.findByIdAndUpdate(
         orderId,
         { ...req.body, userId: new mongoose.Types.ObjectId(req.body.userId) },
@@ -1110,9 +1111,13 @@ export const UpdateOrder = async (req, res) => {
           new: true,
         }
       );
-
+    }else{
+      return res.status(402).json({
+        status: 400,
+        message: "This order is not allowed to cancel!",
+      });
     }
-
+    }
     if (!statusOrder.includes(status) && status != failedOrder) {
       return res.status(402).json({
         status: 402,

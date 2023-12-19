@@ -176,10 +176,33 @@ export const getAllVoucher = async (req, res) => {
   };
   try {
     const data = await Voucher.paginate({}, options);
+    const vouchers = []
+
+    for (let item of data.docs) {
+      let isValidDateStart = true
+      let isValidDateEnd = true
+      const dateNow = new Date()
+      // Voucher đã hết hạn
+      const endOfDay = new Date(item.dateEnd);
+      endOfDay.setHours(23, 59, 59, 999);
+      if (endOfDay < dateNow) {
+        isValidDateEnd = false;
+      }
+      // Voucher chưa cho phép 
+      const startOfDay = new Date(item.dateStart)
+      startOfDay.setHours(0, 0, 0, 0);
+      if (startOfDay > dateNow) {
+        isValidDateStart = false
+      }
+      item = item.toObject();
+      item.isValidDateStart = isValidDateStart
+      item.isValidDateEnd = isValidDateEnd
+      vouchers.push(item)
+    }
     return res.status(201).json({
       status: 201,
       message: "success",
-      body: { data: data.docs },
+      body: { data: vouchers },
     });
   } catch (error) {
     return res.status(500).json({
